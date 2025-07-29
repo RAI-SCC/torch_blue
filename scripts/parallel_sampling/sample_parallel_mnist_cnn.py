@@ -1,6 +1,7 @@
 # Sample parallel implementation of a training loop with the entso_e dataset and a fully connected model architecture.
 import torch
 from torch import Tensor, nn
+from torch.nn.parallel import DistributedDataParallel
 import torch_bayesian.vi as vi
 from torch_bayesian.vi.variational_distributions import MeanFieldNormalVarDist
 from torch.utils.data import DataLoader
@@ -121,7 +122,6 @@ def train(
 
         # Get predictions
         pred = model(x, samples=sample_num)
-
         # Switch to general randomness
         sampling_state = torch.get_rng_state()
         torch.set_rng_state(regular_state)
@@ -132,16 +132,16 @@ def train(
         # Backpropagation
         loss.backward()
 
-        for param in model.parameters():
-            if param.grad is not None:
-                grad_global = param.grad.data
-                dist.all_reduce(grad_global, op=dist.ReduceOp.SUM)
-
-                # Average the gradients
-                grad_global /= world_size
-
-                # Copy the averaged gradients back to the parameter
-                param.grad.data = torch.tensor(grad_global, dtype=param.grad.data.dtype)
+        #for param in model.parameters():
+        #    if param.grad is not None:
+        #        grad_global = param.grad.data
+        #        dist.all_reduce(grad_global, op=dist.ReduceOp.SUM)
+#
+        #        # Average the gradients
+        #        grad_global /= world_size
+#
+        #        # Copy the averaged gradients back to the parameter
+        #        param.grad.data = torch.tensor(grad_global, dtype=param.grad.data.dtype)
 
         optimizer.step()
         optimizer.zero_grad()
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     world_size = int(os.environ["SLURM_NTASKS"])
     #torch.cuda.set_device(local_rank)
     set_device = "cuda:" + str(local_rank)
-    torch.device(set_device)
+    torch.cuda.set_device(local_rank)
     
     batch_size = 64
     epochs = 5
@@ -237,12 +237,15 @@ if __name__ == "__main__":
     )
 
     # Create data loaders.
+    # set each process to have same random seed 
+    torch.manual_seed(random_seed) # Ensure random seed is set before Dataloader is initialized
     train_dataloader = DataLoader(dataset=training_data, batch_size=batch_size, shuffle=True)
     test_dataloader = DataLoader(dataset=test_data, batch_size=batch_size, shuffle=True)
 
     # Get cpu, gpu or mps device for training.
+    setup(rank, world_size)
     device = (
-        "cuda"
+        f"cuda:{local_rank}"
         if torch.cuda.is_available()
         else "mps"
         if torch.backends.mps.is_available()
@@ -251,18 +254,20 @@ if __name__ == "__main__":
     model = MNISTCNN(variational_distribution=MeanFieldNormalVarDist(initial_std=1.)).to(device)
     model.return_log_probs(False)
 
-    print(f"Using {device} device")
     print(model)
+    model = DistributedDataParallel(
+        model,
+        device_ids=[local_rank],
+        output_device=local_rank
+    )
     loss_fn = F.cross_entropy
     optimizer = torch.optim.Adam(params=model.parameters(), lr=1e-3, weight_decay=0)
 
     sample_num = int(all_sample_num / world_size)
     print(sample_num)
     
-    setup(rank, world_size)
     
     # Do stuff here
-    torch.manual_seed(random_seed)
     for t in range(epochs):
         if rank == 0:
             print(f"Epoch {t + 1}\n-------------------------------")
