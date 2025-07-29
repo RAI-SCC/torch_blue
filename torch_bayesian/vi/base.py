@@ -16,8 +16,10 @@ from torch.nn.modules.module import (
     _WrappedHook,
 )
 
-from .utils import PostInitCallMeta
+from .priors import MeanFieldNormalPrior
+from .utils import NoVariablesError, PostInitCallMeta
 from .utils.common_types import VIReturn, _prior_any_t, _vardist_any_t
+from .variational_distributions import MeanFieldNormalVarDist
 
 
 def _forward_unimplemented(self: Module, *input_: Optional[Tensor]) -> VIReturn[Tensor]:
@@ -68,11 +70,215 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     """
 
     forward: Callable[..., VIReturn] = _forward_unimplemented
+    random_variables: Optional[Tuple[str, ...]] = None
     _return_log_probs: bool = True
     # _has_sampling_responsibility is set to False right after __init__ completes for
     # each submodule and True for itself that way submodules automatically call forward
     # and the outermost module calls sampled_forward instead
     _has_sampling_responsibility: bool
+
+    def __init__(
+        self,
+        variable_shapes: Optional[Dict[str, Tuple[int, ...]]] = None,
+        variational_distribution: _vardist_any_t = MeanFieldNormalVarDist(),
+        prior: _prior_any_t = MeanFieldNormalPrior(),
+        rescale_prior: bool = False,
+        kaiming_initialization: bool = True,
+        prior_initialization: bool = False,
+        return_log_probs: bool = True,
+        device: Optional[torch.device] = None,
+        dtype: Optional[torch.dtype] = None,
+    ) -> None:
+        factory_kwargs = {"device": device, "dtype": dtype}
+        super().__init__()
+
+        if self.random_variables is None:
+            return
+        if variable_shapes is None:
+            raise ValueError(
+                "`variable_shapes` cannot be None if the module has random variables"
+            )
+
+        if isinstance(variational_distribution, List):
+            assert (
+                len(variational_distribution) == len(self.random_variables)
+            ), "Provide either exactly one variational distribution or exactly one for each random variable"
+            self.variational_distribution = variational_distribution
+        else:
+            self.variational_distribution = [
+                deepcopy(variational_distribution) for _ in self.random_variables
+            ]
+
+        if isinstance(prior, List):
+            assert (
+                len(prior) == len(self.random_variables)
+            ), "Provide either exactly one prior distribution or exactly one for each random variable"
+            self.prior = prior
+        else:
+            self.prior = [deepcopy(prior) for _ in self.random_variables]
+
+        if rescale_prior:
+            shape_dummy = torch.zeros(variable_shapes[self.random_variables[0]])
+            fan_in, _ = init._calculate_fan_in_and_fan_out(shape_dummy)
+            for prior in self.prior:
+                prior.kaiming_rescale(fan_in)
+
+        self._kaiming_init = kaiming_initialization
+        self._rescale_prior = rescale_prior
+        self._prior_init = prior_initialization
+        self._return_log_probs = return_log_probs
+
+        for variable, vardist in zip(
+            self.random_variables, self.variational_distribution
+        ):
+            assert variable in variable_shapes, f"shape of {variable} is missing"
+            shape = variable_shapes[variable]
+            for variational_parameter in vardist.variational_parameters:
+                parameter_name = self.variational_parameter_name(
+                    variable, variational_parameter
+                )
+                setattr(
+                    self,
+                    parameter_name,
+                    Parameter(torch.empty(shape, **factory_kwargs)),
+                )
+
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        """Reset or initialize the parameters of the Module."""
+        if self.random_variables is None:
+            raise NoVariablesError(
+                f"{self.__class__.__name__} has no random variables to reset"
+            )
+
+        weight_name = self.variational_parameter_name(
+            self.random_variables[0],
+            self.variational_distribution[0].variational_parameters[0],
+        )
+        fan_in, _ = init._calculate_fan_in_and_fan_out(getattr(self, weight_name))
+        for variable, vardist, prior in zip(
+            self.random_variables, self.variational_distribution, self.prior
+        ):
+            vardist.reset_parameters(self, variable, fan_in, self._kaiming_init)
+            if self._prior_init:
+                prior.reset_parameters(self, variable)
+
+    @staticmethod
+    def variational_parameter_name(variable: str, variational_parameter: str) -> str:
+        """
+        Get the attribute name of the variational parameter for the specified variable.
+
+        Parameters
+        ----------
+        variable: str
+            Random variable name as specified in `self.random_variables`.
+        variational_parameter: str
+            Variational parameter name as specified by the variational distribution.
+
+        Returns
+        -------
+        str
+            The attribute name of the specified parameter.
+        """
+        spec = ["", variable, variational_parameter]
+        return "_".join(spec)
+
+    def get_variational_parameters(self, variable: str) -> List[Tensor]:
+        """
+        Get all variational parameters for the specified variable.
+
+        Parameters
+        ----------
+        variable: str
+            Random variable name as specified in `self.random_variables`.
+
+        Returns
+        -------
+        List[Tensor]
+            All variational parameters for the specified variable in the order specified
+            by the associated variational distribution.
+        """
+        if self.random_variables is None:
+            raise NoVariablesError(
+                f"{self.__class__.__name__} has no variational parameters to get"
+            )
+
+        vardist = self.variational_distribution[self.random_variables.index(variable)]
+        return [
+            getattr(self, self.variational_parameter_name(variable, param))
+            for param in vardist.variational_parameters
+        ]
+
+    def get_log_probs(self, sampled_params: List[Tensor]) -> Tensor:
+        """
+        Get prior and variational log prob of the sampled parameters.
+
+        Accepts the sampled parameters as returned by the `self.sample_variables` method
+        and calculates the total prior and variational log probability.
+
+        Parameters
+        ----------
+        sampled_params: List[Tensor]
+            Sampled parameters as returned by the `self.sample_variables` method.
+
+        Returns
+        -------
+        Tensor
+            A Tensor containing two values: the the log probability of the sampled
+            values, if they were drawn from the prior or variational distribution (in
+            that order).
+        """
+        if self.random_variables is None:
+            raise NoVariablesError(f"{self.__class__.__name__} has no random variables")
+
+        device = sampled_params[0].device
+        variational_log_prob = torch.tensor([0.0], device=device)
+        prior_log_prob = torch.tensor([0.0], device=device)
+        for sample, variable, vardist, prior in zip(
+            sampled_params,
+            self.random_variables,
+            self.variational_distribution,
+            self.prior,
+        ):
+            variational_parameters = self.get_variational_parameters(variable)
+            variational_log_prob = (
+                variational_log_prob
+                + vardist.log_prob(sample, *variational_parameters).sum()
+            )
+
+            prior_params = [
+                getattr(self, self.variational_parameter_name(variable, param))
+                for param in prior._required_parameters
+            ]
+            prior_log_prob = (
+                prior_log_prob + prior.log_prob(sample, *prior_params).sum()
+            )
+        return torch.cat([prior_log_prob, variational_log_prob])
+
+    def sample_variables(self) -> List[Tensor]:
+        """
+        Draw one sample from the variational distribution of each random variable.
+
+        The variables are returned in the same order as `self.random_variables`.
+
+        Returns
+        -------
+        List[Tensor]
+            The sampled variables.
+        """
+        if self.random_variables is None:
+            raise NoVariablesError(
+                f"{self.__class__.__name__} has no random variables to sample"
+            )
+
+        params = []
+        for variable, vardist in zip(
+            self.random_variables, self.variational_distribution
+        ):
+            variational_parameters = self.get_variational_parameters(variable)
+            params.append(vardist.sample(*variational_parameters))
+        return params
 
     @staticmethod
     def _expand_to_samples(input_: Optional[Tensor], samples: int) -> Tensor:
@@ -108,6 +314,21 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         expanded = [self._expand_to_samples(x, samples=samples) for x in input_]
         return torch.vmap(self.forward, randomness="different")(*expanded, **kwargs)
 
+    @property
+    def return_log_probs(self) -> bool:
+        """
+        Set whether the module returns log probabilities.
+
+        Log probabilities are required for most standard losses.
+
+        Returns
+        -------
+        bool
+            Whether the module returns log probabilities.
+        """
+        return self._return_log_probs
+
+    @return_log_probs.setter
     def return_log_probs(self, mode: bool = True) -> None:
         """
         Set whether the module returns log probabilities.
