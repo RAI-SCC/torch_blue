@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, cast
 
 import pytest
 import torch
@@ -7,7 +7,6 @@ from torch import Tensor, nn
 from torch.nn import functional as F  # noqa: N812
 
 from torch_bayesian.vi import (
-    VIBaseModule,
     VILinear,
     VIModule,
     VIMultiheadAttention,
@@ -380,7 +379,10 @@ def test_multihead_attention(
     assert module.module.num_heads == num_heads
     assert module.module.bias == bias
     assert module.module.batch_first == batch_first
-    assert set(module.module.random_variables) == set(random_variable_shapes.keys())
+    module_random_vars = cast(Tuple[str, ...], module.module.random_variables)
+    assert len(module_random_vars) == len(random_variable_shapes.keys())
+    for v1, v2 in zip(module_random_vars, random_variable_shapes.keys()):
+        assert v1 == v2
 
     param_dict = dict(module.module.named_parameters())
     for var, shape in random_variable_shapes.items():
@@ -583,7 +585,7 @@ def test_decoder_layer(device: torch.device) -> None:
     assert mha_ref.device == device
 
     # check norm_first=True
-    module2.return_log_probs(False)
+    module2.return_log_probs = False
     out1 = module2(tgt, mem)
     out1.sum().backward()
     ref1 = tgt + module2._sa_block(module2.norm1(tgt))[0]
@@ -591,13 +593,13 @@ def test_decoder_layer(device: torch.device) -> None:
     ref1 = module2._ff_block(module2.norm3(ref1))
     assert torch.allclose(out1, ref1, atol=1e-6)
 
-    module2.return_log_probs(True)
+    module2.return_log_probs = True
     out2, _ = module2(tgt, mem)
     out2.sum().backward()
     assert torch.allclose(out1, out2, atol=1e-6)
 
     # check norm_first=False
-    module3.return_log_probs(False)
+    module3.return_log_probs = False
     out3 = module3(tgt, mem)
     out3.sum().backward()
     ref2 = module3.norm1(tgt + module3._sa_block(tgt)[0])
@@ -605,7 +607,7 @@ def test_decoder_layer(device: torch.device) -> None:
     ref2 = module3.norm3(module3._ff_block(ref2))
     assert torch.allclose(out3, ref2, atol=1e-6)
 
-    module3.return_log_probs(True)
+    module3.return_log_probs = True
     out4, _ = module3(tgt, mem)
     out4.sum().backward()
     assert torch.allclose(out3, out4, atol=1e-6)
@@ -679,27 +681,27 @@ def test_encoder_layer(device: torch.device) -> None:
     assert sa_ref.device == device
 
     # check norm_first=True
-    module2.return_log_probs(False)
+    module2.return_log_probs = False
     out1 = module2(src)
     out1.sum().backward()
     ref1 = src + module2._sa_block(module2.norm1(src))[0]
     ref1 = module2._ff_block(module2.norm2(ref1))
     assert torch.allclose(out1, ref1)
 
-    module2.return_log_probs(True)
+    module2.return_log_probs = True
     out2, _ = module2(src)
     out2.sum().backward()
     assert torch.allclose(out1, out2, atol=2e-7)
 
     # check norm_first=False
-    module3.return_log_probs(False)
+    module3.return_log_probs = False
     out3 = module3(src)
     out3.sum().backward()
     ref2 = module3.norm1(src + module3._sa_block(src)[0])
     ref2 = module3.norm2(module3._ff_block(ref2))
     assert torch.allclose(out3, ref2, atol=2e-7)
 
-    module3.return_log_probs(True)
+    module3.return_log_probs = True
     out4, _ = module3(src)
     out4.sum().backward()
     assert torch.allclose(out3, out4, atol=2e-7)
@@ -733,7 +735,7 @@ def test_decoder(device: torch.device) -> None:
     tgt = torch.rand((9, 5, d_model), device=device)
     memory = torch.rand((9, 5, d_model), device=device)
 
-    module1.return_log_probs(False)
+    module1.return_log_probs = False
     out1 = module1(tgt, memory)
     out1.sum().backward()
     ref = tgt
@@ -745,7 +747,7 @@ def test_decoder(device: torch.device) -> None:
     assert torch.allclose(out1[0], ref, atol=1e-6)
     assert out1.device == device
 
-    module1.return_log_probs(True)
+    module1.return_log_probs = True
     out2, _ = module1(tgt, memory)
     out2.sum().backward()
     assert out1.shape == out2.shape
@@ -757,7 +759,7 @@ def test_decoder(device: torch.device) -> None:
     )
     assert isinstance(module2.norm, nn.LayerNorm)
 
-    module2.return_log_probs(False)
+    module2.return_log_probs = False
     out3 = module2(tgt, memory)
     out3.sum().backward()
     ref2 = tgt
@@ -770,7 +772,7 @@ def test_decoder(device: torch.device) -> None:
     assert torch.allclose(out3[0], ref2, atol=1e-6)
     assert out3.device == device
 
-    module2.return_log_probs(True)
+    module2.return_log_probs = True
     out4, _ = module2(tgt, memory)
     out4.sum().backward()
     assert out3.shape == out4.shape
@@ -805,7 +807,7 @@ def test_encoder(device: torch.device) -> None:
 
     src = torch.rand((9, 5, d_model), device=device)
 
-    module1.return_log_probs(False)
+    module1.return_log_probs = False
     out1 = module1(src)
     out1.sum().backward()
     ref = src
@@ -817,7 +819,7 @@ def test_encoder(device: torch.device) -> None:
     assert torch.allclose(out1[0], ref, atol=1e-6)
     assert out1.device == device
 
-    module1.return_log_probs(True)
+    module1.return_log_probs = True
     out2, _ = module1(src)
     out2.sum().backward()
     assert out1.shape == out2.shape
@@ -829,7 +831,7 @@ def test_encoder(device: torch.device) -> None:
     )
     assert isinstance(module2.norm, nn.LayerNorm)
 
-    module2.return_log_probs(False)
+    module2.return_log_probs = False
     out3 = module2(src)
     out3.sum().backward()
     ref2 = src
@@ -842,7 +844,7 @@ def test_encoder(device: torch.device) -> None:
     assert torch.allclose(out3[0], ref2, atol=1e-6)
     assert out3.device == device
 
-    module2.return_log_probs(True)
+    module2.return_log_probs = True
     out4, _ = module2(src)
     out4.sum().backward()
     assert out3.shape == out4.shape
@@ -1315,21 +1317,25 @@ def test_transformer(
                 assert (
                     layer._return_log_probs == return_log_probs
                 ), f"{layer.__class__.__name__}"
-            if isinstance(layer, VIBaseModule):
-                # Check vardist and prior propagate to all VIBaseLayers
-                for var_dist, prior in zip(layer.variational_distribution, layer.prior):
-                    assert isinstance(var_dist, type(variational_distribution))
-                    assert isinstance(prior, type(prior))
-                # Check bias propagates to all VIBaseLayers
-                if isinstance(layer, VILinear):
-                    bias_mean_name = layer.variational_parameter_name("bias", "mean")
-                    bias_log_std_name = layer.variational_parameter_name(
-                        "bias", "log_std"
-                    )
-                    assert hasattr(layer, bias_mean_name) == bias
-                    assert hasattr(layer, bias_log_std_name) == bias
-                else:
-                    assert layer.bias == bias
+                if layer.random_variables is not None:
+                    # Check vardist and prior propagate to all VIBaseLayers
+                    for var_dist, prior in zip(
+                        layer.variational_distribution, layer.prior
+                    ):
+                        assert isinstance(var_dist, type(variational_distribution))
+                        assert isinstance(prior, type(prior))
+                    # Check bias propagates to all VIBaseLayers
+                    if isinstance(layer, VILinear):
+                        bias_mean_name = layer.variational_parameter_name(
+                            "bias", "mean"
+                        )
+                        bias_log_std_name = layer.variational_parameter_name(
+                            "bias", "log_std"
+                        )
+                        assert hasattr(layer, bias_mean_name) == bias
+                        assert hasattr(layer, bias_log_std_name) == bias
+                    else:
+                        assert layer.bias == bias
 
             if isinstance(layer, nn.LayerNorm):
                 assert layer.eps == layer_norm_eps

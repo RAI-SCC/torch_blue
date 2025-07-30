@@ -160,15 +160,10 @@ probability of the actually used weights (which are sampled on each forward pass
 variational and prior distribution. Since it is quite inefficient to save the samples
 these log probabilities are evaluated during the forward pass and returned by the model.
 Since this is only necessary for training it can be controlled with the argument
-return_log_probs. Once the model is initialized this flag can be changed with the method
-`VIModule.return_log_probs()`, which accepts one bool (default: `True`) and either
-enables (`True`) or disables (`False`) the returning of the log probabilities for all
-submodules.
+return_log_probs. Once the model is initialized this flag can be changed by setting
+`VIModule.return_log_probs`, which either enables (`True`) or disables (`False`) the
+returning of the log probabilities for all submodules.
 
-The internal indicator for this mode is `VIModule._return_log_probs`, which can be
-assumed to be identical for all modules in the same nested hierarchy. This can be
-manually broken, but we are all adults here: Always call `return_log_probs` on the top
-module in the hierarchy (and noone will get hurt).
 When creating advance `VIModule`s you will need to consider, that provided modules
 return a tuple during training. The first element of this tuple is the usual model
 output. The second element is a Tensor containing two values: prior_log_prob and

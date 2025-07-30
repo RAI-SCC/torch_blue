@@ -8,7 +8,7 @@ from torch import Tensor
 from torch.nn import Module
 
 from . import _globals
-from .base import VIBaseModule, VIModule
+from .base import VIModule
 from .predictive_distributions import PredictiveDistribution
 from .priors import MeanFieldNormalPrior, Prior, UniformPrior
 from .variational_distributions import (
@@ -279,7 +279,9 @@ class AnalyticalKullbackLeiblerLoss(Module):
 
         if divergence_type is None:
             for module in model.modules():
-                if not isinstance(module, VIBaseModule):
+                if (
+                    not hasattr(module, "random_variables")
+                ) or module.random_variables is None:
                     continue
                 for prior, var_dist in zip(
                     module.prior, module.variational_distribution
@@ -298,7 +300,7 @@ class AnalyticalKullbackLeiblerLoss(Module):
             raise ValueError("Provided model is not bayesian.")
 
         self.kl_module: KullbackLeiblerModule = divergence_type
-        model.return_log_probs(False)
+        model.return_log_probs = False
         self.model = model
 
         self.log: Optional[Dict[str, List[Tensor]]] = None
@@ -362,7 +364,9 @@ class AnalyticalKullbackLeiblerLoss(Module):
         """
         total_kl = None
         for module in self.model.modules():
-            if not isinstance(module, VIBaseModule):
+            if (
+                not hasattr(module, "random_variables")
+            ) or module.random_variables is None:
                 continue
 
             for var, prior in zip(module.random_variables, module.prior):

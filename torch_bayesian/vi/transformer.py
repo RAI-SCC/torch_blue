@@ -7,7 +7,7 @@ from torch.nn import LayerNorm, Module, ModuleList, ReLU
 from torch.nn import functional as F  # noqa: N812
 from torch.nn.modules.transformer import _detect_is_causal_mask, _get_seq_len
 
-from .base import VIBaseModule, VIModule
+from .base import VIModule
 from .linear import VILinear
 from .priors import MeanFieldNormalPrior, Prior
 from .sequential import VIResidualConnection
@@ -15,7 +15,7 @@ from .utils.common_types import VIkwargs, VIReturn, _prior_any_t, _vardist_any_t
 from .variational_distributions import MeanFieldNormalVarDist, VariationalDistribution
 
 
-class VIMultiheadAttention(VIBaseModule):
+class VIMultiheadAttention(VIModule):
     """
     Allows the model to jointly attend to information from different representation subspaces.
 

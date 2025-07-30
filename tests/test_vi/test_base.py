@@ -1,5 +1,5 @@
 import math
-from typing import Any, Tuple, Union
+from typing import Any, Tuple, Union, cast
 from warnings import filterwarnings
 
 import pytest
@@ -7,7 +7,7 @@ import torch
 from torch import Tensor
 from torch.nn import Module
 
-from torch_bayesian.vi import VIBaseModule, VIModule
+from torch_bayesian.vi import VIModule
 from torch_bayesian.vi.priors import Prior
 from torch_bayesian.vi.variational_distributions import VariationalDistribution
 
@@ -73,9 +73,9 @@ def test_sampled_forward(device: torch.device) -> None:
 
 
 def test_name_maker() -> None:
-    """Test VIBaseModule.variational_parameter_name."""
-    assert VIBaseModule.variational_parameter_name("a", "b") == "_a_b"
-    assert VIBaseModule.variational_parameter_name("vw", "xz") == "_vw_xz"
+    """Test VIModule.variational_parameter_name."""
+    assert VIModule.variational_parameter_name("a", "b") == "_a_b"
+    assert VIModule.variational_parameter_name("vw", "xz") == "_vw_xz"
 
 
 def test_vibasemodule(device: torch.device) -> None:
@@ -106,7 +106,7 @@ def test_vibasemodule(device: torch.device) -> None:
         def log_prob(self, x: Tensor) -> Tensor:
             pass
 
-    module = VIBaseModule(var_dict1, TestDistribution(), TestPrior(), device=device)
+    module = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)
 
     for var in var_dict1:
         for param in var_params:
@@ -134,7 +134,7 @@ def test_vibasemodule(device: torch.device) -> None:
         UserWarning,
         match=r'Module \[TestPrior\] is missing the "reset_parameters" function.*',
     ):
-        _ = VIBaseModule(
+        _ = VIModule(
             var_dict1,
             TestDistribution(),
             TestPrior(),
@@ -146,24 +146,18 @@ def test_vibasemodule(device: torch.device) -> None:
         AssertionError,
         match=r"Provide either exactly one variational distribution or exactly one for each random variable",
     ):
-        _ = VIBaseModule(
-            var_dict1, [TestDistribution()] * 3, TestPrior(), device=device
-        )
+        _ = VIModule(var_dict1, [TestDistribution()] * 3, TestPrior(), device=device)
 
     with pytest.raises(
         AssertionError,
         match=r"Provide either exactly one prior distribution or exactly one for each random variable",
     ):
-        _ = VIBaseModule(
-            var_dict1, TestDistribution(), [TestPrior()] * 3, device=device
-        )
+        _ = VIModule(var_dict1, TestDistribution(), [TestPrior()] * 3, device=device)
 
-    _ = VIBaseModule(
-        var_dict1, [TestDistribution()] * 2, [TestPrior()] * 2, device=device
-    )
+    _ = VIModule(var_dict1, [TestDistribution()] * 2, [TestPrior()] * 2, device=device)
 
     filterwarnings("error")
-    module = VIBaseModule(
+    module = VIModule(
         var_dict1, TestDistribution(), TestPrior(), rescale_prior=True, device=device
     )
     for prior in module.prior:
@@ -197,7 +191,7 @@ def test_get_variational_parameters(device: torch.device) -> None:
         def log_prob(self, x: Tensor) -> Tensor:
             pass
 
-    module = VIBaseModule(var_dict1, TestDistribution(), TestPrior(), device=device)
+    module = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)
 
     for variable in ("weight", "bias"):
         params_list = module.get_variational_parameters(variable)
@@ -238,7 +232,8 @@ def test_get_log_probs(device: torch.device) -> None:
         def log_prob(self, x: Tensor) -> Tensor:
             return torch.tensor(2.0, device=x.device)
 
-    module = VIBaseModule(var_dict1, TestDistribution(), TestPrior(), device=device)
+    module = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)
+    module.random_variables = cast(Tuple[str, ...], module.random_variables)
     params = [torch.empty(1, device=device)] * len(module.random_variables)
     prior_log_prob, variational_log_prob = module.get_log_probs(params)
 
@@ -262,7 +257,7 @@ def test_log_prob_setting(device: torch.device) -> None:
             return self.module(x)
 
     module1 = Test(in_features, out_features)
-    module1.return_log_probs()
+    module1.return_log_probs = True
     assert module1._return_log_probs is True
     assert module1.module._return_log_probs is True
     sample1 = torch.randn(4, in_features, device=device)
@@ -273,7 +268,7 @@ def test_log_prob_setting(device: torch.device) -> None:
     assert out[1].shape == (10, 2)
     assert out[1].device == device
 
-    module1.return_log_probs(False)
+    module1.return_log_probs = False
     assert module1._return_log_probs is False
     assert module1.module._return_log_probs is False
     sample1 = torch.randn(4, in_features, device=device)

@@ -51,7 +51,7 @@ def test_overfitting() -> None:
     plt.show()
 
     test_batch = data[0]  # torch.randn(5, *data_shape)
-    model.return_log_probs(False)
+    model.return_log_probs = False
     pred_samples = model(test_batch, samples=samples)
     prediction = predictive_distribution.predictive_parameters_from_samples(
         pred_samples

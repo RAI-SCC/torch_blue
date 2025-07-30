@@ -1,16 +1,16 @@
-from typing import Optional
+from typing import Dict, Optional, Tuple, cast
 
 import torch
 from torch import Tensor
 from torch.nn import functional as F  # noqa: N812
 
-from .base import VIBaseModule
+from .base import VIModule
 from .priors import MeanFieldNormalPrior
 from .utils.common_types import VIkwargs, VIReturn, _prior_any_t, _vardist_any_t
 from .variational_distributions import MeanFieldNormalVarDist
 
 
-class VILinear(VIBaseModule):
+class VILinear(VIModule):
     """
     Applies an affine linear transformation to the incoming data: :math:`y = xA^T + b`.
 
@@ -57,15 +57,11 @@ class VILinear(VIBaseModule):
         self.in_features = in_features
         self.out_features = out_features
 
-        if bias:
-            self.random_variables = ("weight", "bias")
-        else:
-            self.random_variables = ("weight",)
-
-        variable_shapes = dict(
-            weight=(out_features, in_features),
-            bias=(out_features,),
+        variable_shapes: Dict[str, Tuple[int, ...]] = dict(
+            weight=(out_features, in_features)
         )
+        if bias:
+            variable_shapes["bias"] = (out_features,)
 
         super().__init__(variable_shapes=variable_shapes, **vikwargs)
 
@@ -117,7 +113,7 @@ class VILinear(VIBaseModule):
         """Perform the stable fast path for Gaussian variational distribution."""
         weight_mean = self._weight_mean
         weight_variance = (2 * self._weight_log_std).exp()
-        if "bias" in self.random_variables:
+        if "bias" in cast(Tuple[str, ...], self.random_variables):
             bias_mean = self._bias_mean
             bias_variance = (2 * self._bias_log_std).exp()
         else:

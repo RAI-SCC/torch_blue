@@ -7,7 +7,7 @@ from .analytical_kl_loss import (
     NormalNormalDivergence,
     UniformNormalDivergence,
 )
-from .base import VIBaseModule, VIModule
+from .base import VIModule
 from .conv import VIConv1d, VIConv2d, VIConv3d
 from .kl_loss import KullbackLeiblerLoss
 from .linear import VILinear
@@ -25,7 +25,6 @@ from .utils.common_types import VIkwargs
 __all__ = [
     "AnalyticalKullbackLeiblerLoss",
     "KullbackLeiblerLoss",
-    "VIBaseModule",
     "VIConv1d",
     "VIConv2d",
     "VIConv3d",

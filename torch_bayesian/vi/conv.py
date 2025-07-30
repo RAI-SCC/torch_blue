@@ -6,13 +6,13 @@ from torch.nn import functional as F  # noqa: N812
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
 
-from .base import VIBaseModule
+from .base import VIModule
 from .priors import MeanFieldNormalPrior
 from .utils.common_types import VIkwargs, VIReturn, _prior_any_t, _vardist_any_t
 from .variational_distributions import MeanFieldNormalVarDist
 
 
-class _VIConvNd(VIBaseModule):
+class _VIConvNd(VIModule):
     __constants__ = [
         "stride",
         "padding",

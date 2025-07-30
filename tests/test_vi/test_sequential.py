@@ -36,8 +36,8 @@ def test_sequential(device: torch.device) -> None:
     assert model1._return_log_probs
 
     module_list = list(module_dict.values())
-    module_list[0].return_log_probs(False)
-    module_list[2].return_log_probs(False)
+    module_list[0].return_log_probs = False
+    module_list[2].return_log_probs = False
 
     model2 = VISequential(*module_list)
     assert not model2._return_log_probs
@@ -51,8 +51,8 @@ def test_sequential(device: torch.device) -> None:
 
     sample = torch.randn(2, in_features, device=device)
 
-    model1.return_log_probs()
-    model2.return_log_probs()
+    model1.return_log_probs = True
+    model2.return_log_probs = True
     out1, _ = model1(sample, samples=5)
     out2, _ = model2(sample, samples=5)
     assert out1.shape == (5, 2, out_features)
@@ -60,8 +60,8 @@ def test_sequential(device: torch.device) -> None:
     assert out2.shape == (5, 2, out_features)
     assert out2.device == device
 
-    model1.return_log_probs(False)
-    model2.return_log_probs(False)
+    model1.return_log_probs = False
+    model2.return_log_probs = False
     out1 = model1(sample, samples=4)
     out2 = model2(sample, samples=4)
     assert out1.shape == (4, 2, out_features)
@@ -92,7 +92,7 @@ def test_residual_connection(device: torch.device) -> None:
 
     module = VIResidualConnection(Test())
     broken_module = VIResidualConnection(Test2())
-    module.return_log_probs()
+    module.return_log_probs = True
     sample1 = torch.randn(6, 3, device=device)
     out1, lps1 = module(sample1, samples=3)
     plp1 = lps1[:, 0]
@@ -110,8 +110,8 @@ def test_residual_connection(device: torch.device) -> None:
     assert plp1.device == device
     assert vlp1.device == device
 
-    module.return_log_probs(False)
-    broken_module.return_log_probs(False)
+    module.return_log_probs = False
+    broken_module.return_log_probs = False
     sample2 = torch.randn(3, 6, device=device)
     out2 = module(sample2, samples=5)
     assert out2.device == device
