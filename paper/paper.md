@@ -65,3 +65,63 @@ control of the prior, variational distribution and several other advanced option
 Furthermore, it is set up to be easily extensible with custom layers and distributions.
 All base classes feature post initialization checks that provide specific feedback on
 missing or misspecified required attributes, methods, and sometimes signatures.
+
+# Core design and features
+
+`torch_bayesian` is designed around two core aims:
+1. Ease of use, even for users with
+little to no experience with Bayesian statistics
+2. Flexibility and extensibility as required for research and exploration
+
+| torch.nn          | Linear   | Conv[N]D   | Transformer   | Sequential   |
+|-------------------|----------|------------|---------------|--------------|
+| torch_bayesian.vi | VILinear | VIConv[N]D | VITransformer | VISequential |
+
+While ease of use colors all design decisions it features most prominently in the
+`pytorch`-like interface. While currently only the most common layer types provided by
+`pytorch` are supported, corresponding Bayesian layers follow an analogous naming
+pattern and accept the same arguments as their `pytorch` version. Additionally, while
+there are minor differences the process of implementing custom layers is also very
+similar to `pytorch`.
+
+The additional arguments required to modify the Bayesian aspects of the layers are
+collected on a common group of keyword arguments called `VIkwargs`. These all use
+settings for mean field Gaussian variational inference with Gaussian prior as defaults
+allowing beginner users to implement simple, unoptimized models without worrying about
+Bayesian settings.
+
+**include torch tutorial example here?**
+
+While modular priors and predictive distributions are quite common even for packages
+with a simpler interface flexible variational distributions are much more challenging
+and are often restricted to mean field Gaussian. This is likely due to the fact that
+a generic variational distribution might require any number of different parameters and
+the number and shape of weight matrices can only be determined with knowledge of the
+specific combination of layer and variational distribution. This is overcome in
+`torch_bayesian` by having the layer provide the names and shapes of the required random
+variables (e.g. mean and bias) and dynamically creating the associated class attributes
+during initialization, when the variational distribution is known. The modules also
+provide methods to either return samples of all random variable or the name of each
+attribute for direct access.
+
+Another challenge is introduced by the prior term of the ELBO loss. It can only be
+calculated analytically for a very limited set of priors and variational distributions.
+However, like the rest of the ELBO it can be estimated from the log probability of the
+sampled weights under these two distributions. Therefore, `torch_bayesian` provides the
+option to return these as part of the forward pass. As a result, the only requirement on
+custom distributions is that there needs to be a method to differentiably sample from a
+variational distribution and that for both priors and variational distributions the log
+probability of a given sample can be computed.
+
+Finally, in the age of large Neural Networks scalability and efficiency are always a
+concern. While BNNs are currently scaled to very large models and this is not a primary
+target of `torch_bayesian` it is kept in mind wherever possible. A core feature for this
+purpose is GPU compatibility, which comes with the challenge of various backends and
+device types. We address this by performing all core operations, in particular the layer
+forward passes with the methods from `torch.nn.functional`. This outsources backend
+maintenance to a large, community supported library.
+
+Another, efficiency optimization is the automatic vectorization of the sampling process.
+`torch_bayesian` adds an additional wrapper around the forward pass, which catches the
+optional `samples` argument, creates the specified number of samples (default: 10), and
+vectorizes the forward pass via `pytorch`s `vmap` method.
