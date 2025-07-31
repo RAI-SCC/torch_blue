@@ -1,4 +1,3 @@
-# Sample parallel implementation of a training loop with the entso_e dataset and a fully connected model architecture.
 import torch
 from torch import Tensor, nn
 import torch_bayesian.vi as vi
@@ -11,6 +10,8 @@ import os
 import torch.multiprocessing as mp
 from torchvision.transforms import ToTensor
 from torchvision import datasets
+import numpy as np
+import random
 sampling_state = None
 train_loss_list = []
 test_loss_list = []
@@ -88,6 +89,23 @@ def cleanup():
     """
     dist.destroy_process_group()
 
+def get_all_rng_state(device):
+    device = torch.device(device)
+    if device.type == "cpu":
+        return torch.get_rng_state()
+    else:
+        # Use device.index or default to 0
+        device_index = device.index if device.index is not None else torch.cuda.current_device()
+        return torch.cuda.get_rng_state(device_index)
+
+def set_all_rng_state(device, state):
+    device = torch.device(device)
+    if device.type == "cpu":
+        torch.set_rng_state(state)
+    else:
+        device_index = device.index if device.index is not None else torch.cuda.current_device()
+        torch.cuda.set_rng_state(state, device_index)
+
 
 def train(
         dataloader: DataLoader,
@@ -106,19 +124,20 @@ def train(
 
     for batch, (x, y) in enumerate(dataloader):
         x, y = x.to(device), y.to(device)
-        # Switch to process specific randomness
-        regular_state = torch.get_rng_state()
+        # Switch to process specific randomness        
+        regular_state = get_all_rng_state(device)
         if sampling_state == None:
             torch.manual_seed(rank)
+            torch.cuda.manual_seed(rank)
         else:
-            torch.set_rng_state(sampling_state)
+            set_all_rng_state(device, sampling_state)
 
         # Get predictions
         pred = model(x, samples=sample_num)
 
         # Switch to general randomness
-        sampling_state = torch.get_rng_state()
-        torch.set_rng_state(regular_state)
+        sampling_state = get_all_rng_state(device)
+        set_all_rng_state(device, regular_state)
 
         mean_model_output = pred.mean(dim=0)
         probs = F.softmax(mean_model_output, dim=1)
@@ -164,17 +183,18 @@ def test(dataloader: DataLoader,
 
             x, y = x.to(device), y.to(device)
 
-            regular_state = torch.get_rng_state()
+            regular_state = get_all_rng_state(device)
             if sampling_state == None:
                 torch.manual_seed(rank)
+                torch.cuda.manual_seed(rank)
             else:
-                torch.set_rng_state(sampling_state)
+                set_all_rng_state(device, sampling_state)
 
             samples = model(x, samples=sample_num)
 
 
-            sampling_state = torch.get_rng_state()
-            torch.set_rng_state(regular_state)
+            sampling_state = get_all_rng_state(device)
+            set_all_rng_state(device, regular_state)
 
 
             samples_global = samples
@@ -182,7 +202,7 @@ def test(dataloader: DataLoader,
 
             if rank == 0:
                 samples_global /= world_size
-                mean_model_output = torch.tensor(samples_global, dtype=samples.dtype).mean(dim=0)
+                mean_model_output = samples_global.mean(dim=0)
                 samples = F.softmax(mean_model_output, dim=1)
                 correct += (samples.argmax(1) == y).type(torch.float).sum().item()
                 test_loss += loss_fn(samples, y).item()
@@ -209,11 +229,20 @@ if __name__ == "__main__":
     torch.device(set_device)
     
     batch_size = 64
-    epochs = 10
-    random_seed = 42
+    epochs = 5
     all_sample_num = 32
     print(all_sample_num)
     lr = 1e-3
+
+    seed = 42
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     
     training_data = datasets.CIFAR10(
     root='./data', train=True, download=True, transform=ToTensor())
@@ -238,6 +267,8 @@ if __name__ == "__main__":
 
     print(f"Using {device} device")
     print(model)
+    #pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
     loss_fn = F.cross_entropy
     optimizer = torch.optim.Adam(params=model.parameters(), lr=1e-3, weight_decay=0)
 
@@ -245,9 +276,7 @@ if __name__ == "__main__":
     print(sample_num)
     
     setup(rank, world_size)
-    
-    # Do stuff here
-    torch.manual_seed(random_seed)
+
     for t in range(epochs):
         if rank == 0:
             print(f"Epoch {t + 1}\n-------------------------------")

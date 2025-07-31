@@ -1,4 +1,3 @@
-# Sample parallel implementation of a training loop with the entso_e dataset and a fully connected model architecture.
 import torch
 from torch import Tensor, nn
 import torch_bayesian.vi as vi
@@ -11,7 +10,10 @@ import os
 import torch.multiprocessing as mp
 from torchvision.transforms import ToTensor
 from torchvision import datasets
+import numpy as np
+import random
 sampling_state = None
+from timing_utils import cuda_time_function, print_cuda_timing_summary
 train_loss_list = []
 test_loss_list = []
 
@@ -77,6 +79,24 @@ def cleanup():
     dist.destroy_process_group()
 
 
+def get_all_rng_state(device):
+    device = torch.device(device)
+    if device.type == "cpu":
+        return torch.get_rng_state()
+    else:
+        # Use device.index or default to 0
+        device_index = device.index if device.index is not None else torch.cuda.current_device()
+        return torch.cuda.get_rng_state(device_index)
+
+def set_all_rng_state(device, state):
+    device = torch.device(device)
+    if device.type == "cpu":
+        torch.set_rng_state(state)
+    else:
+        device_index = device.index if device.index is not None else torch.cuda.current_device()
+        torch.cuda.set_rng_state(state, device_index)
+
+
 def train(
         dataloader: DataLoader,
         model: vi.VIModule,
@@ -95,18 +115,19 @@ def train(
     for batch, (x, y) in enumerate(dataloader):
         x, y = x.to(device), y.to(device)
         # Switch to process specific randomness
-        regular_state = torch.get_rng_state()
+        regular_state = get_all_rng_state(device)
         if sampling_state == None:
             torch.manual_seed(rank)
+            torch.cuda.manual_seed(rank)
         else:
-            torch.set_rng_state(sampling_state)
+            set_all_rng_state(device, sampling_state)
 
         # Get predictions
         pred = model(x, samples=sample_num)
 
         # Switch to general randomness
-        sampling_state = torch.get_rng_state()
-        torch.set_rng_state(regular_state)
+        sampling_state = get_all_rng_state(device)
+        set_all_rng_state(device, regular_state)
 
         mean_model_output = pred.mean(dim=0)
         probs = F.softmax(mean_model_output, dim=1)
@@ -152,17 +173,18 @@ def test(dataloader: DataLoader,
 
             x, y = x.to(device), y.to(device)
 
-            regular_state = torch.get_rng_state()
+            regular_state = get_all_rng_state(device)
             if sampling_state == None:
                 torch.manual_seed(rank)
+                torch.cuda.manual_seed(rank)
             else:
-                torch.set_rng_state(sampling_state)
+                set_all_rng_state(device, sampling_state)
 
             samples = model(x, samples=sample_num)
 
 
-            sampling_state = torch.get_rng_state()
-            torch.set_rng_state(regular_state)
+            sampling_state = get_all_rng_state(device)
+            set_all_rng_state(device, regular_state)
 
 
             samples_global = samples
@@ -196,12 +218,22 @@ if __name__ == "__main__":
     set_device = "cuda:" + str(local_rank)
     torch.device(set_device)
     
-    batch_size = 32
+    batch_size = 64
     epochs = 5
     random_seed = 42
     all_sample_num = 32
     print(all_sample_num)
     lr = 1e-3
+
+    seed = 42
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     
     training_data = datasets.CIFAR10(
     root='./data', train=True, download=True, transform=ToTensor())
@@ -235,13 +267,13 @@ if __name__ == "__main__":
     setup(rank, world_size)
     
     # Do stuff here
-    torch.manual_seed(random_seed)
     for t in range(epochs):
         if rank == 0:
             print(f"Epoch {t + 1}\n-------------------------------")
         model = train(train_dataloader, model, loss_fn, optimizer, sample_num, train_loss_list, rank, world_size,device)
         test(test_dataloader, model, loss_fn, sample_num, test_loss_list,rank, world_size, device)
 
+    #print_cuda_timing_summary()
     cleanup()
     
 
