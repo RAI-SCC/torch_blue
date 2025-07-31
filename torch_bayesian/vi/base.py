@@ -43,19 +43,19 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     """
     Base class for Modules using Variational Inference.
 
-    Conceptually, this class takes the place of :class:`torch.nn.Module` for BNNs. It is
-    used for any module that has no Bayesian parameters of its own. If the module should
-    have Bayesian parameters, use :class:`~.VIBaseModule` instead, which is an extension
-    of this class.
+    This class takes the place of :class:`torch.nn.Module` for BNNs. It is used for any
+    Bayesian module. While a :class:`torch.nn.Module` may be contained within a
+    :class:`VIModule` and vice versa there should always be a singular :class:`VIModule`
+    containing all others to avoid superfluous sampling dimensions.
 
     :class:`~.VIModule` contains some additional functionality. Firstly, it keeps track
     of whether the model should return the log probability of the sampled weight (i.e.,
-    the log likelihood to obtain these specific values when sampling from the prior or
+    the log probability to obtain these specific values when sampling from the prior or
     variational distribution).These are needed for loss calculation by
     :class:`~.KullbackLeiblerLoss`. If your module contains multiple submodules make
     sure to add all log probabilities and return them, if required by
-    :attr:`~self._return_log_probs`. This attribute can be changed with
-    :meth:`~return_log_probs`.
+    :attr:`~self.return_log_probs`. For evaluation, :attr:`~self.return_log_probs` can
+    be set to `False`.
 
     Secondly, a model of nested :class:`~.VIModule` automatically identifies the
     outermost module and sets the :attr:`~self._has_sampling_responsibility` flag. This
@@ -67,6 +67,44 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     correctly with the vectorization and should not be used in :class:`~.VIModule`.
     Most importantly, this affects the operators ``+=``, ``-=``, ``*=``, and ``/=``.
     However, their longform versions work fine, e.g. ``a = a + b`` instead of ``a += b``.
+
+    If the constructed module does not have its own weights, :meth:`super().__init__()`
+    is called without arguments. In this setting the methods :meth:`get_log_probs`,
+    :meth:`get_variational_parameters`, :meth:`reset_parameters`, and
+    :meth:`sample_variables` cannot be used and raise
+    :exc:`~torch_bayesian.vi.utils.NoVariablesError`.
+
+    Any weight matrix in a BNN may require multiple parameters (e.g. mean and std).
+    These are stored in separate attributes and therefore cannot be created without
+    knowledge of the variational distribution. Therefore, only their shapes are provided
+    to :meth:`super().__init__()` via the `variable_shapes` argument. This should be a
+    dictionary, where the keys are the random variable names as strings (e.g. "weight"
+    and "bias") and the values are tuples of integers specifying the shape.
+
+    .. NOTE:: The insertion order of the dictionary becomes the order
+        :attr:`self.random_variables` and therefore also the oder the variables are
+        returned in by :meth:`~self.sample_variables`. This relies on deterministic
+        3.7+ key ordering.
+
+    The names of the created attributes can be discovered using the
+    :meth:`~self.variational_parameter_name()` method.
+
+    Additionally, a module with random variables accepts arguments from
+    :class:`~torch_bayesian.vi.VIkwargs` as keyword arguments. If a list of priors or
+    variational distributions is provided they are again assumed to follow the insertion
+    order as described above.
+
+    Parameters
+    ----------
+    variable_shapes: Optional[Dict[str, Tuple[int, ...]]], default = None
+        Shape specifications for all random variables. Keys are turned into
+        :attr:`self.random_variables` in insertion order.
+
+    Raises
+    ------
+    NoVariablesError
+        If the modul does not have Bayesian parameters of its own and a method requiring
+        them is called.
     """
 
     forward: Callable[..., VIReturn] = _forward_unimplemented
@@ -143,7 +181,14 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        """Reset or initialize the parameters of the Module."""
+        """
+        Reset or initialize the parameters of the Module.
+
+        Raises
+        ------
+        NoVariablesError
+            If the module does not have parameters of its own.
+        """
         if self.random_variables is None:
             raise NoVariablesError(
                 f"{self.__class__.__name__} has no random variables to reset"
@@ -195,6 +240,11 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         List[Tensor]
             All variational parameters for the specified variable in the order specified
             by the associated variational distribution.
+
+        Raises
+        ------
+        NoVariablesError
+            If the module does not have parameters of its own.
         """
         if self.random_variables is None:
             raise NoVariablesError(
@@ -225,6 +275,11 @@ class VIModule(Module, metaclass=PostInitCallMeta):
             A Tensor containing two values: the the log probability of the sampled
             values, if they were drawn from the prior or variational distribution (in
             that order).
+
+        Raises
+        ------
+        NoVariablesError
+            If the module does not have parameters of its own.
         """
         if self.random_variables is None:
             raise NoVariablesError(f"{self.__class__.__name__} has no random variables")
@@ -263,6 +318,11 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         -------
         List[Tensor]
             The sampled variables.
+
+        Raises
+        ------
+        NoVariablesError
+            If the module does not have parameters of its own.
         """
         if self.random_variables is None:
             raise NoVariablesError(
@@ -546,36 +606,3 @@ class VIModule(Module, metaclass=PostInitCallMeta):
                         continue
             # raise exception raised in try block
             raise
-
-
-#    """
-#    Base class for VIModules that draw weights from a variational distribution.
-#
-#    Conceptually, this class takes the place of ``torch.nn.Module`` for BNNs.It is used
-#    for any module that has Bayesian parameters of its own. If the module should not have
-#    Bayesian parameters, use ``VIModule`` instead.
-#
-#    It dynamically initializes a separate attribute for each parameter of each random
-#    variable.
-#
-#    Random variables are specified in by ``self.random_variables`` and should be set
-#    before `super().__init__` is called. Generally, this is any Tensor that would be a
-#    ``Parameter`` in pytorch, like the `weight` and `bias` Tensor. The Tensor shape is
-#    specified by the argument `variable_shapes`.
-#
-#    For each random variable a number of attributes are initialized according to the
-#    number of entries of `variational_parameters` of the associated
-#    :func:`VariationalDistribution<torch_bayesian.vi.base.VariationalDistribution>`.
-#
-#    The names of these attributes can be discovered using the
-#    ``variational_parameter_name`` method.
-#
-#    This class accepts :func:`VIkwargs<torch_bayesian.vi.VIkwargs>` , but has no default
-#    for `variational_distribution` and `prior`.
-#
-#    Parameters
-#    ----------
-#    variable_shapes: Dict[str, Tuple[int, ...]]
-#        Shape specifications for all random variables. Keys should match the values in
-#        `self.random_variables`. Additional keys are ignored.
-#    """
