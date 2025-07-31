@@ -353,25 +353,24 @@ def test_multihead_attention(
         )
     )
 
-    random_variable_shapes: Dict[str, Tuple[int, ...]] = {
-        "out_proj_weight": (embed_dim, embed_dim),
-    }
+    random_variable_shapes: Dict[str, Tuple[int, ...]] = dict()
+    if kdim is None and vdim is None:
+        use_separate_proj_weight = False
+        assert module.module._qkv_same_embed_dim
+        random_variable_shapes["in_proj_weight"] = (3 * embed_dim, embed_dim)
+    else:
+        use_separate_proj_weight = True
+        assert not module.module._qkv_same_embed_dim
+        random_variable_shapes["q_proj_weight"] = (embed_dim, embed_dim)
+        random_variable_shapes["k_proj_weight"] = (embed_dim, kdim or embed_dim)
+        random_variable_shapes["v_proj_weight"] = (embed_dim, vdim or embed_dim)
+    random_variable_shapes["out_proj_weight"] = (embed_dim, embed_dim)
     if bias:
         random_variable_shapes["in_proj_bias"] = (3 * embed_dim,)
         random_variable_shapes["out_proj_bias"] = (embed_dim,)
     if add_bias_kv:
         random_variable_shapes["bias_k"] = (1, 1, embed_dim)
         random_variable_shapes["bias_v"] = (1, 1, embed_dim)
-    if kdim is not None or vdim is not None:
-        use_separate_proj_weight = True
-        assert not module.module._qkv_same_embed_dim
-        random_variable_shapes["q_proj_weight"] = (embed_dim, embed_dim)
-        random_variable_shapes["k_proj_weight"] = (embed_dim, kdim or embed_dim)
-        random_variable_shapes["v_proj_weight"] = (embed_dim, vdim or embed_dim)
-    else:
-        use_separate_proj_weight = False
-        assert module.module._qkv_same_embed_dim
-        random_variable_shapes["in_proj_weight"] = (3 * embed_dim, embed_dim)
 
     assert module.module.embed_dim == embed_dim
     assert module.module.kdim == (kdim or embed_dim)

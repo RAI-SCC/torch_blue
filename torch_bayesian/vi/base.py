@@ -92,12 +92,9 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
 
-        if self.random_variables is None:
-            return
         if variable_shapes is None:
-            raise ValueError(
-                "`variable_shapes` cannot be None if the module has random variables"
-            )
+            return
+        self.random_variables = tuple(variable_shapes.keys())
 
         if isinstance(variational_distribution, List):
             assert (

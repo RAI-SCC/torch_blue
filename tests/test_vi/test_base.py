@@ -132,7 +132,7 @@ def test_vibasemodule(device: torch.device) -> None:
     # Test prior based initialization
     with pytest.warns(
         UserWarning,
-        match=r'Module \[TestPrior\] is missing the "reset_parameters" function.*',
+        match=r'Module \[TestPrior\] is missing the "reset_parameters" method*',
     ):
         _ = VIModule(
             var_dict1,

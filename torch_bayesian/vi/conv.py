@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 from torch import Tensor
@@ -136,16 +136,12 @@ class _VIConvNd(VIModule):
         else:
             weight_shape = (out_channels, in_channels // groups, *kernel_size)
 
-        bias_shape = (out_channels,)
-        variable_shapes = dict(
+        variable_shapes: Dict[str, Tuple[int, ...]] = dict(
             weight=weight_shape,
-            bias=bias_shape,
         )
-
         if bias:
-            self.random_variables = ("weight", "bias")
-        else:
-            self.random_variables = ("weight",)
+            bias_shape = (out_channels,)
+            variable_shapes["bias"] = bias_shape
 
         super().__init__(variable_shapes=variable_shapes, **vikwargs)
 

@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, Optional, Tuple, cast
 
 import torch
 from torch import Tensor
@@ -87,28 +87,21 @@ class VIMultiheadAttention(VIModule):
         ), "embed_dim must be divisible by num_heads"
 
         variables: Dict[str, Tuple[int, ...]] = dict()
-        random_variables: List[str] = []
         if not self._qkv_same_embed_dim:
             variables["q_proj_weight"] = (embed_dim, embed_dim)
             variables["k_proj_weight"] = (embed_dim, self.kdim)
             variables["v_proj_weight"] = (embed_dim, self.vdim)
-            random_variables.extend(["q_proj_weight", "k_proj_weight", "v_proj_weight"])
         else:
             variables["in_proj_weight"] = (3 * embed_dim, embed_dim)
-            random_variables.append("in_proj_weight")
         variables["out_proj_weight"] = (embed_dim, embed_dim)
-        random_variables.append("out_proj_weight")
         if bias:
             variables["in_proj_bias"] = (3 * embed_dim,)
             variables["out_proj_bias"] = (embed_dim,)
-            random_variables.extend(["in_proj_bias", "out_proj_bias"])
 
         if add_bias_kv:
             variables["bias_k"] = (1, 1, embed_dim)
             variables["bias_v"] = (1, 1, embed_dim)
-            random_variables.extend(["bias_k", "bias_v"])
 
-        self.random_variables = tuple(random_variables)
         self.add_kv_bias = add_bias_kv
         self.add_zero_attn = add_zero_attn
         self.bias = bias
