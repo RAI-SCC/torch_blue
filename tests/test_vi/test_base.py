@@ -9,6 +9,7 @@ from torch.nn import Module
 
 from torch_bayesian.vi import VIModule
 from torch_bayesian.vi.priors import Prior
+from torch_bayesian.vi.utils import NoVariablesError
 from torch_bayesian.vi.variational_distributions import VariationalDistribution
 
 
@@ -78,8 +79,44 @@ def test_name_maker() -> None:
     assert VIModule.variational_parameter_name("vw", "xz") == "_vw_xz"
 
 
-def test_vibasemodule(device: torch.device) -> None:
-    """Test VIBaseModule."""
+def test_vimodule(device: torch.device) -> None:
+    """Test VIModule."""
+
+    # Test variant without parameters
+    class DummyModule(VIModule):
+        pass
+
+    module1 = DummyModule()
+
+    assert module1.random_variables is None
+    assert module1.return_log_probs
+    assert module1._has_sampling_responsibility
+    assert not hasattr(module1, "variational_distribution")
+    assert not hasattr(module1, "prior")
+    assert not hasattr(module1, "_kaiming_init")
+    assert not hasattr(module1, "_rescale_prior")
+    assert not hasattr(module1, "_prior_init")
+
+    with pytest.raises(
+        NoVariablesError, match="DummyModule has no random variables to reset"
+    ):
+        module1.reset_parameters()
+    with pytest.raises(
+        NoVariablesError, match="DummyModule has no variational parameters to get"
+    ):
+        module1.get_variational_parameters("weight")
+    with pytest.raises(NoVariablesError, match="DummyModule has no random variables"):
+        module1.get_log_probs(
+            [
+                torch.zeros(1),
+            ]
+        )
+    with pytest.raises(
+        NoVariablesError, match="DummyModule has no random variables to sample"
+    ):
+        module1.sample_variables()
+
+    # Test variant with parameters
     var_dict1 = dict(
         weight=(2, 3),
         bias=(3,),
@@ -106,28 +143,28 @@ def test_vibasemodule(device: torch.device) -> None:
         def log_prob(self, x: Tensor) -> Tensor:
             pass
 
-    module = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)
+    module2 = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)
 
     for var in var_dict1:
         for param in var_params:
-            param_name = module.variational_parameter_name(var, param)
-            assert hasattr(module, param_name)
-            assert getattr(module, param_name).device == device
+            param_name = module2.variational_parameter_name(var, param)
+            assert hasattr(module2, param_name)
+            assert getattr(module2, param_name).device == device
             if param != "mean":
                 # kaiming_init scales with sqrt(fan_in=3)
                 scale = 1 / math.sqrt(3)
                 index = var_params.index(param)
                 default = default_params[index]
-                assert (getattr(module, param_name) == default * scale).all()
+                assert (getattr(module2, param_name) == default * scale).all()
 
     # Check that reset_mean randomizes the means
-    weight_mean = module._weight_mean.clone()
-    bias_mean = module._bias_mean.clone()
+    weight_mean = module2._weight_mean.clone()
+    bias_mean = module2._bias_mean.clone()
 
-    module.reset_parameters()
+    module2.reset_parameters()
 
-    assert not (module._weight_mean == weight_mean).all()
-    assert not (module._bias_mean == bias_mean).all()
+    assert not (module2._weight_mean == weight_mean).all()
+    assert not (module2._bias_mean == bias_mean).all()
 
     # Test prior based initialization
     with pytest.warns(
@@ -157,10 +194,10 @@ def test_vibasemodule(device: torch.device) -> None:
     _ = VIModule(var_dict1, [TestDistribution()] * 2, [TestPrior()] * 2, device=device)
 
     filterwarnings("error")
-    module = VIModule(
+    module2 = VIModule(
         var_dict1, TestDistribution(), TestPrior(), rescale_prior=True, device=device
     )
-    for prior in module.prior:
+    for prior in module2.prior:
         assert prior.mean == 1 / math.sqrt(3 * 3)  # type: ignore [attr-defined]
         assert prior.std == 2 / math.sqrt(3 * 3)  # type: ignore [attr-defined]
 
