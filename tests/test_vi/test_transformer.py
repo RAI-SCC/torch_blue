@@ -10,6 +10,7 @@ from torch_bayesian.vi import (
     VILinear,
     VIModule,
     VIMultiheadAttention,
+    VIReturn,
     VITransformer,
     VITransformerDecoder,
     VITransformerDecoderLayer,
@@ -17,7 +18,6 @@ from torch_bayesian.vi import (
     VITransformerEncoderLayer,
 )
 from torch_bayesian.vi.priors import MeanFieldNormalPrior, Prior
-from torch_bayesian.vi.utils.common_types import VIReturn
 from torch_bayesian.vi.variational_distributions import (
     MeanFieldNormalVarDist,
     VariationalDistribution,

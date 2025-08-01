@@ -105,7 +105,7 @@ modules with the same arguments as their pytorch equivalent. For advanced usage 
 [Quickstart: Level 2](#level-2). Many other layers can be included as-is. In particular
 activation functions, pooling, and padding (even dropout, though they
 should not be necessary since the prior acts as regularization). Currently not supported
-are recurrent, Transformer and transposed convolution layers. Normalization layers may
+are recurrent and transposed convolution layers. Normalization layers may
 have parameters depending on their setting, but can likely be left non-Bayesian.
 
 Additionally, the loss must be replaced. To start out use `vi.KullbackLeiblerLoss`,
@@ -115,12 +115,17 @@ important for balancing of assumptions and data, more details
 from the table below based on the loss you would use in pytorch (more details
 [here](#the-predictive-distribution)).
 
+> [!IMPORTANT]
+> `KullbackLEiblerLoss` requires the length of the dataset, not the dataloader, which is
+> just the number of batches.
+
 | pytorch               | vi replacement (import from `vi.predictive_distributions`) |
 |-----------------------|------------------------------------------------------------|
 | `nn.MSELoss`          | `MeanFieldNormalPredictiveDistribution`                    |
 | `nn.CrossEntropyLoss` | `CategoricalPredictiveDistribution`                        |
 
-> **Note:** Reasons for the requirement to use `VISequential` (and how to overcome it)
+> [!NOTE]
+> Reasons for the requirement to use `VISequential` (and how to overcome it)
 > are described in [Quickstart: Level 3](#level-3). However, adding residual connections
 > from the start to the end of a block of layers can also be achieved using
 > `VIResidualConnection`, which acts the same as `VISequential`, but adds the input to
@@ -142,8 +147,8 @@ assumes normal distributed, uncorrelated weights with mean 0 and standard deviat
   (also known as an uninformative or standard normal prior). Mean and standard deviation
 can be adapted here. Particularly reducing the standard deviation may help convergence
 at the risk of an overconfident model. Other available priors:
-  - `BasicQuietPrior`: a prior that correlates mean and standard deviation to
-  disincentivise noisy weights
+  - `BasicQuietPrior`: an experimental prior that correlates mean and standard deviation
+  to disincentivize noisy weights
 - rescale_prior (`bool`): Experimental. Scales the prior similar to Kaiming-initialization.
 May help with convergence, but may lead to overconfidence. Current research.
 - prior_initialization (`bool`): Experimental. Initialize parameters from the prior
@@ -168,14 +173,13 @@ When creating advance `VIModule`s you will need to consider, that provided modul
 return a tuple during training. The first element of this tuple is the usual model
 output. The second element is a Tensor containing two values: prior_log_prob and
 variational_log_prob. Your modules must be able to handle both cases (by checking
-`_return_log_probs`) and return log probs accordingly. If you have multiple submodels
+`return_log_probs`) and return log probs accordingly. If you have multiple submodels
 returning log probs you can just add them. Generally, this will follow the pattern:
 
 ```python
 from torch import Tensor
 
-from torch_bayesian.vi import VIModule
-from torch_bayesian.vi.utils.common_types import VIReturn
+from torch_bayesian.vi import VIModule, VIReturn
 
 
 class VINetwork(VIModule):
@@ -201,7 +205,8 @@ type of the layer output to it.
 
 Creating custom `VIModules` with parameters goes beyond the scope of this guide.
 
-> **Note:** Due to [Autosampling](#autosampling) all output Tensors, i.e. each Tensor
+> [!NOTE]
+> Due to [Autosampling](#autosampling) all output Tensors, i.e. each Tensor
 > in the model output and the Tensor containing the log probs has an additional
 > dimension at the beginning representing the multiple samples necessary to properly
 > evaluate the stochastic forward pass. This is only relevant for VIModules that are not

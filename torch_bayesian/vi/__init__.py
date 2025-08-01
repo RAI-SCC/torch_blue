@@ -20,7 +20,7 @@ from .transformer import (
     VITransformerEncoder,
     VITransformerEncoderLayer,
 )
-from .utils.common_types import VIkwargs
+from .utils.common_types import VIkwargs, VIReturn
 
 __all__ = [
     "AnalyticalKullbackLeiblerLoss",
@@ -43,4 +43,5 @@ __all__ = [
     "NormalNormalDivergence",
     "UniformNormalDivergence",
     "VIkwargs",
+    "VIReturn",
 ]
