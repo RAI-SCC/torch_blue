@@ -78,7 +78,7 @@ def test_parameter_checking() -> None:
 
     with pytest.warns(
         UserWarning,
-        match=r'Module \[Test6\] is missing the "reset_parameters" function.*',
+        match=r'Module \[Test6\] is missing the "reset_parameters" method*',
     ):
         test.reset_parameters(test, "mean")  # type: ignore [arg-type]
 

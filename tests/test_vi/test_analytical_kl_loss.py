@@ -266,7 +266,7 @@ def test_prior_matching(
     sample = torch.rand([batch_size, f_in], device=device)
     target = torch.rand([batch_size, f_out], device=device)
 
-    model.return_log_probs()
+    model.return_log_probs = True
 
     out = model(sample, samples=samples)
 
@@ -685,7 +685,7 @@ def test_forward(
     target = torch.rand([batch_size, f_out], device=device)
     optimizer = torch.optim.Adam(model.parameters())
 
-    model.return_log_probs()
+    model.return_log_probs = True
 
     for _ in range(test_epochs):
         output = model(sample, samples=samples)

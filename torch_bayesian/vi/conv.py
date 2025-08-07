@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 from torch import Tensor
@@ -6,13 +6,13 @@ from torch.nn import functional as F  # noqa: N812
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
 
-from .base import VIBaseModule
+from .base import VIModule
 from .priors import MeanFieldNormalPrior
 from .utils.common_types import VIkwargs, VIReturn, _prior_any_t, _vardist_any_t
 from .variational_distributions import MeanFieldNormalVarDist
 
 
-class _VIConvNd(VIBaseModule):
+class _VIConvNd(VIModule):
     __constants__ = [
         "stride",
         "padding",
@@ -136,16 +136,12 @@ class _VIConvNd(VIBaseModule):
         else:
             weight_shape = (out_channels, in_channels // groups, *kernel_size)
 
-        bias_shape = (out_channels,)
-        variable_shapes = dict(
+        variable_shapes: Dict[str, Tuple[int, ...]] = dict(
             weight=weight_shape,
-            bias=bias_shape,
         )
-
         if bias:
-            self.random_variables = ("weight", "bias")
-        else:
-            self.random_variables = ("weight",)
+            bias_shape = (out_channels,)
+            variable_shapes["bias"] = bias_shape
 
         super().__init__(variable_shapes=variable_shapes, **vikwargs)
 

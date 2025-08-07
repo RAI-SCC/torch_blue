@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, Optional, Tuple, cast
 
 import torch
 from torch import Tensor
@@ -7,7 +7,7 @@ from torch.nn import LayerNorm, Module, ModuleList, ReLU
 from torch.nn import functional as F  # noqa: N812
 from torch.nn.modules.transformer import _detect_is_causal_mask, _get_seq_len
 
-from .base import VIBaseModule, VIModule
+from .base import VIModule
 from .linear import VILinear
 from .priors import MeanFieldNormalPrior, Prior
 from .sequential import VIResidualConnection
@@ -15,7 +15,7 @@ from .utils.common_types import VIkwargs, VIReturn, _prior_any_t, _vardist_any_t
 from .variational_distributions import MeanFieldNormalVarDist, VariationalDistribution
 
 
-class VIMultiheadAttention(VIBaseModule):
+class VIMultiheadAttention(VIModule):
     """
     Allows the model to jointly attend to information from different representation subspaces.
 
@@ -87,28 +87,21 @@ class VIMultiheadAttention(VIBaseModule):
         ), "embed_dim must be divisible by num_heads"
 
         variables: Dict[str, Tuple[int, ...]] = dict()
-        random_variables: List[str] = []
         if not self._qkv_same_embed_dim:
             variables["q_proj_weight"] = (embed_dim, embed_dim)
             variables["k_proj_weight"] = (embed_dim, self.kdim)
             variables["v_proj_weight"] = (embed_dim, self.vdim)
-            random_variables.extend(["q_proj_weight", "k_proj_weight", "v_proj_weight"])
         else:
             variables["in_proj_weight"] = (3 * embed_dim, embed_dim)
-            random_variables.append("in_proj_weight")
         variables["out_proj_weight"] = (embed_dim, embed_dim)
-        random_variables.append("out_proj_weight")
         if bias:
             variables["in_proj_bias"] = (3 * embed_dim,)
             variables["out_proj_bias"] = (embed_dim,)
-            random_variables.extend(["in_proj_bias", "out_proj_bias"])
 
         if add_bias_kv:
             variables["bias_k"] = (1, 1, embed_dim)
             variables["bias_v"] = (1, 1, embed_dim)
-            random_variables.extend(["bias_k", "bias_v"])
 
-        self.random_variables = tuple(random_variables)
         self.add_kv_bias = add_bias_kv
         self.add_zero_attn = add_zero_attn
         self.bias = bias
