@@ -116,7 +116,7 @@ from the table below based on the loss you would use in pytorch (more details
 [here](#the-predictive-distribution)).
 
 > [!IMPORTANT]
-> `KullbackLEiblerLoss` requires the length of the dataset, not the dataloader, which is
+> `KullbackLeiblerLoss` requires the length of the dataset, not the dataloader, which is
 > just the number of batches.
 
 | pytorch               | vi replacement (import from `vi.predictive_distributions`) |
