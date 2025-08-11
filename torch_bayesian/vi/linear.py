@@ -100,14 +100,9 @@ class VILinear(VIModule):
             return output
 
         params = self.sample_variables()
-
         output = F.linear(input_, *params)
 
-        if self._return_log_probs:
-            log_probs = self.get_log_probs(params)
-            return output, log_probs
-        else:
-            return output
+        return output
 
     def _fast_forward(self, input_: Tensor) -> Tensor:
         """Perform the stable fast path for Gaussian variational distribution."""

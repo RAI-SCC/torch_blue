@@ -62,12 +62,6 @@ def test_vilinear(device: torch.device) -> None:
     assert out.shape == (5, 4, 7, out_features)
     assert lps.shape == (5, 2)
 
-    module3._has_sampling_responsibility = False
-    out, lps = module3(sample3)
-    assert out.shape == (4, 7, out_features)
-    assert lps.shape == (2,)
-    out.sum().backward()
-
     multisample2 = module3.sampled_forward(sample3, samples=10)
     assert multisample2[0].shape == (10, 4, 7, out_features)
     assert multisample2[1].shape == (10, 2)

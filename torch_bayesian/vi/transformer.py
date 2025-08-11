@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -118,7 +118,7 @@ class VIMultiheadAttention(VIModule):
         key_padding_mask: Optional[Tensor] = None,
         average_attn_weights: bool = True,
         is_causal: bool = False,
-    ) -> VIReturn[Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tuple[Tensor, Optional[Tensor]]:
         """
         Compute attention outputs using query, key, and value embeddings.
 
@@ -239,11 +239,7 @@ class VIMultiheadAttention(VIModule):
         if self.batch_first and is_batched:
             attn_output = attn_output.transpose(1, 0)
 
-        if self._return_log_probs:
-            log_probs = self.get_log_probs(params)
-            return (attn_output, attn_output_weights), log_probs
-        else:
-            return attn_output, attn_output_weights
+        return attn_output, attn_output_weights
 
 
 class VITransformerEncoderLayer(VIModule):
@@ -312,7 +308,7 @@ class VITransformerEncoderLayer(VIModule):
         src_mask: Optional[Tensor] = None,
         src_key_padding_mask: Optional[Tensor] = None,
         is_causal: bool = False,
-    ) -> VIReturn[Tensor]:
+    ) -> Tensor:
         """
         Pass the input through the encoder layer.
 
@@ -339,29 +335,7 @@ class VITransformerEncoderLayer(VIModule):
         )
         x = src
         # _ff_block already includes residual connection
-        if self._return_log_probs and self.norm_first:
-            (x1, _), lps1 = self._sa_block(
-                self.norm1(x), src_mask, src_key_padding_mask, is_causal=is_causal
-            )
-            x2 = x + x1
-            x3, lps2 = self._ff_block(self.norm2(x2))
-            x4 = x3
-
-            lps1, lps2 = cast(Tuple[Tensor, Tensor], (lps1, lps2))
-            log_probs = lps1 + lps2
-            return x4, log_probs
-        elif self._return_log_probs:
-            (x1, _), lps1 = self._sa_block(
-                x, src_mask, src_key_padding_mask, is_causal=is_causal
-            )
-            x2 = x + x1
-            x3, lps2 = self._ff_block(self.norm1(x2))
-            x4 = self.norm2(x3)
-
-            lps1, lps2 = cast(Tuple[Tensor, Tensor], (lps1, lps2))
-            log_probs = lps1 + lps2
-            return x4, log_probs
-        elif self.norm_first:
+        if self.norm_first:
             x = (
                 x
                 + self._sa_block(
@@ -386,7 +360,7 @@ class VITransformerEncoderLayer(VIModule):
         attn_mask: Optional[Tensor] = None,
         key_padding_mask: Optional[Tensor] = None,
         is_causal: bool = False,
-    ) -> VIReturn[Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tuple[Tensor, Tensor]:
         x = self.self_attn(
             x,
             x,
@@ -492,41 +466,7 @@ class VITransformerDecoderLayer(VIModule):
         """
         x = tgt
         # _ff_block already includes residual connection
-        if self._return_log_probs and self.norm_first:
-            (x1, _), lps1 = self._sa_block(
-                self.norm1(x), tgt_mask, tgt_key_padding_mask, tgt_is_causal
-            )
-            x = x + x1
-            (x2, _), lps2 = self._mha_block(
-                self.norm2(x),
-                memory,
-                memory_mask,
-                memory_key_padding_mask,
-                memory_is_causal,
-            )
-            x = x + x2
-            x3, lps3 = self._ff_block(self.norm3(x))
-            x = x3
-
-            lps1, lps2, lps3 = cast(Tuple[Tensor, Tensor, Tensor], (lps1, lps2, lps3))
-            log_probs = lps1 + lps2 + lps3
-            return x, log_probs
-        elif self._return_log_probs:
-            (x1, _), lps1 = self._sa_block(
-                x, tgt_mask, tgt_key_padding_mask, tgt_is_causal
-            )
-            x = self.norm1(x + x1)
-            (x2, _), lps2 = self._mha_block(
-                x, memory, memory_mask, memory_key_padding_mask, memory_is_causal
-            )
-            x = self.norm2(x + x2)
-            x3, lps3 = self._ff_block(x)
-            x = self.norm3(x3)
-
-            lps1, lps2, lps3 = cast(Tuple[Tensor, Tensor, Tensor], (lps1, lps2, lps3))
-            log_probs = lps1 + lps2 + lps3
-            return x, log_probs
-        elif self.norm_first:
+        if self.norm_first:
             x = x + self._sa_block(self.norm1(x), tgt_mask, tgt_key_padding_mask)[0]
             x = (
                 x
@@ -557,7 +497,7 @@ class VITransformerDecoderLayer(VIModule):
         attn_mask: Optional[Tensor] = None,
         key_padding_mask: Optional[Tensor] = None,
         is_causal: bool = False,
-    ) -> VIReturn[Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tuple[Tensor, Tensor]:
         x = self.self_attn(
             x,
             x,
@@ -575,7 +515,7 @@ class VITransformerDecoderLayer(VIModule):
         attn_mask: Optional[Tensor] = None,
         key_padding_mask: Optional[Tensor] = None,
         is_causal: bool = False,
-    ) -> VIReturn[Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tuple[Tensor, Tensor]:
         x = self.multihead_attn(
             x,
             mem,
@@ -635,38 +575,20 @@ class VITransformerDecoder(VIModule):
         seq_len = _get_seq_len(tgt, self.layers[0].self_attn.batch_first)
         tgt_is_causal = _detect_is_causal_mask(tgt_mask, tgt_is_causal, seq_len)
 
-        if self._return_log_probs:
-            log_probs = torch.zeros(2, device=tgt.device)
-            for mod in self.layers:
-                output, lps = mod(
-                    output,
-                    memory,
-                    tgt_mask=tgt_mask,
-                    memory_mask=memory_mask,
-                    tgt_key_padding_mask=tgt_key_padding_mask,
-                    memory_key_padding_mask=memory_key_padding_mask,
-                    tgt_is_causal=tgt_is_causal,
-                    memory_is_causal=memory_is_causal,
-                )
-                log_probs = log_probs + lps
-            if self.norm is not None:
-                output = self.norm(output)
-            return output, log_probs
-        else:
-            for mod in self.layers:
-                output = mod(
-                    output,
-                    memory,
-                    tgt_mask=tgt_mask,
-                    memory_mask=memory_mask,
-                    tgt_key_padding_mask=tgt_key_padding_mask,
-                    memory_key_padding_mask=memory_key_padding_mask,
-                    tgt_is_causal=tgt_is_causal,
-                    memory_is_causal=memory_is_causal,
-                )
-            if self.norm is not None:
-                output = self.norm(output)
-            return output
+        for mod in self.layers:
+            output = mod(
+                output,
+                memory,
+                tgt_mask=tgt_mask,
+                memory_mask=memory_mask,
+                tgt_key_padding_mask=tgt_key_padding_mask,
+                memory_key_padding_mask=memory_key_padding_mask,
+                tgt_is_causal=tgt_is_causal,
+                memory_is_causal=memory_is_causal,
+            )
+        if self.norm is not None:
+            output = self.norm(output)
+        return output
 
 
 class VITransformerEncoder(VIModule):
@@ -730,30 +652,16 @@ class VITransformerEncoder(VIModule):
         seq_len = _get_seq_len(src, self.layers[0].self_attn.batch_first)
         is_causal = _detect_is_causal_mask(mask, is_causal, seq_len)
 
-        if self._return_log_probs:
-            log_probs = torch.zeros(2, device=src.device)
-            for mod in self.layers:
-                output, lps = mod(
-                    output,
-                    src_mask=mask,
-                    src_key_padding_mask=src_key_padding_mask,
-                    is_causal=is_causal,
-                )
-                log_probs = log_probs + lps
-            if self.norm is not None:
-                output = self.norm(output)
-            return output, log_probs
-        else:
-            for mod in self.layers:
-                output = mod(
-                    output,
-                    src_mask=mask,
-                    src_key_padding_mask=src_key_padding_mask,
-                    is_causal=is_causal,
-                )
-            if self.norm is not None:
-                output = self.norm(output)
-            return output
+        for mod in self.layers:
+            output = mod(
+                output,
+                src_mask=mask,
+                src_key_padding_mask=src_key_padding_mask,
+                is_causal=is_causal,
+            )
+        if self.norm is not None:
+            output = self.norm(output)
+        return output
 
 
 class VITransformer(VIModule):
@@ -872,40 +780,20 @@ class VITransformer(VIModule):
 
         This implementation also currently does not support the torch fastpath.
         """
-        if self._return_log_probs:
-            memory, encoder_log_probs = self.encoder(
-                src,
-                mask=src_mask,
-                src_key_padding_mask=src_key_padding_mask,
-                is_causal=src_is_causal,
-            )
-            output, decoder_log_probs = self.decoder(
-                tgt,
-                memory,
-                tgt_mask=tgt_mask,
-                memory_mask=memory_mask,
-                tgt_key_padding_mask=tgt_key_padding_mask,
-                memory_key_padding_mask=memory_key_padding_mask,
-                tgt_is_causal=tgt_is_causal,
-                memory_is_causal=memory_is_causal,
-            )
-            log_probs = encoder_log_probs + decoder_log_probs
-            return output, log_probs
-        else:
-            memory = self.encoder(
-                src,
-                mask=src_mask,
-                src_key_padding_mask=src_key_padding_mask,
-                is_causal=src_is_causal,
-            )
-            output = self.decoder(
-                tgt,
-                memory,
-                tgt_mask=tgt_mask,
-                memory_mask=memory_mask,
-                tgt_key_padding_mask=tgt_key_padding_mask,
-                memory_key_padding_mask=memory_key_padding_mask,
-                tgt_is_causal=tgt_is_causal,
-                memory_is_causal=memory_is_causal,
-            )
-            return output
+        memory = self.encoder(
+            src,
+            mask=src_mask,
+            src_key_padding_mask=src_key_padding_mask,
+            is_causal=src_is_causal,
+        )
+        output = self.decoder(
+            tgt,
+            memory,
+            tgt_mask=tgt_mask,
+            memory_mask=memory_mask,
+            tgt_key_padding_mask=tgt_key_padding_mask,
+            memory_key_padding_mask=memory_key_padding_mask,
+            tgt_is_causal=tgt_is_causal,
+            memory_is_causal=memory_is_causal,
+        )
+        return output

@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import torch
 import torch.utils.hooks as hooks
 from torch import Tensor
+from torch._C._functorch import get_unwrapped
 from torch.nn import Module, Parameter, init
 from torch.nn.common_types import _tensor_list_t
 from torch.nn.modules.module import (
@@ -114,6 +115,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     # each submodule and True for itself that way submodules automatically call forward
     # and the outermost module calls sampled_forward instead
     _has_sampling_responsibility: bool
+    _log_probs: List[Tensor]
 
     def __init__(
         self,
@@ -177,7 +179,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
                     parameter_name,
                     Parameter(torch.empty(shape, **factory_kwargs)),
                 )
-
+        self._log_probs = []
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -335,6 +337,14 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         ):
             variational_parameters = self.get_variational_parameters(variable)
             params.append(vardist.sample(*variational_parameters))
+
+        if self.return_log_probs:
+            log_probs = self.get_log_probs(params)
+            try:
+                log_probs = get_unwrapped(log_probs)
+            except RuntimeError:
+                pass
+            self._log_probs.append(log_probs)
         return params
 
     @staticmethod
@@ -369,7 +379,29 @@ class VIModule(Module, metaclass=PostInitCallMeta):
             One or multiple Tensors
         """
         expanded = [self._expand_to_samples(x, samples=samples) for x in input_]
-        return torch.vmap(self.forward, randomness="different")(*expanded, **kwargs)
+        out = torch.vmap(self.forward, randomness="different")(*expanded, **kwargs)
+
+        if self.return_log_probs:
+            log_probs = self.gather_log_probs()
+            return out, log_probs
+        else:
+            return out
+
+    def gather_log_probs(self) -> Tensor:
+        """Gather and aggregate log probs from all submodules, then reset them."""
+        all_log_probs = []
+        for module in self.modules():
+            if not hasattr(module, "_log_probs"):
+                continue
+            if len(module._log_probs) == 0:
+                pass
+            else:
+                all_log_probs.append(torch.stack(module._log_probs).mean(dim=0))
+
+            # Reset _log_probs
+            module._log_probs = []
+
+        return torch.stack(all_log_probs).sum(dim=0)
 
     @property
     def return_log_probs(self) -> bool:

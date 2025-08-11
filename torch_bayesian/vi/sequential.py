@@ -1,6 +1,5 @@
 from typing import OrderedDict, overload
 
-import torch
 from torch import Tensor
 from torch.nn import Module, Sequential
 
@@ -76,20 +75,9 @@ class VISequential(VIModule, Sequential):
 
             Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
-        if self._return_log_probs:
-            total_log_probs = torch.tensor([0.0, 0.0], device=input_.device)
-            for module in self:
-                if isinstance(module, VIModule):
-                    input_, log_probs = module(input_)
-
-                    total_log_probs = total_log_probs + log_probs
-                else:
-                    input_ = module(input_)
-            return input_, total_log_probs
-        else:
-            for module in self:
-                input_ = module(input_)
-            return input_
+        for module in self:
+            input_ = module(input_)
+        return input_
 
 
 class VIResidualConnection(VISequential):
@@ -125,12 +113,8 @@ class VIResidualConnection(VISequential):
 
             Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
-        if self._return_log_probs:
-            output, log_probs = super().forward(input_)
-            return self._safe_add(input_, output), log_probs
-        else:
-            output = super().forward(input_)
-            return self._safe_add(input_, output)
+        output = super().forward(input_)
+        return self._safe_add(input_, output)
 
     @staticmethod
     def _safe_add(input_: Tensor, output_: Tensor) -> Tensor:

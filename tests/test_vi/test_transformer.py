@@ -567,16 +567,20 @@ def test_decoder_layer(device: torch.device) -> None:
     tgt = torch.rand((7, 4, d_model), device=device)
     mem = torch.rand((7, 4, d_model), device=device)
 
-    (sa_out, sa_weights), sa_lps = module2._sa_block(tgt)
-    (sa_ref, sa_rweight), sa_rlp = module2.self_attn(tgt, tgt, tgt)
+    sa_ref, sa_rweight = module2.self_attn(tgt, tgt, tgt)
+    sa_rlp = module2.gather_log_probs()
+    sa_out, sa_weights = module2._sa_block(tgt)
+    sa_lps = module2.gather_log_probs()
     assert sa_out.shape == sa_ref.shape
     assert torch.allclose(sa_out, sa_ref)
     assert torch.allclose(sa_lps, sa_rlp)
     assert sa_out.device == device
     assert sa_ref.device == device
 
-    (mha_out, mha_weights), mha_lps = module2._mha_block(tgt, mem)
-    (mha_ref, mha_rweight), mha_rlp = module2.multihead_attn(tgt, mem, mem)
+    mha_out, mha_weights = module2._mha_block(tgt, mem)
+    mha_lps = module2.gather_log_probs()
+    mha_ref, mha_rweight = module2.multihead_attn(tgt, mem, mem)
+    mha_rlp = module2.gather_log_probs()
     assert mha_out.shape == mha_ref.shape
     assert torch.allclose(mha_out, mha_ref)
     assert torch.allclose(mha_lps, mha_rlp)
@@ -671,8 +675,10 @@ def test_encoder_layer(device: torch.device) -> None:
 
     src = torch.rand((7, 4, d_model), device=device)
 
-    (sa_out, sa_weights), sa_lps = module2._sa_block(src)
-    (sa_ref, sa_rweight), sa_rlp = module2.self_attn(src, src, src)
+    sa_out, sa_weights = module2._sa_block(src)
+    sa_lps = module2.gather_log_probs()
+    sa_ref, sa_rweight = module2.self_attn(src, src, src)
+    sa_rlp = module2.gather_log_probs()
     assert sa_out.shape == sa_ref.shape
     assert torch.allclose(sa_out, sa_ref)
     assert torch.allclose(sa_lps, sa_rlp)
