@@ -273,7 +273,6 @@ def test_prior_matching(
     analytical_prior_matching = criterion.prior_matching()
     ref_criterion(out, target)
     ref_prior_matching = ref_criterion.log["prior_matching"]  # type: ignore [index]
-    print(ref_prior_matching[0], analytical_prior_matching)
     assert analytical_prior_matching.device == device
     assert torch.allclose(
         torch.tensor(ref_prior_matching[0]),

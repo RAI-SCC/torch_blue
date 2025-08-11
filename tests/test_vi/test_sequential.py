@@ -79,16 +79,14 @@ def test_residual_connection(device: torch.device) -> None:
     class Test(VIModule):
         def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor, Tensor]]:
             if self._return_log_probs:
-                return x, torch.tensor([0.0, 1.0], device=x.device)
-            else:
-                return x
+                self._log_probs = [torch.tensor([[0.0, 1.0]], device=x.device)]
+            return x
 
     class Test2(VIModule):
         def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor, Tensor]]:
             if self._return_log_probs:
-                return x.reshape((3, 6)), torch.tensor([0.0, 1.0], device=x.device)
-            else:
-                return x.reshape((2, 9))
+                self._log_probs = [torch.tensor([[0.0, 1.0]], device=x.device)]
+            return x.reshape((2, 9))
 
     module = VIResidualConnection(Test())
     broken_module = VIResidualConnection(Test2())
@@ -99,7 +97,7 @@ def test_residual_connection(device: torch.device) -> None:
     vlp1 = lps1[:, 1]
     with pytest.raises(
         RuntimeError,
-        match="Output shape \(torch.Size\(\[3, 6\]\)\) of residual connection must match input shape \(torch.Size\(\[6, 3\]\)\)",
+        match="Output shape \(torch.Size\(\[2, 9\]\)\) of residual connection must match input shape \(torch.Size\(\[6, 3\]\)\)",
     ):
         broken_module(sample1, samples=3)
 

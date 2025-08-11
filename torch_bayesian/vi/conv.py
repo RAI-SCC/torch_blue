@@ -266,11 +266,7 @@ class VIConv1d(_VIConvNd):
 
         output = self._conv_forward(input_, *params)
 
-        if self._return_log_probs:
-            log_probs = self.get_log_probs(params)
-            return output, log_probs
-        else:
-            return output
+        return output
 
 
 class VIConv2d(_VIConvNd):
@@ -386,11 +382,7 @@ class VIConv2d(_VIConvNd):
 
         output = self._conv_forward(input_, *params)
 
-        if self._return_log_probs:
-            log_probs = self.get_log_probs(params)
-            return output, log_probs
-        else:
-            return output
+        return output
 
 
 class VIConv3d(_VIConvNd):
@@ -507,8 +499,4 @@ class VIConv3d(_VIConvNd):
 
         output = self._conv_forward(input_, *params)
 
-        if self._return_log_probs:
-            log_probs = self.get_log_probs(params)
-            return output, log_probs
-        else:
-            return output
+        return output

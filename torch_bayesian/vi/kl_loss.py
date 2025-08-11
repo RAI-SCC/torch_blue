@@ -113,7 +113,7 @@ class KullbackLeiblerLoss(Module):
         """
         samples, log_probs = model_output
         # Average log probs separately and calculate prior matching term
-        mean_log_probs = log_probs.mean(dim=0)
+        mean_log_probs = log_probs.mean(dim=0) if log_probs.dim() != 1 else log_probs
 
         if (dataset_size is None) and (self.dataset_size is None):
             warn(

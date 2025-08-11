@@ -1,10 +1,11 @@
 import math
-from typing import Any, Tuple, Union, cast
+from typing import Any, List, Tuple, Union, cast
 from warnings import filterwarnings
 
 import pytest
 import torch
 from torch import Tensor
+from torch._C._functorch import get_unwrapped
 from torch.nn import Module
 
 from torch_bayesian.vi import VIModule
@@ -50,11 +51,12 @@ def test_sampled_forward(device: torch.device) -> None:
         def __init__(self, ref: Tensor) -> None:
             super().__init__()
             self.ref = ref
+            self._log_probs = []
 
-        def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
+        def forward(self, x: Tensor) -> Tensor:
             assert x.shape == self.ref.shape
-            rand = torch.randn(x.shape, device=x.device)
-            return x - self.ref, rand
+            self._log_probs.append(get_unwrapped(torch.randn(2, device=x.device)))
+            return x - self.ref
 
     shape1 = (3, 4)
     sample1 = torch.randn(shape1, device=device)
@@ -314,6 +316,7 @@ def test_log_prob_setting(device: torch.device) -> None:
     assert out.device == device
 
 
+@pytest.mark.filterwarnings("ignore")
 def test_slow_forward(device: torch.device) -> None:
     """
     Test VIModule._slow_forward.
@@ -324,7 +327,10 @@ def test_slow_forward(device: torch.device) -> None:
     # Let's just test it by jitifying something
 
     class Test(VIModule):
+        _log_probs: List[Tensor] = []
+
         def forward(self, x: Tensor) -> Tensor:
+            self._log_probs.append(torch.tensor((5.0, 3.0), device=x.device))
             return x
 
     module1 = Test()
@@ -362,7 +368,10 @@ def test_hooks(device: torch.device) -> None:
         pass
 
     class Test(VIModule):
+        _log_probs: List[Tensor] = []
+
         def forward(self, x: Tensor) -> Tensor:
+            self._log_probs.append(get_unwrapped(torch.randn(2, device=x.device)))
             return x
 
     test = Test()
