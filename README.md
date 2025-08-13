@@ -10,6 +10,7 @@ most components mirror components from [pytorch](https://pytorch.org/docs/stable
   - [Level 1](#level-1)
   - [Level 2](#level-2)
   - [Level 3](#level-3)
+  - [Level 4](#level-4)
 
 ## Installation
 
@@ -79,6 +80,7 @@ Three levels are introduced:
 - [Level 1](#level-1): Simple sequential layer stacks
 - [Level 2](#level-2): Customizing Bayesian assumptions and VI kwargs
 - [Level 3](#level-3): Non-sequential models and log probabilities
+- [Level 4](#level-4): Custom modules with weights
 
 ### Level 1
 
@@ -169,41 +171,26 @@ return_log_probs. Once the model is initialized this flag can be changed by sett
 `VIModule.return_log_probs`, which either enables (`True`) or disables (`False`) the
 returning of the log probabilities for all submodules.
 
-When creating advance `VIModule`s you will need to consider, that provided modules
-return a tuple during training. The first element of this tuple is the usual model
-output. The second element is a Tensor containing two values: prior_log_prob and
-variational_log_prob. Your modules must be able to handle both cases (by checking
-`return_log_probs`) and return log probs accordingly. If you have multiple submodels
-returning log probs you can just add them. Generally, this will follow the pattern:
+While `torch_bayesian` calculates and aggregates log probs internally, this is handled
+by the outermost `VIModule`. This module will not have the expected output signature
+when returning log probs, but instead return a tuple of the normal output and the log
+probs. This is the format `torch_bayesian` losses expect. Therefore, if you feed the
+output directly into a loss there should be no issues. For deployment `return_log_probs`
+should be set to `False`. However, if your outermost module is not a `VIModule`, but a
+pytorch `Module`, or you are working with multiple models like an encoder and decoder
+this feature needs to be handled. The easiest way to do this is to make sure that your
+outermost module is always a `VIModule` even if it is only a wrapper that calls you
+model and returns its output, since this will make sure log probs are only introduced at
+the very end.
 
-```python
-from torch import Tensor
-
-from torch_bayesian.vi import VIModule, VIReturn
-
-
-class VINetwork(VIModule):
-  def __init__(self) -> None:
-    super().__init__()
-    self.module1 = ... # some VIModule
-    self.module2 = ... # another VIModule
-
-  def foward(self, input_: Tensor) -> VIReturn[Tensor]:
-      if self._return_log_probs:
-          input_, log_probs1 = self.module1(input_)
-          output, log_probs2 = self.module2(input_)
-          log_probs = log_probs1 + log_probs2
-          return output, log_probs
-      else:
-          input_ = self.module1(input_)
-          output = self.module2(input_)
-          return output
-```
+> [!NOTE]
+> Always make sure your outermost module is a VIModule and keep in mind that the output
+> of that module will be a tuple of the expected output and a tensor containing the
+> weight log probabilities, if `return_log_probs == True`. Losses in `torch_baysian`
+> expect this format.
 
 `VIReturn` is a type alias that encapsulates this shifting return type. Just provide the
 type of the layer output to it.
-
-Creating custom `VIModules` with parameters goes beyond the scope of this guide.
 
 > [!NOTE]
 > Due to [Autosampling](#autosampling) all output Tensors, i.e. each Tensor
@@ -213,6 +200,30 @@ Creating custom `VIModules` with parameters goes beyond the scope of this guide.
 > contained within other VIModules. Loss functions are designed to expect and handle
 > this output format, i.e. you can simply feed the model output into the loss and
 > everything will work.
+
+### Level 4
+
+Arguably, creating `VIModule`s with Bayesian weights - which are typically called random
+variables in documentation and code - is arguably simpler than in pytorch. Since a
+different number of weight matrices needs to be created based on the variational
+distribution, the process is completely automated. For `VIModules` without weights
+`super().__init__` is called without arguments. Modules with random variables
+expect `VIkwargs` (which you should be familiar with from [Level 2](#level-2)), but
+defaults are used if non are passed. More importantly, `VIModules` with weights call
+`super().__init__` with the argument `variable_shapes`. The keys of this dictionary are
+the names of the random variables and the values the shapes of the weight matrices as
+tuple or list.
+
+The insertion order of this dictionary matters, as it becomes the order of the names
+in the module attribute `random_variables`. `random_variables`, the shapes, and a similar
+attribute of the variational distribution call `variational_parameters` are used to
+dynamically create the weight matrices. To get weight during the forward pass call the
+`sample_variables` method, which returns a tuple of sampled weight matrices. One for
+each entry in `random_variables` and in the same order. This call also internally
+calculates and stores the log probabilities, if required.
+
+Should you need to access the weight tensors directly you can use `getattr` and derive
+the name using the method `variational_parameter_name`.
 
 ## Variational Inference
 

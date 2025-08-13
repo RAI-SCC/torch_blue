@@ -42,7 +42,7 @@ class NonBayesian(VariationalDistribution):
 
     def log_prob(self, sample: Tensor, mean: Tensor) -> Tensor:
         """
-        Return 0 as dummy log likelihood.
+        Return 0 as dummy log probability.
 
         Dummy log_prob that returns 0.
 

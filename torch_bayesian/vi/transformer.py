@@ -38,6 +38,15 @@ class VIMultiheadAttention(VIModule):
     - ("in_proj_bias", "out_proj_bias") if ``bias`` is ``True``.
     - ("bias_k", "bias_v") if ``add_bias_kv`` is ``True``.
 
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.MultiheadAttention` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention.html>`__),
+        except ``dropout``, which is not relevant for BNNs.
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     __constants__ = ["batch_first"]
@@ -252,6 +261,16 @@ class VITransformerEncoderLayer(VIModule):
 
     This does not support the ``dropout`` argument.
     In addition to all other arguments, this class accepts :class:`~.VIkwargs`.
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.TransformerEncoderLayer` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.TransformerEncoderLayer.html>`__),
+        except ``dropout``, which is not relevant for BNNs.
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     def __init__(
@@ -300,7 +319,7 @@ class VITransformerEncoderLayer(VIModule):
         self.norm1 = LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
         self.norm2 = LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
 
-        self._return_log_probs = return_log_probs
+        self.return_log_probs = return_log_probs
 
     def forward(
         self,
@@ -382,6 +401,16 @@ class VITransformerDecoderLayer(VIModule):
 
     This does not support the ``dropout`` argument.
     In addition to all other arguments, this class accepts :class:`~.VIkwargs`.
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.TransformerDecoder` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.TransformerDecoder.html>`__),
+        except ``dropout``, which is not relevant for BNNs.
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     def __init__(
@@ -443,7 +472,7 @@ class VITransformerDecoderLayer(VIModule):
         self.norm2 = LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
         self.norm3 = LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
 
-        self._return_log_probs = return_log_probs
+        self.return_log_probs = return_log_probs
 
     def forward(
         self,
@@ -549,7 +578,7 @@ class VITransformerDecoder(VIModule):
         )
         self.norm = norm
         self.num_layers = num_layers
-        self._return_log_probs = return_log_probs
+        self.return_log_probs = return_log_probs
 
     def forward(
         self,
@@ -674,6 +703,16 @@ class VITransformer(VIModule):
 
     This does not support the ``dropout`` argument.
     In addition to all other arguments, this class accepts :class:`~.VIkwargs`.
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.Transformer` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.Transformer.html>`__),
+        except ``dropout``, which is not relevant for BNNs.
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     def __init__(

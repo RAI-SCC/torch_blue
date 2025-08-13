@@ -24,6 +24,15 @@ class VILinear(VIModule):
 
     - ("weight", "bias") if bias == True
     - ("weight", )       if bias == False
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.Linear` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.Linear.html>`__)
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     __constants__ = ["in_features", "out_features"]

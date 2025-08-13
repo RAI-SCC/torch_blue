@@ -10,7 +10,7 @@ from torch_bayesian.vi import _globals
 from .base import Prior
 
 if TYPE_CHECKING:
-    from ..base import VIBaseModule  # pragma: no cover
+    from ..base import VIModule  # pragma: no cover
 
 
 class MeanFieldNormalPrior(Prior):
@@ -51,7 +51,7 @@ class MeanFieldNormalPrior(Prior):
 
     def log_prob(self, sample: Tensor) -> Tensor:
         """
-        Compute the Gaussian log likelihood of a sample using the prior parameters.
+        Compute the Gaussian log probability of a sample using the prior parameters.
 
         All Tensors have the same shape.
 
@@ -61,12 +61,12 @@ class MeanFieldNormalPrior(Prior):
         Parameters
         ----------
         sample: Tensor
-            A Tensor of values to calculate the log likelihood for.
+            A Tensor of values to calculate the log prbability for.
 
         Returns
         -------
         Tensor
-            The log likelihood of the sample under the prior.
+            The log probability of the sample under the prior.
         """
         variance = self.std**2 + self.eps
         data_fitting = (sample - self.mean) ** 2 / variance
@@ -75,13 +75,13 @@ class MeanFieldNormalPrior(Prior):
             normalization = normalization + log(2 * torch.pi)
         return -0.5 * (data_fitting + normalization)
 
-    def reset_parameters(self, module: "VIBaseModule", variable: str) -> None:
+    def reset_parameters(self, module: "VIModule", variable: str) -> None:
         """
         Reset the parameters of a module to prior mean and standard deviation.
 
         Parameters
         ----------
-        module: VIBaseModule
+        module: VIModule
             The module containing the parameters to reset.
         variable: str
             The name of the random variable to reset as given by

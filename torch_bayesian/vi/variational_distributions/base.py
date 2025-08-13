@@ -8,7 +8,7 @@ from torch.nn import init
 from ..utils import PostInitCallMeta
 
 if TYPE_CHECKING:
-    from ..base import VIBaseModule  # pragma: no cover
+    from ..base import VIModule  # pragma: no cover
 
 
 class VariationalDistribution(metaclass=PostInitCallMeta):
@@ -28,7 +28,7 @@ class VariationalDistribution(metaclass=PostInitCallMeta):
 
     Additionally, a :meth:`~self.sample` method must be defined that accepts one tensor for
     each variational parameter and returns a sample from the specified distributions.
-    Finally, the way to calculate the log likelihood of a weight configuration in the
+    Finally, the way to calculate the log probability of a weight configuration in the
     :meth:`~self.log_prob` method is required.
 
     Attributes
@@ -50,11 +50,11 @@ class VariationalDistribution(metaclass=PostInitCallMeta):
         :attr:`variational_parameters` and returns a sample from the distribution
         of the same shape. All input Tensors must have the same shape.
     log_prob : Callable[[Tensor, ...], Tensor]
-        This method is used to calculate the log likelihood of a weight configuration
+        This method is used to calculate the log probability of a weight configuration
         under this distribution. The log_prob method needs to be implemented by each
         subclass. It accepts one Tensor containing the weight configuration and one
         Tensor for each variational parameter in the order specified in
-        :attr:`variational_parameters` and returns the log likelihood of the weight
+        :attr:`variational_parameters` and returns the log probability of the weight
         configuration. All input Tensors must have the same shape.
     """
 
@@ -65,7 +65,7 @@ class VariationalDistribution(metaclass=PostInitCallMeta):
 
     def reset_parameters(
         self,
-        module: "VIBaseModule",
+        module: "VIModule",
         variable: str,
         fan_in: int,
         kaiming_scaling: bool = True,

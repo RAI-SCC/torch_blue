@@ -54,7 +54,7 @@ class MeanFieldNormalPredictiveDistribution(PredictiveDistribution):
         reference: Tensor, parameters: Tuple[Tensor, Tensor]
     ) -> Tensor:
         """
-        Calculate the log likelihood of reference given the predictive mean and standard deviation.
+        Calculate the log probability of reference given the predictive mean and standard deviation.
 
         This calculation is affected by :data:`_globals._USE_NORM_CONSTANTS`, which can
         be set with :func:`~torch_bayesian.vi.utils.use_norm_constants`.
@@ -71,7 +71,7 @@ class MeanFieldNormalPredictiveDistribution(PredictiveDistribution):
         Returns
         -------
         Tensor
-            The log likelihood of the reference under the predicted normal distribution.
+            The log probability of the reference under the predicted normal distribution.
             Shape: (1,).
         """
         mean, std = parameters

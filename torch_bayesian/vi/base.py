@@ -46,8 +46,8 @@ class VIModule(Module, metaclass=PostInitCallMeta):
 
     This class takes the place of :class:`torch.nn.Module` for BNNs. It is used for any
     Bayesian module. While a :class:`torch.nn.Module` may be contained within a
-    :class:`VIModule` and vice versa there should always be a singular :class:`VIModule`
-    containing all others to avoid superfluous sampling dimensions.
+    :class:`~.VIModule` and vice versa there should always be a singular
+    :class:`~.VIModule` containing all others to avoid superfluous sampling dimensions.
 
     :class:`~.VIModule` contains some additional functionality. Firstly, it keeps track
     of whether the model should return the log probability of the sampled weight (i.e.,
@@ -91,15 +91,17 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     :meth:`~self.variational_parameter_name()` method.
 
     Additionally, a module with random variables accepts arguments from
-    :class:`~torch_bayesian.vi.VIkwargs` as keyword arguments. If a list of priors or
-    variational distributions is provided they are again assumed to follow the insertion
-    order as described above.
+    :class:`~.VIkwargs` as keyword arguments. If a list of priors or variational
+    distributions is provided they are again assumed to follow the insertion order as
+    described above.
 
     Parameters
     ----------
     variable_shapes: Optional[Dict[str, Tuple[int, ...]]], default = None
         Shape specifications for all random variables. Keys are turned into
         :attr:`self.random_variables` in insertion order.
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
 
     Raises
     ------
@@ -388,7 +390,14 @@ class VIModule(Module, metaclass=PostInitCallMeta):
             return out
 
     def gather_log_probs(self) -> Tensor:
-        """Gather and aggregate log probs from all submodules, then reset them."""
+        """
+        Gather and aggregate log probs from all submodules, then reset them.
+
+        Returns
+        -------
+        Tensor
+            The aggregated log probabilities of all submodules.
+        """
         all_log_probs = []
         for module in self.modules():
             if not hasattr(module, "_log_probs"):

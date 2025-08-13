@@ -165,6 +165,15 @@ class VIConv1d(_VIConvNd):
 
     - ("weight", "bias") if bias == True
     - ("weight", )       if bias == False
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.Conv1d` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html>`__)
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     def __init__(
@@ -283,6 +292,15 @@ class VIConv2d(_VIConvNd):
 
     - ("weight", "bias") if bias == True
     - ("weight", )       if bias == False
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.Conv2d` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html>`__)
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     def __init__(
@@ -399,6 +417,15 @@ class VIConv3d(_VIConvNd):
 
     - ("weight", "bias") if bias == True
     - ("weight", )       if bias == False
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.Conv3d` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.Conv3d.html>`__)
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     def __init__(

@@ -20,7 +20,7 @@ class PredictiveDistribution(metaclass=PostInitCallMeta):
     Typically, it is enough for subclasses to define :meth:`~log_prob_from_parameters`
     and :meth:`~predictive_parameters_from_samples`, which the class automatically uses
     to first calculate the predictive parameters from the provided samples and then the
-    log likelihood of those samples from the parameters. In case this detour does not
+    log probability of those samples from the parameters. In case this detour does not
     work :meth:`~log_prob_from_samples` can be overwritten. However,
     :meth:`~predictive_parameters_from_samples` should still be defined to allow
     extracting predictions.
@@ -66,7 +66,7 @@ class PredictiveDistribution(metaclass=PostInitCallMeta):
     Returns
     -------
         Tensor
-            The log likelihood of the reference under the predicted distribution.
+            The log probability of the reference under the predicted distribution.
             Shape: (1,).
     """
 
@@ -91,7 +91,7 @@ class PredictiveDistribution(metaclass=PostInitCallMeta):
 
     def log_prob_from_samples(self, reference: Tensor, samples: Tensor) -> Tensor:
         r"""
-        Calculate the log likelihood for reference given a set of samples.
+        Calculate the log probability for reference given a set of samples.
 
         Usually combines :meth:`~predictive_parameters_from_samples` and
         :meth:`~log_prob_from_parameters`, but can be redefined, if needed.
@@ -106,7 +106,7 @@ class PredictiveDistribution(metaclass=PostInitCallMeta):
         Returns
         -------
         Tensor
-            The log likelihood of the reference under the predicted distribution.
+            The log probability of the reference under the predicted distribution.
             Shape: (1,).
         """
         params = self.predictive_parameters_from_samples(samples)
