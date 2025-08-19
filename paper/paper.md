@@ -29,20 +29,30 @@ bibliography: paper.bib
 
 In the work towards reliable Neural Networks (NN), Bayesian Neural Networks (BNN) and
 Variational Inference (VI) present an important approach enabling better decisions via
-integrating uncertainty quantification in all steps of the training an predictions
+integrating uncertainty quantification in all steps of the training and predictions
 process. They strike a balance between the ability to forecast a large variety of
 distributions and compute requirements to potentially allow for larger models.
 
 However, setting up and training BNNs is quite complicated and existing libraries all
-either lack flexibility, scalability or tackle Bayesian computation in general, adding
-even more complexity and therefore a huge entry barrier.
+either lack flexibility, scalability, or tackle Bayesian computation in general, adding
+even more complexity and therefore a huge entry barrier. The most popular options - Pyro
+and Stan - fall in the last category. While both are quite powerful, their interfaces
+are designed for users experienced with statistical programming. Stan basically rises to
+the level of a new programming language with an interface inspired by R. Pyro is build
+around plate notation, observations, and the variational distribution, which is renamed
+"guide". While these are important to learn, it can be quite challenging from the
+perspective off a user new to Bayesian approaches to learn both the trappings of
+Bayesian statistics and a completely new software interface at the same time.
+Additionally, neither of these directly support BNNs by providing pre-programmed
+layers. This forces any BNNs to be implemented from scratch, which can be challenging
+even for non-Bayesian networks.
 
-`torch_bayesian` provides an interface that is almost identical to the widely used
-`pytorch` for basic use, providing low entry barrier, as well as an advanced interface
-designed for exploration and research. It provides Bayesian versions of most standard
-NN layer types, Bayesian optimization objectives, and a selection of relevant
-distributions as well as instructions for advanced users to implement custom variants of
-the same.
+`torch_bayesian` addresses this by providing an interface that is almost identical to
+the widely used `pytorch` for basic use, providing a low entry barrier, as well as an
+advanced interface designed for exploration and research. It provides Bayesian versions
+of most standard NN layer types, Bayesian optimization objectives, and a selection of
+relevant distributions as well as instructions for advanced users to implement custom
+variants of the same.
 
 # Statement of need
 
@@ -93,8 +103,8 @@ Bayesian settings.
 **include torch tutorial example here?**
 
 While modular priors and predictive distributions are quite common even for packages
-with a simpler interface flexible variational distributions are much more challenging
-and are often restricted to mean field Gaussian. This is likely due to the fact that
+with a simpler interface, flexible variational distributions are much more challenging
+and are often restricted to mean-field Gaussian. This is likely due to the fact that
 a generic variational distribution might require any number of different parameters and
 the number and shape of weight matrices can only be determined with knowledge of the
 specific combination of layer and variational distribution. This is overcome in
