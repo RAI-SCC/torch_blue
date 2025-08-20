@@ -9,34 +9,40 @@ from .utils.common_types import _log_prob_return_format
 
 
 class KullbackLeiblerLoss(Module):
-    """
+    r"""
     Kullback-Leibler (KL) divergence loss.
 
     Calculates the Evidence Lower Bound (ELBO) loss which minimizes the KL-divergence
     between the variational distribution and the true posterior. Requires external
-    calculation of prior and variational log probability, i.e. modules must have
-    return_log_probs = True.
+    calculation of prior and variational log probability, i.e., modules must have
+    `return_log_probs` = ``True``.
 
     Parameters
     ----------
-    predictive_distribution: PredictiveDistribution
-        Assumed distribution of the outputs. Typically, `CategoricalPredictiveDistribution`
-        for classification and `MeanFieldNormalPredictiveDistribution` for regression.
+    predictive_distribution: :class:`~.predictive_distributions.PredictiveDistribution`
+        Assumed distribution of the outputs. Typically,
+        :class:`~.predictive_distributions.CategoricalPredictiveDistribution` for
+        classification and
+        :class:`~.predictive_distributions.MeanFieldNormalPredictiveDistribution` for
+        regression.
     dataset_size: Optional[int]
         Size of the training dataset. Required for loss calculation. If not provided,
-        it must be provided to the forward method.
-    heat: float
-        Temperature in the sense of the Cold Posterior effect. Default: 1.
-    track: bool
-        Set True to track the loss components. The log is stored as a dictionary in
-        `self.log`. Loss history is stored for three components as lists accessible via
-        the respective keys:
-            data_fitting: data log likelihood
-            prior_matching: the Kullback-Leibler divergence of prior anc variational
-                distribution
-            log_probs: the raw prior and variational distribution log probabilities of
-                the sampled weights.
-        Default: False.
+        it must be provided to the :meth:`~forward` method.
+    heat: float, default: 1.0
+        A factor multiplied with the prior matching term. Set smaller than 1. to produce
+        a "cold posterior" loss. Set to 0. to disable the prior matching term to imitate
+        a non-Bayesian loss.
+    track: bool, default: False
+        Set ``True`` to track the loss components. The log is stored as a dictionary in
+        :attr:`~self.log`. Loss history is stored for three components as lists
+        accessible via the respective keys:
+
+        - `data_fitting`: data log likelihood
+        - `prior_matching`: the Kullback-Leibler divergence of prior anc variational
+          distribution
+        - `log_probs`: the raw prior and variational distribution log probabilities of
+          the sampled weights.
+
     """
 
     def __init__(
@@ -60,12 +66,12 @@ class KullbackLeiblerLoss(Module):
         """
         Enable or disable loss tracking.
 
-        Any existing loss history is kept and continued if tracking is reenabled.
+        Any existing loss history is kept and continued if tracking is re-enabled.
 
         Parameters
         ----------
-        mode: bool
-            If `True`, enable loss tracking if `False` disable it. Default: True.
+        mode: bool, default: True
+            If ``True``, enable loss tracking if ``False`` disable it.
         """
         if mode and self.log is None:
             self._init_log()
@@ -80,7 +86,7 @@ class KullbackLeiblerLoss(Module):
         target: Tensor,
         dataset_size: Optional[int] = None,
     ) -> Tensor:
-        """
+        r"""
         Calculate the negative ELBO loss from sampled evaluations, a target and the weight log probs.
 
         Accepts a Tensor of N samples, the associate log probabilities and a target to
@@ -89,16 +95,16 @@ class KullbackLeiblerLoss(Module):
         Parameters
         ----------
         model_output: Tuple[Tensor, Tensor]
-            The model output in with return_log_probs = True. The first Tensor is the
-            sampled model prediction (Shape: (N, *). The second Tensor contains
-            prior_log_prob and variational_log_prob - the log probability of the sampled
+            The model output in with `return_log_probs` = ``True``. The first Tensor is
+            the sampled model prediction (Shape: (N, \*). The second Tensor contains
+            prior_log_prob and variational_log_prob - the log likelihood of the sampled
             weights under the prior and variational distribution respectively - and has
             shape (N, 2).
-        target: Tensor,
-            Target prediction. Shape (*)
-        dataset_size: Optional[int] = None
-            Total number of samples in the dataset. Used in place of self.dataset_size
-            if provided.
+        target: Tensor
+            Target prediction. Shape (\*)
+        dataset_size: Optional[int], default: None
+            Total number of samples in the dataset. Used in place of
+            :attr:`~self.dataset_size` if provided.
 
         Returns
         -------

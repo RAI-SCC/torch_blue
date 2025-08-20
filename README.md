@@ -5,6 +5,7 @@ Neural Networks (BNNs) with Variational Inference (VI). To make this as easy as 
 most components mirror components from [pytorch](https://pytorch.org/docs/stable/index.html).
 
 - [Installation](#installation)
+- [Documentation](#documentation)
 - [Quickstart](#quickstart)
   - [Level 1](#level-1)
   - [Level 2](#level-2)
@@ -49,7 +50,25 @@ $ pip install -e .[scripts]
 ```
 
 
-## Quickstart to `torch_bayesian.vi`
+## Documentation
+
+Documentation is not yet hosted online, but can easily be build locally with sphinx.
+Run
+
+```console
+$ pip install -e .[docs]
+```
+
+Then navigate to ``torch_bayesian/docs/`` and run:
+
+```console
+$ sphinx-build -T -E -b html ./source ./build
+```
+
+You can then open ``torch_bayesian/docs/build/index.html`` to start browsing.
+
+
+## Quickstart
 
 This Quickstart guide assumes basic familiarity with [pytorch](https://pytorch.org/docs/stable/index.html)
 and knowledge of how to implement the intended model in it. For a (potentially familiar)
@@ -71,12 +90,13 @@ pytorch model fulfills two requirements it can be transferred almost unchanged:
 2. The model can be expressed purely as a sequential application of a list of layers,
 i.e. with `nn.Sequential`.
 
-| pytorch     | vi replacement |
-|-------------|----------------|
-| `nn.Linear` | `VILinear`     |
-| `nn.Conv1d` | `VIConv1d`     |
-| `nn.Conv2d` | `VIConv2d`     |
-| `nn.Conv3d` | `VIConv3d`     |
+| pytorch          | vi replacement  |
+|------------------|-----------------|
+| `nn.Linear`      | `VILinear`      |
+| `nn.Conv1d`      | `VIConv1d`      |
+| `nn.Conv2d`      | `VIConv2d`      |
+| `nn.Conv3d`      | `VIConv3d`      |
+| `nn.Transformer` | `VITransformer` |
 
 Given these two conditions, inherit the module from `vi.VIModule` instead of `nn.Module`
 and use `vi.VISequential` instead of `nn.Sequential`. Then replace all layers
@@ -97,8 +117,8 @@ from the table below based on the loss you would use in pytorch (more details
 
 | pytorch               | vi replacement (import from `vi.predictive_distributions`) |
 |-----------------------|------------------------------------------------------------|
-| `nn.MSELoss`          | `MeanFieldNormalPredicitveDistribution`                    |
-| `nn.CrossEntropyLoss` | `CategoricalPredicitveDistribution`                        |
+| `nn.MSELoss`          | `MeanFieldNormalPredictiveDistribution`                    |
+| `nn.CrossEntropyLoss` | `CategoricalPredictiveDistribution`                        |
 
 > **Note:** Reasons for the requirement to use `VISequential` (and how to overcome it)
 > are described in [Quickstart: Level 3](#level-3). However, adding residual connections
@@ -203,45 +223,3 @@ Creating custom `VIModules` with parameters goes beyond the scope of this guide.
 ### The Predictive Distribution
 
 ### Autosampling
-
-
-#### The Documentation grind tracker
-
-- [ ] vi.base
-- [x] conv
-- [x] kl_loss
-- [x] linear
-- [x] sequential
-
-
-- variation_distributions
-
-    - [ ] base
-    - [ ] normal
-
-
-- priors
-
-    - [ ] base
-    - [ ] normal
-    - [ ] quiet
-
-
-- predictive_distributions
-
-  - [x] base
-  - [ ] categorical
-  - [ ] normal
-
-- README
-  - [x] Quickstart
-  - [ ] Variational Inference
-  - [ ] Prior
-  - [ ] Variational Distribution
-  - [ ] Predictive Distribution
-  - [ ] Auto-Sampling
-
-### ToDo
-
-- Check if log params should be set to `-inf` if `fan_in` is 0
-- BasicQuietPrior might need an eps to avoid infinity for mean = 0

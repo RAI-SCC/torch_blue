@@ -11,12 +11,34 @@ from .base import VIBaseModule, VIModule
 from .linear import VILinear
 from .priors import MeanFieldNormalPrior, Prior
 from .sequential import VIResidualConnection
-from .utils.common_types import VIReturn, _prior_any_t, _vardist_any_t, _VIkwargs
+from .utils.common_types import VIkwargs, VIReturn, _prior_any_t, _vardist_any_t
 from .variational_distributions import MeanFieldNormalVarDist, VariationalDistribution
 
 
 class VIMultiheadAttention(VIBaseModule):
-    """Alpha implementation of VIMultiheadAttention."""
+    """
+    Allows the model to jointly attend to information from different representation subspaces.
+
+    Equivalent of :class:`nn.MultiheadAttention` with variational inference. See its
+    `documentation <https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention.html>`__
+    for usage.
+
+    This does not support the ``dropout`` argument.
+    In addition to all other arguments, this class accepts :class:`~.VIkwargs`.
+
+    This module's random variables are:
+
+    - ("in_proj_weight", "out_proj_weight") if ``kdim`` and ``vdim`` are ``None`` or
+      equal to ``embed_dim``.
+    - ("q_proj_weight", "k_proj_weight", "v_proj_weight", "out_proj_weight") else.
+
+    Additional random variables are appended in the following order based on the given
+    arguments:
+
+    - ("in_proj_bias", "out_proj_bias") if ``bias`` is ``True``.
+    - ("bias_k", "bias_v") if ``add_bias_kv`` is ``True``.
+
+    """
 
     __constants__ = ["batch_first"]
     bias_k: Optional[torch.Tensor]
@@ -41,7 +63,7 @@ class VIMultiheadAttention(VIBaseModule):
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
     ) -> None:
-        vikwargs: _VIkwargs = dict(
+        vikwargs: VIkwargs = dict(
             variational_distribution=variational_distribution,
             prior=prior,
             kaiming_initialization=kaiming_initialization,
@@ -104,7 +126,16 @@ class VIMultiheadAttention(VIBaseModule):
         average_attn_weights: bool = True,
         is_causal: bool = False,
     ) -> VIReturn[Tuple[Tensor, Optional[Tensor]]]:
-        """Forward computation."""
+        """
+        Compute attention outputs using query, key, and value embeddings.
+
+        Supports optional parameters for padding, masks and attention weights. See
+        `documentation <https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention.html>`__
+        of :class:`nn.MultiheadAttention` for details. For technical reasons
+        ``need_weights`` is hardcoded as ``True``.
+
+        This implementation also currently does not support the torch fastpath.
+        """
         is_batched = query.dim() == 3
 
         key_padding_mask = F._canonical_mask(
@@ -223,7 +254,16 @@ class VIMultiheadAttention(VIBaseModule):
 
 
 class VITransformerEncoderLayer(VIModule):
-    """Alpha implementation of VITransformerEncoderLayer."""
+    """
+    TransformerEncoderLayer is made up of self-attn and feedforward network.
+
+    Equivalent of :class:`nn.TransformerEncoderLayer` with variational inference. See its
+    `documentation <https://pytorch.org/docs/stable/generated/torch.nn.TransformerEncoderLayer.html>`__
+    for usage.
+
+    This does not support the ``dropout`` argument.
+    In addition to all other arguments, this class accepts :class:`~.VIkwargs`.
+    """
 
     def __init__(
         self,
@@ -245,7 +285,7 @@ class VITransformerEncoderLayer(VIModule):
         dtype: Optional[torch.dtype] = None,
     ) -> None:
         factory_kwargs = {"device": device, "dtype": dtype}
-        vikwargs: _VIkwargs = dict(
+        vikwargs: VIkwargs = dict(
             variational_distribution=variational_distribution,
             prior=prior,
             rescale_prior=rescale_prior,
@@ -280,7 +320,14 @@ class VITransformerEncoderLayer(VIModule):
         src_key_padding_mask: Optional[Tensor] = None,
         is_causal: bool = False,
     ) -> VIReturn[Tensor]:
-        """Forward computation."""
+        """
+        Pass the input through the encoder layer.
+
+        See `documentation <https://pytorch.org/docs/stable/generated/torch.nn.TranformerEncoderLayer.html>`__
+        of :class:`nn.TranformerEncoderLayer` for details.
+
+        This implementation also currently does not support the torch fastpath.
+        """
         src_key_padding_mask = F._canonical_mask(
             mask=src_key_padding_mask,
             mask_name="src_key_padding_mask",
@@ -359,7 +406,16 @@ class VITransformerEncoderLayer(VIModule):
 
 
 class VITransformerDecoderLayer(VIModule):
-    """Alpha implementation of VITransformerDecoderLayer."""
+    """
+    TransformerDecoderLayer is made up of self-attn, multi-head-attn and feedforward network.
+
+    Equivalent of :class:`nn.TransformerDecoderLayer` with variational inference. See its
+    `documentation <https://pytorch.org/docs/stable/generated/torch.nn.TransformerDecoderLayer.html>`__
+    for usage.
+
+    This does not support the ``dropout`` argument.
+    In addition to all other arguments, this class accepts :class:`~.VIkwargs`.
+    """
 
     def __init__(
         self,
@@ -381,7 +437,7 @@ class VITransformerDecoderLayer(VIModule):
         dtype: Optional[torch.dtype] = None,
     ) -> None:
         factory_kwargs = {"device": device, "dtype": dtype}
-        vikwargs: _VIkwargs = dict(
+        vikwargs: VIkwargs = dict(
             variational_distribution=variational_distribution,
             prior=prior,
             rescale_prior=rescale_prior,
@@ -433,7 +489,14 @@ class VITransformerDecoderLayer(VIModule):
         tgt_is_causal: bool = False,
         memory_is_causal: bool = False,
     ) -> VIReturn[Tensor]:
-        """Forward computation."""
+        """
+        Pass the input through the decoder layer.
+
+        See `documentation <https://pytorch.org/docs/stable/generated/torch.nn.TranformerDecoderLayer.html>`__
+        of :class:`nn.TranformerDecoderLayer` for details.
+
+        This implementation also currently does not support the torch fastpath.
+        """
         x = tgt
         # _ff_block already includes residual connection
         if self._return_log_probs and self.norm_first:
@@ -532,7 +595,13 @@ class VITransformerDecoderLayer(VIModule):
 
 
 class VITransformerDecoder(VIModule):
-    """Alpha implementation of VITransformerDecoder."""
+    """
+    TransformerDecoder is a stack of N decoder layers.
+
+    Equivalent of :class:`nn.TransformerDecoder` with variational inference. See its
+    `documentation <https://pytorch.org/docs/stable/generated/torch.nn.TransformerDecoder.html>`__
+    for usage.
+    """
 
     def __init__(
         self,
@@ -560,7 +629,14 @@ class VITransformerDecoder(VIModule):
         tgt_is_causal: Optional[bool] = None,
         memory_is_causal: bool = False,
     ) -> VIReturn[Tensor]:
-        """Forward computation."""
+        """
+        Pass the input through the decoder layers in turn.
+
+        See `documentation <https://pytorch.org/docs/stable/generated/torch.nn.TranformerDecoder.html>`__
+        of :class:`nn.TransformerDecoder` for details.
+
+        This implementation also currently does not support the torch fastpath.
+        """
         output = tgt
 
         seq_len = _get_seq_len(tgt, self.layers[0].self_attn.batch_first)
@@ -601,7 +677,13 @@ class VITransformerDecoder(VIModule):
 
 
 class VITransformerEncoder(VIModule):
-    """Alpha implementation of VITransformerEncoder."""
+    """
+    TransformerEncoder is a stack of N encoder layers.
+
+    Equivalent of :class:`nn.TransformerEncoder` with variational inference. See its
+    `documentation <https://pytorch.org/docs/stable/generated/torch.nn.TransformerEncoder.html>`__
+    for usage.
+    """
 
     def __init__(
         self,
@@ -625,7 +707,14 @@ class VITransformerEncoder(VIModule):
         src_key_padding_mask: Optional[Tensor] = None,
         is_causal: Optional[bool] = None,
     ) -> VIReturn[Tensor]:
-        """Forward computation."""
+        """
+        Pass the input through the encoder layers in turn.
+
+        See `documentation <https://pytorch.org/docs/stable/generated/torch.nn.TranformerEncoder.html>`__
+        of :class:`nn.TransformerEncoder` for details.
+
+        This implementation also currently does not support the torch fastpath.
+        """
         src_key_padding_mask = F._canonical_mask(
             mask=src_key_padding_mask,
             mask_name="src_key_padding_mask",
@@ -675,7 +764,16 @@ class VITransformerEncoder(VIModule):
 
 
 class VITransformer(VIModule):
-    """Alpha implementation of VITransformer."""
+    """
+    A Bayesian Transformer model.
+
+    Equivalent of :class:`nn.Transformer` with variational inference. See its
+    `documentation <https://pytorch.org/docs/stable/generated/torch.nn.Transformer.html>`__
+    for usage.
+
+    This does not support the ``dropout`` argument.
+    In addition to all other arguments, this class accepts :class:`~.VIkwargs`.
+    """
 
     def __init__(
         self,
@@ -702,7 +800,7 @@ class VITransformer(VIModule):
     ) -> None:
         super().__init__()
         factory_kwargs = {"device": device, "dtype": dtype}
-        vikwargs: _VIkwargs = dict(
+        vikwargs: VIkwargs = dict(
             variational_distribution=variational_distribution,
             prior=prior,
             rescale_prior=rescale_prior,
@@ -773,7 +871,14 @@ class VITransformer(VIModule):
         tgt_is_causal: Optional[bool] = None,
         memory_is_causal: bool = False,
     ) -> VIReturn[Tensor]:
-        """Forward computation."""
+        """
+        Take in and process masked source/target sequences.
+
+        See `documentation <https://pytorch.org/docs/stable/generated/torch.nn.Tranformer.html>`__
+        of :class:`nn.Transformer` for details.
+
+        This implementation also currently does not support the torch fastpath.
+        """
         if self._return_log_probs:
             memory, encoder_log_probs = self.encoder(
                 src,

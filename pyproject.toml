@@ -37,6 +37,12 @@ dev = [
     "pytest",
     "coverage",
 ]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinx-autoapi",
+    "myst-parser",
+]
 scripts = [
     "matplotlib",
     "torchvision",

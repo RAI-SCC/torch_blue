@@ -1,0 +1,43 @@
+
+/* leave out the internal module paths */
+dl.py.class span.sig-prename.descclassname {
+    display: none;
+}
+
+dl.py.function span.sig-prename.descclassname {
+    display: none;
+}
+
+
+/* add a colored background box to parameters, returns, etc */
+dl.field-list.simple dt.field-odd, dl.field-list.simple dt.field-even {
+    border:none;
+    border-left: solid 3px #6ab0de;
+    background-color: #e1e4e5;
+    padding-right: 6px;
+}
+
+/* add margins for return / parameter / etc box and the corresponding texts */
+dl.field-list.simple dt.field-odd, dl.field-list.simple dt.field-even, dl.field-list.simple dd.field-odd, dl.field-list.simple dd.field-even {
+    margin-bottom: 3px;
+    margin-top: 3px;
+}
+
+
+/* method header formatting */
+html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.citation):not(.glossary):not(.simple) dl:not(.option-list):not(.field-list):not(.footnote):not(.citation):not(.glossary):not(.simple) > dt {
+    border-left: solid 3px #555555;
+}
+
+/*
+html.writer-html5 .rst-content dl[class="py method"] dt[class="sig sig-object py"] {
+    border-left: solid 3px #555555;
+}
+*/
+
+/* automatically mark optional arguments as such */
+/*
+dd.field-odd ul.simple li p em:nth-last-of-type(2)::before {
+    content: ", optional"
+}
+*/

@@ -9,11 +9,16 @@ from .base import VIModule
 
 class VISequential(VIModule, Sequential):
     """
-    Sequential container equivalent to torch.nn.Sequential, that manages VIModules too.
+    Sequential container for :class:`~.VIModule`.
+
+    Equivalent to :class:`nn.Sequential`, that manages :class:`~.VIModule` too. See its
+    `documentation <https://pytorch.org/docs/stable/generated/torch.nn.Sequential.html>`__
+    for usage.
 
     Detects and aggregates prior_log_prob and variational_log_prob from submodules, if
-    needed. Then passes on only the output to the next module making mixed sequences of
-    VIModules and nn.Modules work with and without return_log_probs.
+    needed. Then passes on only the output to the next module. This makes mixed
+    sequences of :class:`~.VIModule` and :class:`nn.Module` work with and without
+    ``return_log_probs``.
     """
 
     @overload
@@ -63,14 +68,13 @@ class VISequential(VIModule, Sequential):
 
         Returns
         -------
-        output, log_probs if return_log_probs else output
-
         output: Varies
             Output of the module stack.
         log_probs: Tensor
             Tensor of shape (2,) containing the total prior and variational log
             probability (in that order) of all sampled weights and biases.
-            Only returned if return_log_probs.
+
+            Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
         if self._return_log_probs:
             total_log_probs = torch.tensor([0.0, 0.0], device=input_.device)
@@ -90,11 +94,16 @@ class VISequential(VIModule, Sequential):
 
 class VIResidualConnection(VISequential):
     """
-    A version of VISequential that supports residual connections.
+    A version of :class:`~.VISequential` that supports residual connections.
 
-    This class is identical to VISequential, but adds the input to the output.
-    Importantly it manages log prob tracking, if required. Note that a single
+    This class is identical to :class:`~.VISequential`, but adds the input to the
+    output. Importantly, it manages log prob tracking, if required. Note that a single
     module can also be wrapped to add a residual connection around it.
+
+    Raises
+    ------
+    :exc:`RuntimeError`
+        If the output shape does not match the input shape during the forward pass.
     """
 
     def forward(self, input_):  # type: ignore
@@ -108,14 +117,13 @@ class VIResidualConnection(VISequential):
 
         Returns
         -------
-        output, log_probs if return_log_probs else output
-
         output: Varies
             Output of the module stack plus the input to the residual connection.
         log_probs: Tensor
             Tensor of shape (2,) containing the total prior and variational log
             probability (in that order) of all sampled weights and biases.
-            Only returned if return_log_probs.
+
+            Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
         if self._return_log_probs:
             output, log_probs = super().forward(input_)

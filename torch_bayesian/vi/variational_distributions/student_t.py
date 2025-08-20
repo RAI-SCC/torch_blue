@@ -19,10 +19,10 @@ class StudentTVarDist(VariationalDistribution):
 
     Parameters
     ----------
-    initial_scale: float
-        initial scale each independent distribution. Default: 1.0
-    degrees_of_freedom: float
-        degrees of freedom each independent distribution. Default: 4.0
+    initial_scale: float, default: 1.0
+        initial scale each independent distribution.
+    degrees_of_freedom: float, default: 4.0
+        degrees of freedom each independent distribution.
     """
 
     def __init__(
@@ -53,7 +53,7 @@ class StudentTVarDist(VariationalDistribution):
         Returns
         -------
         sample: Tensor
-            Sample tensor of the same shape as mean drawn from Student's t-distribution.
+            Sample tensor of the same shape as ``mean`` drawn from Student's t-distribution.
         """
         scale = torch.exp(log_scale)
         return self._student_t_sample(mean, scale)
@@ -77,7 +77,7 @@ class StudentTVarDist(VariationalDistribution):
         Returns
         -------
         log_prob: Tensor
-            Tensor with the same shape as sample containing the log probability of the sample given mean and log_scale.
+            Tensor with the same shape as ``sample`` containing the log probability of the sample given ``mean`` and ``log_scale``.
         """
         self.degrees_of_freedom = self.degrees_of_freedom.to(device=sample.device)
         scale = torch.exp(log_scale)
@@ -113,7 +113,7 @@ class StudentTVarDist(VariationalDistribution):
         Returns
         -------
         sample: Tensor
-            Sample tensor of the same shape as mean drawn from Student's t-distribution.
+            Sample tensor of the same shape as ``mean`` drawn from Student's t-distribution.
         """
         self.degrees_of_freedom = self.degrees_of_freedom.to(device=mean.device)
         base_sample = StudentT(self.degrees_of_freedom).sample(sample_shape=mean.shape)
