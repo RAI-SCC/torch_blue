@@ -1,7 +1,6 @@
-from typing import TYPE_CHECKING, Optional, Tuple, TypedDict, TypeVar, Union
+from typing import TYPE_CHECKING, Optional, TypedDict
 
 import torch
-from torch import Tensor
 from torch.nn.common_types import _scalar_or_tuple_any_t
 from typing_extensions import TypeAlias
 
@@ -11,10 +10,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 _prior_any_t: TypeAlias = _scalar_or_tuple_any_t["Prior"]
 _vardist_any_t: TypeAlias = _scalar_or_tuple_any_t["VariationalDistribution"]
-
-T = TypeVar("T")
-_log_prob_return_format = Tuple[T, Tensor]
-VIReturn = Union[T, _log_prob_return_format[T]]
 
 
 class VIkwargs(TypedDict):

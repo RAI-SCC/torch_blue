@@ -53,8 +53,8 @@ def test_sequential(device: torch.device) -> None:
 
     model1.return_log_probs = True
     model2.return_log_probs = True
-    out1, _ = model1(sample, samples=5)
-    out2, _ = model2(sample, samples=5)
+    out1 = model1(sample, samples=5)
+    out2 = model2(sample, samples=5)
     assert out1.shape == (5, 2, out_features)
     assert out1.device == device
     assert out2.shape == (5, 2, out_features)
@@ -92,7 +92,8 @@ def test_residual_connection(device: torch.device) -> None:
     broken_module = VIResidualConnection(Test2())
     module.return_log_probs = True
     sample1 = torch.randn(6, 3, device=device)
-    out1, lps1 = module(sample1, samples=3)
+    out1 = module(sample1, samples=3)
+    lps1 = out1.log_probs
     plp1 = lps1[:, 0]
     vlp1 = lps1[:, 1]
     with pytest.raises(

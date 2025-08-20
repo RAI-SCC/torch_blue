@@ -8,7 +8,7 @@ from torch import Tensor
 from torch._C._functorch import get_unwrapped
 from torch.nn import Module
 
-from torch_bayesian.vi import VIModule
+from torch_bayesian.vi import VIModule, VIReturn
 from torch_bayesian.vi.priors import Prior
 from torch_bayesian.vi.utils import NoVariablesError
 from torch_bayesian.vi.variational_distributions import VariationalDistribution
@@ -61,10 +61,14 @@ def test_sampled_forward(device: torch.device) -> None:
     shape1 = (3, 4)
     sample1 = torch.randn(shape1, device=device)
     test1 = Test(ref=sample1)
-    cons, rand = test1.sampled_forward(sample1, samples=10)
-    assert torch.allclose(cons, torch.zeros((10,) + shape1, device=device))
-    for r in rand[1:]:
-        assert not torch.allclose(rand[0], r)
+    out = cast(VIReturn, test1.sampled_forward(sample1, samples=10))
+    lps = cast(Tensor, out.log_probs)
+    assert hasattr(out, "log_probs")
+    assert isinstance(out, VIReturn)
+    assert lps.shape == (10, 2)
+    assert torch.allclose(out, torch.zeros((10,) + shape1, device=device))
+    for r in lps[1:]:
+        assert not torch.allclose(lps[0], r)
 
     shape2 = (5,)
     sample2 = torch.randn(shape2, device=device)
@@ -301,19 +305,23 @@ def test_log_prob_setting(device: torch.device) -> None:
     assert module1.module._return_log_probs is True
     sample1 = torch.randn(4, in_features, device=device)
     out = module1(sample1, samples=10)
-    assert len(out) == 2
-    assert out[0].shape == (10, 4, out_features)
-    assert out[0].device == device
-    assert out[1].shape == (10, 2)
-    assert out[1].device == device
+    lps = out.log_probs
+    assert isinstance(out, VIReturn)
+    assert out.shape == (10, 4, out_features)
+    assert out.device == device
+    assert lps.shape == (10, 2)
+    assert lps.device == device
 
     module1.return_log_probs = False
     assert module1._return_log_probs is False
     assert module1.module._return_log_probs is False
     sample1 = torch.randn(4, in_features, device=device)
     out = module1(sample1, samples=10)
+    lps = out.log_probs
+    assert isinstance(out, VIReturn)
     assert out.shape == (10, 4, out_features)
     assert out.device == device
+    assert lps is None
 
 
 @pytest.mark.filterwarnings("ignore")

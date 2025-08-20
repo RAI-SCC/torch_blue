@@ -20,7 +20,8 @@ from .transformer import (
     VITransformerEncoder,
     VITransformerEncoderLayer,
 )
-from .utils.common_types import VIkwargs, VIReturn
+from .utils.common_types import VIkwargs
+from .utils.vi_return import VIReturn
 
 __all__ = [
     "AnalyticalKullbackLeiblerLoss",

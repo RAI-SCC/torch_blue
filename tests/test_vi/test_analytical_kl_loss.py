@@ -692,14 +692,13 @@ def test_forward(
         if init_dataset_size is None and fwrd_dataset_size is None:
             message = f"No dataset_size is provided. Batch size \\({batch_size}\\) is used instead."
             with pytest.warns(UserWarning, match=message):
-                analytical_loss = criterion(output[0], target, fwrd_dataset_size)
+                analytical_loss = criterion(output, target, fwrd_dataset_size)
             ref_loss = ref_criterion(output, target, batch_size)
         else:
-            analytical_loss = criterion(output[0], target, fwrd_dataset_size)
+            analytical_loss = criterion(output, target, fwrd_dataset_size)
             ref_loss = ref_criterion(output, target, fwrd_dataset_size)
 
         assert analytical_loss.device == device
-        print(analytical_loss, ref_loss)
         assert torch.allclose(analytical_loss, ref_loss, atol=2e-1, rtol=1e-3)
 
         model.zero_grad()

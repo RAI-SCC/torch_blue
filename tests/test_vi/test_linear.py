@@ -1,9 +1,10 @@
 from math import exp
+from typing import cast
 
 import torch
 from torch import Tensor
 
-from torch_bayesian.vi import VILinear
+from torch_bayesian.vi import VILinear, VIReturn
 from torch_bayesian.vi.priors import MeanFieldNormalPrior
 from torch_bayesian.vi.variational_distributions import NonBayesian
 
@@ -58,14 +59,16 @@ def test_vilinear(device: torch.device) -> None:
     module3 = VILinear(in_features, out_features, return_log_probs=True, device=device)
 
     sample3 = torch.randn(4, 7, in_features, device=device)
-    out, lps = module3(sample3, samples=5)
+    out = module3(sample3, samples=5)
+    lps = out.log_probs
     assert out.shape == (5, 4, 7, out_features)
     assert lps.shape == (5, 2)
 
-    multisample2 = module3.sampled_forward(sample3, samples=10)
-    assert multisample2[0].shape == (10, 4, 7, out_features)
-    assert multisample2[1].shape == (10, 2)
-    multisample2[0].sum().backward()
+    multisample2 = cast(VIReturn, module3.sampled_forward(sample3, samples=10))
+    multilps = cast(Tensor, multisample2.log_probs)
+    assert multisample2.shape == (10, 4, 7, out_features)
+    assert multilps.shape == (10, 2)
+    multisample2.sum().backward()
 
     # test prior_init
     in_features = 7

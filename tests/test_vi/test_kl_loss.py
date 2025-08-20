@@ -3,7 +3,7 @@ from warnings import filterwarnings
 import torch
 from pytest import warns
 
-from torch_bayesian.vi import KullbackLeiblerLoss
+from torch_bayesian.vi import KullbackLeiblerLoss, VIReturn
 from torch_bayesian.vi.predictive_distributions import (
     MeanFieldNormalPredictiveDistribution,
 )
@@ -18,9 +18,9 @@ def test_kl_loss(device: torch.device) -> None:
     log_probs = torch.randn((batch_size, 2), device=device)
     target = torch.randn([batch_size, *sample_shape], device=device)
 
-    model_return = samples, log_probs
-    double_return = torch.cat([samples] * 2, dim=1), log_probs
-    double_target = torch.cat([target] * 2, dim=0)
+    model_return = VIReturn(samples, log_probs)
+    double_return = VIReturn(torch.cat([samples] * 2, dim=1), log_probs)
+    double_target = VIReturn(torch.cat([target] * 2, dim=0), None)
 
     loss1 = KullbackLeiblerLoss(MeanFieldNormalPredictiveDistribution())
     with warns(

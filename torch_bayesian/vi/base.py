@@ -1,6 +1,6 @@
 import warnings
 from copy import deepcopy
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.utils.hooks as hooks
@@ -19,11 +19,12 @@ from torch.nn.modules.module import (
 
 from .priors import MeanFieldNormalPrior
 from .utils import NoVariablesError, PostInitCallMeta
-from .utils.common_types import VIReturn, _prior_any_t, _vardist_any_t
+from .utils.common_types import _prior_any_t, _vardist_any_t
+from .utils.vi_return import VIReturn
 from .variational_distributions import MeanFieldNormalVarDist
 
 
-def _forward_unimplemented(self: Module, *input_: Optional[Tensor]) -> VIReturn[Tensor]:
+def _forward_unimplemented(self: Module, *input_: Optional[Tensor]) -> Tensor:
     r"""Define the computation performed at every call.
 
     Should be overridden by all subclasses.
@@ -110,7 +111,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         them is called.
     """
 
-    forward: Callable[..., VIReturn] = _forward_unimplemented
+    forward: Callable[..., _tensor_list_t] = _forward_unimplemented
     random_variables: Optional[Tuple[str, ...]] = None
     _return_log_probs: bool = True
     # _has_sampling_responsibility is set to False right after __init__ completes for
@@ -357,7 +358,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
 
     def sampled_forward(
         self, *input_: Optional[Tensor], samples: int = 10, **kwargs: Any
-    ) -> VIReturn[_tensor_list_t]:
+    ) -> Union[VIReturn, Tuple[VIReturn, ...]]:
         """
         Forward pass of the module evaluating multiple weight samples.
 
@@ -377,17 +378,28 @@ class VIModule(Module, metaclass=PostInitCallMeta):
 
         Returns
         -------
-        Union[Tensor, Tuple[Tensor, ...]]
-            One or multiple Tensors
+        Union[VIReturn, Tuple[VIReturn, ...]]
+            One or multiple Tensors with log prob annotation
         """
         expanded = [self._expand_to_samples(x, samples=samples) for x in input_]
-        out = torch.vmap(self.forward, randomness="different")(*expanded, **kwargs)
+        out: _tensor_list_t = torch.vmap(self.forward, randomness="different")(
+            *expanded, **kwargs
+        )
 
         if self.return_log_probs:
             log_probs = self.gather_log_probs()
-            return out, log_probs
         else:
+            log_probs = None
+
+        if isinstance(out, Tensor):
+            out.__class__ = VIReturn
+            out.log_probs = log_probs
             return out
+
+        for t in out:
+            t.__class__ = VIReturn
+            t.log_probs = log_probs
+        return out
 
     def gather_log_probs(self) -> Tensor:
         """
