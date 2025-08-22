@@ -21,11 +21,18 @@ class VIReturn(Tensor):
 
     def clone(self, *args: Any, **kwargs: Any) -> "VIReturn":
         """Cloning."""
-        return VIReturn(super().clone(*args, **kwargs), self.log_probs)
+        if self.log_probs is None:
+            return VIReturn(super().clone(*args, **kwargs), None)
+        return VIReturn(
+            super().clone(*args, **kwargs), self.log_probs.clone(*args, **kwargs)
+        )
 
     def to(self, *args: Any, **kwargs: Any) -> "VIReturn":
         """To copy."""
-        new_obj = VIReturn([], self.log_probs)
+        if self.log_probs is None:
+            new_obj = VIReturn([], None)
+        else:
+            new_obj = VIReturn([], self.log_probs.to(*args, **kwargs))
         temp = super().to(*args, **kwargs)
         new_obj.data = temp.data
         new_obj.requires_grad = temp.requires_grad

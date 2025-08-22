@@ -11,7 +11,7 @@ from .base import VIModule
 from .linear import VILinear
 from .priors import MeanFieldNormalPrior, Prior
 from .sequential import VIResidualConnection
-from .utils.common_types import VIkwargs, VIReturn, _prior_any_t, _vardist_any_t
+from .utils.common_types import VIkwargs, _prior_any_t, _vardist_any_t
 from .variational_distributions import MeanFieldNormalVarDist, VariationalDistribution
 
 
@@ -484,7 +484,7 @@ class VITransformerDecoderLayer(VIModule):
         memory_key_padding_mask: Optional[Tensor] = None,
         tgt_is_causal: bool = False,
         memory_is_causal: bool = False,
-    ) -> VIReturn[Tensor]:
+    ) -> Tensor:
         """
         Pass the input through the decoder layer.
 
@@ -590,7 +590,7 @@ class VITransformerDecoder(VIModule):
         memory_key_padding_mask: Optional[Tensor] = None,
         tgt_is_causal: Optional[bool] = None,
         memory_is_causal: bool = False,
-    ) -> VIReturn[Tensor]:
+    ) -> Tensor:
         """
         Pass the input through the decoder layers in turn.
 
@@ -650,7 +650,7 @@ class VITransformerEncoder(VIModule):
         mask: Optional[Tensor] = None,
         src_key_padding_mask: Optional[Tensor] = None,
         is_causal: Optional[bool] = None,
-    ) -> VIReturn[Tensor]:
+    ) -> Tensor:
         """
         Pass the input through the encoder layers in turn.
 
@@ -810,7 +810,7 @@ class VITransformer(VIModule):
         src_is_causal: Optional[bool] = None,
         tgt_is_causal: Optional[bool] = None,
         memory_is_causal: bool = False,
-    ) -> VIReturn[Tensor]:
+    ) -> Tensor:
         """
         Take in and process masked source/target sequences.
 

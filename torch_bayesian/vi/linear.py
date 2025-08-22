@@ -6,7 +6,7 @@ from torch.nn import functional as F  # noqa: N812
 
 from .base import VIModule
 from .priors import MeanFieldNormalPrior
-from .utils.common_types import VIkwargs, VIReturn, _prior_any_t, _vardist_any_t
+from .utils.common_types import VIkwargs, _prior_any_t, _vardist_any_t
 from .variational_distributions import MeanFieldNormalVarDist
 
 
@@ -83,7 +83,7 @@ class VILinear(VIModule):
         else:
             self._fast_path = False
 
-    def forward(self, input_: Tensor) -> VIReturn[Tensor]:
+    def forward(self, input_: Tensor) -> Tensor:
         r"""
         Forward computation.
 

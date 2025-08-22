@@ -8,7 +8,7 @@ from torch.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _tripl
 
 from .base import VIModule
 from .priors import MeanFieldNormalPrior
-from .utils.common_types import VIkwargs, VIReturn, _prior_any_t, _vardist_any_t
+from .utils.common_types import VIkwargs, _prior_any_t, _vardist_any_t
 from .variational_distributions import MeanFieldNormalVarDist
 
 
@@ -248,7 +248,7 @@ class VIConv1d(_VIConvNd):
             input_, weight, bias, self.stride, self.padding, self.dilation, self.groups
         )
 
-    def forward(self, input_: Tensor) -> VIReturn[Tensor]:
+    def forward(self, input_: Tensor) -> Tensor:
         """
         Forward computation.
 
@@ -373,7 +373,7 @@ class VIConv2d(_VIConvNd):
             input_, weight, bias, self.stride, self.padding, self.dilation, self.groups
         )
 
-    def forward(self, input_: Tensor) -> VIReturn[Tensor]:
+    def forward(self, input_: Tensor) -> Tensor:
         """
         Forward computation.
 
@@ -498,7 +498,7 @@ class VIConv3d(_VIConvNd):
             input_, weight, bias, self.stride, self.padding, self.dilation, self.groups
         )
 
-    def forward(self, input_: Tensor) -> VIReturn[Tensor]:
+    def forward(self, input_: Tensor) -> Tensor:
         """
         Forward computation.
 
