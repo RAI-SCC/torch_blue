@@ -4,7 +4,17 @@ from torch import Tensor
 
 
 class VIReturn(Tensor):
-    """Likely dysfunctional log_prob tracking Tensor."""
+    """
+    A subclass of :class:`torch.Tensor` that also stores log probabilities.
+
+    A :class:`VIReturn` object behaves like a :class:`torch.Tensor` for all practical
+    purposes, but provides the optional attribute :attr:`~log_probs`. However, it should
+    not be used as replacement since certain pytorch operation will lose the log prob
+    information. It is almost exclusively used as the return formate for
+    :class:`~torch_bayesian.vi.VIModule`s. This allows the output to be treated like a
+    :class:`torch.Tensor`, but still provide the log prob information when needed.
+    `torch_bayesian` losses may require this format as input.
+    """
 
     log_probs: Optional[Tensor] = None
 
@@ -19,16 +29,14 @@ class VIReturn(Tensor):
         super().__init__()
         self.log_probs = log_probs
 
-    def clone(self, *args: Any, **kwargs: Any) -> "VIReturn":
-        """Cloning."""
+    def clone(self, *args: Any, **kwargs: Any) -> "VIReturn":  # noqa: D102
         if self.log_probs is None:
             return VIReturn(super().clone(*args, **kwargs), None)
         return VIReturn(
             super().clone(*args, **kwargs), self.log_probs.clone(*args, **kwargs)
         )
 
-    def to(self, *args: Any, **kwargs: Any) -> "VIReturn":
-        """To copy."""
+    def to(self, *args: Any, **kwargs: Any) -> "VIReturn":  # noqa: D102
         if self.log_probs is None:
             new_obj = VIReturn([], None)
         else:

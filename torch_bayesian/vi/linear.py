@@ -97,11 +97,6 @@ class VILinear(VIModule):
         output: Tensor
             Output tensor of shape (\*, out_features). Auto-sampling will add a sample
             dimension at the start for the overall output.
-        log_probs: Tensor
-            Tensor of shape (2,) containing the total prior and variational log
-            probability (in that order) of the sampled weights and biases.
-
-            Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
         # Check for and perform fast path if possible:
         if (not self._return_log_probs) and self._fast_path:

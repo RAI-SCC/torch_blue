@@ -265,11 +265,6 @@ class VIConv1d(_VIConvNd):
         output: Tensor
             Output tensor of shape [N, C_out, W_out].
             Auto-sampling will add a sample dimension at the start for the overall output.
-        log_probs: Tensor
-            Tensor of shape (2,) containing the total prior and variational log
-            probability (in that order) of the sampled weights and biases.
-
-            Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
         params = self.sample_variables()
 
@@ -390,11 +385,6 @@ class VIConv2d(_VIConvNd):
         output: Tensor
             Output tensor of shape [N, C_out, H_out, W_out].
             Auto-sampling will add a sample dimension at the start for the overall output.
-        log_probs: Tensor
-            Tensor of shape (2,) containing the total prior and variational log
-            probability (in that order) of the sampled weights and biases.
-
-            Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
         params = self.sample_variables()
 
@@ -516,11 +506,6 @@ class VIConv3d(_VIConvNd):
         output: Tensor
             Output tensor of shape [N, C_out, D_out, H_out, W_out].
             Auto-sampling will add a sample dimension at the start for the overall output.
-        log_probs: Tensor
-            Tensor of shape (2,) containing the total prior and variational log
-            probability (in that order) of the sampled weights and biases.
-
-            Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
         params = self.sample_variables()
 

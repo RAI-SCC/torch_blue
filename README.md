@@ -167,34 +167,32 @@ probability of the actually used weights (which are sampled on each forward pass
 variational and prior distribution. Since it is quite inefficient to save the samples
 these log probabilities are evaluated during the forward pass and returned by the model.
 Since this is only necessary for training it can be controlled with the argument
-return_log_probs. Once the model is initialized this flag can be changed by setting
+`return_log_probs`. Once the model is initialized this flag can be changed by setting
 `VIModule.return_log_probs`, which either enables (`True`) or disables (`False`) the
 returning of the log probabilities for all submodules.
 
 While `torch_bayesian` calculates and aggregates log probs internally, this is handled
 by the outermost `VIModule`. This module will not have the expected output signature
-when returning log probs, but instead return a tuple of the normal output and the log
-probs. This is the format `torch_bayesian` losses expect. Therefore, if you feed the
-output directly into a loss there should be no issues. For deployment `return_log_probs`
-should be set to `False`. However, if your outermost module is not a `VIModule`, but a
-pytorch `Module`, or you are working with multiple models like an encoder and decoder
-this feature needs to be handled. The easiest way to do this is to make sure that your
-outermost module is always a `VIModule` even if it is only a wrapper that calls you
-model and returns its output, since this will make sure log probs are only introduced at
-the very end.
+when returning log probs, but instead return a `VIReturn` object. This class is pytorch
+`Tensor` that also contains log prob information in its additional `log_probs`
+attribute. This is the format `torch_bayesian` losses expect. Therefore, if you feed the
+output directly into a loss there should be no issues. While all pytorch tensor
+operations can be performed on `VIReturns` many will delete the log prob information and
+transform the object back into a `Tensor`. This needs to be considered when performing
+further operations on the model output. The simplest way to avoid issues is to wrap all
+operations - except the loss - in a `VIModule` since log prob aggregation is only
+performed by the outermost module. For deployment `return_log_probs` should be set to
+`False`. If multiple `Tensor`s are returned by the model, each will carry all log probs.
 
 > [!NOTE]
 > Always make sure your outermost module is a VIModule and keep in mind that the output
-> of that module will be a tuple of the expected output and a tensor containing the
+> of that module will be a `VIReturn` object, which behaves like a `Tensor`, carries
 > weight log probabilities, if `return_log_probs == True`. Losses in `torch_baysian`
 > expect this format.
 
-`VIReturn` is a type alias that encapsulates this shifting return type. Just provide the
-type of the layer output to it.
-
 > [!NOTE]
-> Due to [Autosampling](#autosampling) all output Tensors, i.e. each Tensor
-> in the model output and the Tensor containing the log probs has an additional
+> Due to [Autosampling](#autosampling) all output Tensors, i.e. each `VIReturn`
+> in the model output and the `Tensor` containing the log probs has an additional
 > dimension at the beginning representing the multiple samples necessary to properly
 > evaluate the stochastic forward pass. This is only relevant for VIModules that are not
 > contained within other VIModules. Loss functions are designed to expect and handle
@@ -224,6 +222,10 @@ calculates and stores the log probabilities, if required.
 
 Should you need to access the weight tensors directly you can use `getattr` and derive
 the name using the method `variational_parameter_name`.
+
+> [!IMPORTANT]
+> Make sure to access your weights using the method `sample_variables` since it also
+> takes care of calculating and storing log probabilities.
 
 ## Variational Inference
 

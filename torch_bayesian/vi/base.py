@@ -54,10 +54,22 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     of whether the model should return the log probability of the sampled weight (i.e.,
     the log probability to obtain these specific values when sampling from the prior or
     variational distribution).These are needed for loss calculation by
-    :class:`~.KullbackLeiblerLoss`. If your module contains multiple submodules make
-    sure to add all log probabilities and return them, if required by
-    :attr:`~self.return_log_probs`. For evaluation, :attr:`~self.return_log_probs` can
-    be set to `False`.
+    :class:`~.KullbackLeiblerLoss`. This is handled automatically as part of
+    :meth:`~self.sample_variables` which calculates and stores the log probs, if
+    :attr:`~self.return_log_probs` is True. For evaluation, it can be set to `False`.
+
+    The outermost module will aggregate the log probabilities and pack the output and
+    log probs into a :class:`~.VIReturn` object, which behaves like a pytorch Tensor.
+    However, it has the added attribute :attr:`log_probs` where the log probs are
+    stored. This is used by losses, therefore it is easiest to wrap all operations into
+    a :class:`~.VIModule` and feed the output directly into a loss function. Classical
+    losses will treat it like a Tensor and `torch_bayesian` losses can use the log prob
+    information. If the model has multiple output Tensors, each will contain the full
+    log prob information.
+
+    .. IMPORTANT:: When defining custom modules with weights make sure to retrieve them
+        using :meth:`~self.sample_variables` as this will maintain the automatic log
+        prob tracking.
 
     Secondly, a model of nested :class:`~.VIModule` automatically identifies the
     outermost module and sets the :attr:`~self._has_sampling_responsibility` flag. This
@@ -317,7 +329,8 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         """
         Draw one sample from the variational distribution of each random variable.
 
-        The variables are returned in the same order as `self.random_variables`.
+        The variables are returned in the same order as `self.random_variables`. This
+        also performs log prob tracking, if :attr:`~self.return_log_probs` is True.
 
         Returns
         -------

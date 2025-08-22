@@ -69,11 +69,6 @@ class VISequential(VIModule, Sequential):
         -------
         output: Varies
             Output of the module stack.
-        log_probs: Tensor
-            Tensor of shape (2,) containing the total prior and variational log
-            probability (in that order) of all sampled weights and biases.
-
-            Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
         for module in self:
             input_ = module(input_)
@@ -107,11 +102,6 @@ class VIResidualConnection(VISequential):
         -------
         output: Varies
             Output of the module stack plus the input to the residual connection.
-        log_probs: Tensor
-            Tensor of shape (2,) containing the total prior and variational log
-            probability (in that order) of all sampled weights and biases.
-
-            Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
         output = super().forward(input_)
         return self._safe_add(input_, output)
