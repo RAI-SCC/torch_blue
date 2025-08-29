@@ -191,7 +191,7 @@ performed by the outermost module. For deployment `return_log_probs` should be s
 > expect this format.
 
 > [!NOTE]
-> Due to [Autosampling](#autosampling) all output Tensors, i.e. each `VIReturn`
+> Due to Autosampling all output Tensors, i.e. each `VIReturn`
 > in the model output and the `Tensor` containing the log probs has an additional
 > dimension at the beginning representing the multiple samples necessary to properly
 > evaluate the stochastic forward pass. This is only relevant for VIModules that are not
@@ -226,13 +226,3 @@ the name using the method `variational_parameter_name`.
 > [!IMPORTANT]
 > Make sure to access your weights using the method `sample_variables` since it also
 > takes care of calculating and storing log probabilities.
-
-## Variational Inference
-
-### The Prior
-
-### The Variational Distribution
-
-### The Predictive Distribution
-
-### Autosampling
