@@ -1317,7 +1317,7 @@ def test_transformer(
                 if layer.random_variables is not None:
                     # Check vardist and prior propagate to all VIBaseLayers
                     for var_dist, prior in zip(
-                        layer.variational_distribution, layer.prior
+                        layer.variational_distribution.values(), layer.prior.values()
                     ):
                         assert isinstance(var_dist, type(variational_distribution))
                         assert isinstance(prior, type(prior))

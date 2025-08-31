@@ -1,5 +1,5 @@
 import math
-from typing import Any, List, Tuple, Union, cast
+from typing import Any, Dict, Optional, Tuple, Union, cast
 from warnings import filterwarnings
 
 import pytest
@@ -51,11 +51,13 @@ def test_sampled_forward(device: torch.device) -> None:
         def __init__(self, ref: Tensor) -> None:
             super().__init__()
             self.ref = ref
-            self._log_probs = []
+            self._log_probs = dict(all=[])
 
         def forward(self, x: Tensor) -> Tensor:
             assert x.shape == self.ref.shape
-            self._log_probs.append(get_unwrapped(torch.randn(2, device=x.device)))
+            self._log_probs["all"].append(
+                get_unwrapped(torch.randn(2, device=x.device))
+            )
             return x - self.ref
 
     shape1 = (3, 4)
@@ -123,7 +125,7 @@ def test_vimodule(device: torch.device) -> None:
         module1.sample_variables()
 
     # Test variant with parameters
-    var_dict1 = dict(
+    var_dict1: Dict[str, Optional[Tuple[int, ...]]] = dict(
         weight=(2, 3),
         bias=(3,),
     )
@@ -203,14 +205,14 @@ def test_vimodule(device: torch.device) -> None:
     module2 = VIModule(
         var_dict1, TestDistribution(), TestPrior(), rescale_prior=True, device=device
     )
-    for prior in module2.prior:
+    for prior in module2.prior.values():
         assert prior.mean == 1 / math.sqrt(3 * 3)  # type: ignore [attr-defined]
         assert prior.std == 2 / math.sqrt(3 * 3)  # type: ignore [attr-defined]
 
 
 def test_get_variational_parameters(device: torch.device) -> None:
     """Test VIBaseModule.get_variational_parameters."""
-    var_dict1 = dict(
+    var_dict1: Dict[str, Optional[Tuple[int, ...]]] = dict(
         weight=(2, 3),
         bias=(3,),
     )
@@ -251,7 +253,7 @@ def test_get_variational_parameters(device: torch.device) -> None:
 
 def test_get_log_probs(device: torch.device) -> None:
     """Test VIBaseModule.get_log_probs."""
-    var_dict1 = dict(
+    var_dict1: Dict[str, Optional[Tuple[int, ...]]] = dict(
         weight=(3, 1),
         bias=(1,),
     )
@@ -276,7 +278,7 @@ def test_get_log_probs(device: torch.device) -> None:
             return torch.tensor(2.0, device=x.device)
 
     module = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)
-    module.random_variables = cast(Tuple[str, ...], module.random_variables)
+    assert module.random_variables is not None
     params = [torch.empty(1, device=device)] * len(module.random_variables)
     prior_log_prob, variational_log_prob = module.get_log_probs(params)
 
@@ -335,10 +337,10 @@ def test_slow_forward(device: torch.device) -> None:
     # Let's just test it by jitifying something
 
     class Test(VIModule):
-        _log_probs: List[Tensor] = []
+        _log_probs = dict(all=[])
 
         def forward(self, x: Tensor) -> Tensor:
-            self._log_probs.append(torch.tensor((5.0, 3.0), device=x.device))
+            self._log_probs["all"].append(torch.tensor((5.0, 3.0), device=x.device))
             return x
 
     module1 = Test()
@@ -376,10 +378,12 @@ def test_hooks(device: torch.device) -> None:
         pass
 
     class Test(VIModule):
-        _log_probs: List[Tensor] = []
+        _log_probs = dict(all=[])
 
         def forward(self, x: Tensor) -> Tensor:
-            self._log_probs.append(get_unwrapped(torch.randn(2, device=x.device)))
+            self._log_probs["all"].append(
+                get_unwrapped(torch.randn(2, device=x.device))
+            )
             return x
 
     test = Test()

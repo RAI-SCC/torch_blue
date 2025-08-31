@@ -66,7 +66,7 @@ class VILinear(VIModule):
         self.in_features = in_features
         self.out_features = out_features
 
-        variable_shapes: Dict[str, Tuple[int, ...]] = dict(
+        variable_shapes: Dict[str, Optional[Tuple[int, ...]]] = dict(
             weight=(out_features, in_features)
         )
         if bias:
@@ -77,7 +77,7 @@ class VILinear(VIModule):
         # If the variational distribution is stable we might be able to use the stable fast path
         if all(
             isinstance(dist, MeanFieldNormalVarDist)
-            for dist in self.variational_distribution
+            for dist in self.variational_distribution.values()
         ):
             self._fast_path = True
         else:
@@ -111,10 +111,10 @@ class VILinear(VIModule):
     def _fast_forward(self, input_: Tensor) -> Tensor:
         """Perform the stable fast path for Gaussian variational distribution."""
         weight_mean = self._weight_mean
-        weight_variance = (2 * self._weight_log_std).exp()
+        weight_variance = cast(Tensor, 2 * self._weight_log_std).exp()
         if "bias" in cast(Tuple[str, ...], self.random_variables):
             bias_mean = self._bias_mean
-            bias_variance = (2 * self._bias_log_std).exp()
+            bias_variance = cast(Tensor, 2 * self._bias_log_std).exp()
         else:
             bias_mean = None
             bias_variance = None

@@ -79,13 +79,17 @@ def test_residual_connection(device: torch.device) -> None:
     class Test(VIModule):
         def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor, Tensor]]:
             if self._return_log_probs:
-                self._log_probs = [torch.tensor([[0.0, 1.0]], device=x.device)]
+                self._log_probs = dict(
+                    all=[torch.tensor([[0.0, 1.0]], device=x.device)]
+                )
             return x
 
     class Test2(VIModule):
         def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor, Tensor]]:
             if self._return_log_probs:
-                self._log_probs = [torch.tensor([[0.0, 1.0]], device=x.device)]
+                self._log_probs = dict(
+                    all=[torch.tensor([[0.0, 1.0]], device=x.device)]
+                )
             return x.reshape((2, 9))
 
     module = VIResidualConnection(Test())

@@ -181,3 +181,8 @@ class VariationalDistribution(metaclass=PostInitCallMeta):
                 diff_params[var_param] = i
 
         return shared_params, diff_params
+
+    @property
+    def primary_parameter(self) -> str:
+        """The distribution parameter that is closest to a non-Bayesian weight."""
+        return self.variational_parameters[0]
