@@ -91,7 +91,7 @@ def test_vilinear(device: torch.device) -> None:
     assert (bias_mean == torch.zeros_like(bias_mean)).all()
     assert (bias_log_std == torch.zeros_like(bias_log_std)).all()
 
-    module4.reset_parameters()
+    module4.reset_variational_parameters()
     assert (weight_mean == module4._weight_mean).all()
     assert (weight_log_std == module4._weight_log_std).all()
     assert (bias_mean == module4._bias_mean).all()

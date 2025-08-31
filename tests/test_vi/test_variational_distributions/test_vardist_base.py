@@ -213,8 +213,8 @@ def test_init_constant(device: torch.device) -> None:
     assert bias3.device == device
 
 
-def test_vardist_reset_parameters(device: torch.device) -> None:
-    """Test VariationalDistribution.reset_parameters."""
+def test_vardist_reset_variational_parameters(device: torch.device) -> None:
+    """Test VariationalDistribution.reset_variational_parameters."""
     param_shape = (5, 4)
 
     class Test(VariationalDistribution):
@@ -247,7 +247,7 @@ def test_vardist_reset_parameters(device: torch.device) -> None:
     mean1 = dummy.weight_mean.clone()
     iter1 = dummy.parameters()
 
-    vardist.reset_parameters(dummy, "weight", fan_in, False)
+    vardist.reset_variational_parameters(dummy, "weight", fan_in, False)
     mean2 = iter1.__next__().clone()
     std2 = iter1.__next__().clone()
     log_std2 = iter1.__next__().clone()
@@ -266,7 +266,7 @@ def test_vardist_reset_parameters(device: torch.device) -> None:
     iter2 = dummy.parameters()
     eps = 1e-5
 
-    vardist.reset_parameters(dummy, "weight", fan_in, True)
+    vardist.reset_variational_parameters(dummy, "weight", fan_in, True)
     mean3 = iter2.__next__().clone()
     std3 = iter2.__next__().clone()
     log_std3 = iter2.__next__().clone()

@@ -89,7 +89,7 @@ class BasicQuietPrior(Prior):
             normalization = normalization + 2 * log(2 * torch.pi)
         return -0.5 * (data_fitting + mean_decay + normalization)
 
-    def reset_parameters(self, module: "VIModule", variable: str) -> None:
+    def reset_variational_parameters(self, module: "VIModule", variable: str) -> None:
         """
         Reset the parameters of the module to prior mean and standard deviation.
 

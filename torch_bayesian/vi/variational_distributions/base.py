@@ -63,7 +63,7 @@ class VariationalDistribution(metaclass=PostInitCallMeta):
     sample: Callable[..., Tensor]
     log_prob: Callable[..., Tensor]
 
-    def reset_parameters(
+    def reset_variational_parameters(
         self,
         module: "VIModule",
         variable: str,

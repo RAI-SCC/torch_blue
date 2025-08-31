@@ -8,7 +8,7 @@ from ..priors import MeanFieldNormalPrior
 from ..variational_distributions import MeanFieldNormalVarDist
 from .common_types import VIkwargs, _prior_any_t, _vardist_any_t
 
-_blacklist = [nn.ReLU]
+_blacklist = [nn.ReLU, nn.LayerNorm]
 
 
 def _convert_module(
@@ -35,8 +35,7 @@ def _convert_module(
         device=device,
         dtype=dtype,
     )
-
-    new_class_name = "VI" + module.__class__.__name__
+    new_class_name = "AVI" + module.__class__.__name__
     new_class = type(new_class_name, (module.__class__, VIModule), dict())
 
     module.__class__ = new_class
@@ -53,9 +52,11 @@ def _convert_module(
         if parameter is None:
             variable_shapes[name] = None
         else:
-            variable_shapes[name] = parameter.shape
+            variable_shapes[name] = tuple(parameter.shape)
 
-    VIModule.__init__(cast(VIModule, module), variable_shapes, **vikwargs)
+    VIModule.__init__(
+        cast(VIModule, module), variable_shapes, convert_overwrite=True, **vikwargs
+    )
 
 
 def convert_to_vimodule(

@@ -108,7 +108,7 @@ def test_vimodule(device: torch.device) -> None:
     with pytest.raises(
         NoVariablesError, match="DummyModule has no random variables to reset"
     ):
-        module1.reset_parameters()
+        module1.reset_variational_parameters()
     with pytest.raises(
         NoVariablesError, match="DummyModule has no variational parameters to get"
     ):
@@ -169,7 +169,7 @@ def test_vimodule(device: torch.device) -> None:
     weight_mean = module2._weight_mean.clone()
     bias_mean = module2._bias_mean.clone()
 
-    module2.reset_parameters()
+    module2.reset_variational_parameters()
 
     assert not (module2._weight_mean == weight_mean).all()
     assert not (module2._bias_mean == bias_mean).all()
@@ -177,7 +177,7 @@ def test_vimodule(device: torch.device) -> None:
     # Test prior based initialization
     with pytest.warns(
         UserWarning,
-        match=r'Module \[TestPrior\] is missing the "reset_parameters" method*',
+        match=r'Module \[TestPrior\] is missing the "reset_variational_parameters" method*',
     ):
         _ = VIModule(
             var_dict1,

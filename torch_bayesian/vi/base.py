@@ -84,7 +84,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
 
     If the constructed module does not have its own weights, :meth:`super().__init__()`
     is called without arguments. In this setting the methods :meth:`get_log_probs`,
-    :meth:`get_variational_parameters`, :meth:`reset_parameters`, and
+    :meth:`get_variational_parameters`, :meth:`reset_variational_parameters`, and
     :meth:`sample_variables` cannot be used and raise
     :exc:`~torch_bayesian.vi.utils.NoVariablesError`.
 
@@ -142,9 +142,11 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         return_log_probs: bool = True,
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
+        convert_overwrite: bool = False,
     ) -> None:
         factory_kwargs = {"device": device, "dtype": dtype}
-        super().__init__()
+        if not convert_overwrite:
+            super().__init__()
 
         if variable_shapes is None:
             return
@@ -182,6 +184,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
             shape = variable_shapes[var]
             if shape is None:
                 self.variational_distribution[var] = None
+                continue
             for var_param in self.variational_distribution[var].variational_parameters:
                 parameter_name = self.variational_parameter_name(var, var_param)
                 setattr(
@@ -192,7 +195,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         self._log_probs = dict(all=[])
         for variable in random_variables:
             self._log_probs[variable] = []
-        self.reset_parameters()
+        self.reset_variational_parameters()
 
     @property
     def random_variables(self) -> Optional[Tuple[str, ...]]:
@@ -229,7 +232,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         for prior in self.prior.values():
             prior.kaiming_rescale(fan_in)
 
-    def reset_parameters(self) -> None:
+    def reset_variational_parameters(self) -> None:
         """
         Reset or initialize the parameters of the Module.
 
@@ -249,14 +252,12 @@ class VIModule(Module, metaclass=PostInitCallMeta):
             self.variational_distribution[layer_width_var].variational_parameters[0],
         )
         fan_in, _ = init._calculate_fan_in_and_fan_out(getattr(self, weight_name))
-        for var in self.variational_distribution:
-            if self.variational_distribution[var] is None:
+        for var, dist in self.variational_distribution.items():
+            if dist is None:
                 continue
-            self.variational_distribution[var].reset_parameters(
-                self, var, fan_in, self._kaiming_init
-            )
+            dist.reset_variational_parameters(self, var, fan_in, self._kaiming_init)
             if self._prior_init:
-                self.prior[var].reset_parameters(self, var)
+                self.prior[var].reset_variational_parameters(self, var)
 
     @staticmethod
     def variational_parameter_name(variable: str, variational_parameter: str) -> str:

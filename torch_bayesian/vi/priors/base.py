@@ -38,7 +38,7 @@ class Prior(metaclass=PostInitCallMeta):
     handled during rescaling.
 
     To enable the ``prior_initialization`` functionality, the class must implement the
-    :meth:`~self.reset_parameters` method. Which initializes the parameters for one
+    :meth:`~self.reset_variational_parameters` method. Which initializes the parameters for one
     random variable of a model, whose variational parameters are supported by the prior,
     to the prior values.
 
@@ -114,7 +114,7 @@ class Prior(metaclass=PostInitCallMeta):
                 else:
                     setattr(self, parameter, param * scale)
 
-    def reset_parameters(self, module: "VIModule", variable: str) -> None:
+    def reset_variational_parameters(self, module: "VIModule", variable: str) -> None:
         """
         Initialize the parameters of a VIModule according to the prior distribution.
 
@@ -146,7 +146,7 @@ class Prior(metaclass=PostInitCallMeta):
         None
         """
         warn(
-            f'Module [{type(self).__name__}] is missing the "reset_parameters" method'
+            f'Module [{type(self).__name__}] is missing the "reset_variational_parameters" method'
             f" and therefore does not support prior initialization."
         )
 

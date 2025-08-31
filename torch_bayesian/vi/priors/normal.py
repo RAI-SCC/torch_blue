@@ -75,7 +75,7 @@ class MeanFieldNormalPrior(Prior):
             normalization = normalization + log(2 * torch.pi)
         return -0.5 * (data_fitting + normalization)
 
-    def reset_parameters(self, module: "VIModule", variable: str) -> None:
+    def reset_variational_parameters(self, module: "VIModule", variable: str) -> None:
         """
         Reset the parameters of a module to prior mean and standard deviation.
 
