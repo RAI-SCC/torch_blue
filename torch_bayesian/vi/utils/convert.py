@@ -36,7 +36,8 @@ def _convert_module(
         dtype=dtype,
     )
     new_class_name = "AVI" + module.__class__.__name__
-    new_class = type(new_class_name, (module.__class__, VIModule), dict())
+    new_class = type(new_class_name, (VIModule, module.__class__), dict())
+    setattr(new_class, "forward", module.forward)
 
     module.__class__ = new_class
     if len(module._parameters) == 0:

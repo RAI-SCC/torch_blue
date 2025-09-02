@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, Callable, Dict, Optional, Tuple, cast
 
 import pytest
 import torch
@@ -1198,6 +1198,7 @@ def test_transformer(
     return_log_probs: bool,
     device: Optional[torch.device],
     dtype: Optional[torch.dtype],
+    get_model: Callable,
     num_samples: int = 7,
     batch_size: int = 3,
     src_length: int = 5,
