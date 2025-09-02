@@ -9,6 +9,8 @@ authors:
       affiliation: 1
     - name: Lars H. Heyen
       affiliation: 1
+    - name: Juan Pedro Gutiérrez Hermosillo Muriedas
+      affiliation: 1
     - name: Peihsuan Hsia
       affiliation: 1
     - name: Asena K. Özdemir
