@@ -29,11 +29,11 @@ bibliography: paper.bib
 
 # Summary
 
-In the work towards reliable Neural Networks (NN), Bayesian Neural Networks (BNN) and
-Variational Inference (VI) present an important approach enabling better decisions via
-integrating uncertainty quantification in all steps of the training and predictions
-process. They strike a balance between the ability to forecast a large variety of
-distributions and compute requirements to potentially allow for larger models.
+Bayesian Neural Networks (BNN) integrate uncertainty quantification in all steps of the
+training and prediction process, thus enabling better-informed decisions. Variational
+Inference (VI) specifically strikes a balance between the ability to consider a large
+variety of distributions while maintaining low enough compute requirements to
+potentially allow scaling to larger models.
 
 However, setting up and training BNNs is quite complicated and existing libraries all
 either lack flexibility, scalability, or tackle Bayesian computation in general, adding
