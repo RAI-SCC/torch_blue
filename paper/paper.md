@@ -23,7 +23,7 @@ affiliations:
     - name: Karlsruhe Institute of Technology, Germany
       index: 1
       ror: 04t3en479
-date: 10 June 2024
+date: 08 September 2025
 bibliography: paper.bib
 ---
 
@@ -39,55 +39,53 @@ However, setting up and training BNNs is quite complicated and existing librarie
 either lack flexibility, scalability, or tackle Bayesian computation in general, adding
 even more complexity and therefore a huge entry barrier. The most popular options - Pyro
 and Stan - fall in the last category. While both are quite powerful, their interfaces
-are designed for users experienced with statistical programming. Stan basically rises to
-the level of a new programming language with an interface inspired by R. Pyro is build
-around plate notation, observations, and the variational distribution, which is renamed
-"guide". While these are important to learn, it can be quite challenging from the
-perspective off a user new to Bayesian approaches to learn both the trappings of
-Bayesian statistics and a completely new software interface at the same time.
-Additionally, neither of these directly support BNNs by providing pre-programmed
-layers. This forces any BNNs to be implemented from scratch, which can be challenging
-even for non-Bayesian networks.
+are designed for users experienced with Bayesian statistics. Even more importantly,
+neither of these directly supports BNNs by providing pre-programmed layers. This forces
+any BNNs to be implemented from scratch, which can be challenging even for non-Bayesian
+networks.
 
 `torch_bayesian` addresses this by providing an interface that is almost identical to
 the widely used `pytorch` for basic use, providing a low entry barrier, as well as an
-advanced interface designed for exploration and research. It provides Bayesian versions
-of most standard NN layer types, Bayesian optimization objectives, and a selection of
-relevant distributions as well as instructions for advanced users to implement custom
-variants of the same.
+advanced interface designed for exploration and research. Overall this allows users to
+set up models and even custom layers without worrying about the Bayesian intricacies
+under the hood.
 
 # Statement of need
 
-While interest in uncertainty quantification and BNNs has been growing support for users
-with little to no experience with Bayesian statistics is still limited. Bayesian
-Programming Languages like Pyro and Stan are very powerful and versatile, but structured
-around Bayesian concepts - like plate notation - which will be unfamiliar to many
-primary machine learning users. `torch_bayesian` implements Bayes by Backprob and
-approaches this by sacrificing some of the flexibility, which is usually not needed for
-BNNs, to allow automatic handling. The ability to use multiple independent sampling
-dimensions is sacrificed and sample vectorization is performed by the outermost instance
-of the new base class `VIModule`, which captures the optional keyword argument `samples`
-specifying the number of samples.
-The log likelihoods typically needed for loss calculation can be returned by the layers
-and for simple layer stacks handling and aggregation can be done via the `VISequential`
-module allowing basic users to not be involved in this process.
+To represent uncertainty BNNs do not consider their weights as point values, but
+distributed random variables. The optimization goal becomes adapting the weight
+distributions to minimize their distance to the perfect distribution. This requires two
+assumptions. Firstly, the Kullback-Leibler divergence is typically used to define the
+distance between distributions. Secondly, it is non-trivial to optimize an object as
+complex as a distributions. VI answers this by electing a parametrized distribution and
+optimizing its parameters. Thus the Kullback-Leibler criterion can be simplified to the
+ELBO (**E**vidence **L**ower **BO**und) loss:
+$$\mathrm{ELBO} = \mathbb{E}_{W\sim q}[\underbrace{\log p(Y|X, W)}_\mathrm{Data~fitting} \underbrace{(\log q(W|\lambda) - \log p(W))}_\mathrm{Prior~matching}] \quad ,$$
+where $(X, Y)$ are the training inputs and labels, $W$ are the network weights, $q$ the
+variational distribution and $\lambda$ its current best fit parameters.
 
-For advanced users `torch_bayesian` provides a unified set of `VIkwargs`, that allows
-control of the prior, variational distribution and several other advanced options.
-Furthermore, it is set up to be easily extensible with custom layers and distributions.
-All base classes feature post initialization checks that provide specific feedback on
-missing or misspecified required attributes, methods, and sometimes signatures.
+While interest in uncertainty quantification and BNNs has been growing, support for
+users with little to no experience with Bayesian statistics is still limited.
+Probabilistic Programming Languages like Pyro and Stan are very powerful and versatile
+allowing the implementation of many approaches beyond VI. But they are structured
+around Bayesian concepts - like plate notation - which will be unfamiliar to many
+primary machine learning users.
+
+`torch_bayesian` sacrifices this extreme flexibility to allow nearly fully automating
+VI with reparametrization (Bayes by Backprop). The ability to use multiple independent
+sampling dimensions is sacrificed to fully automate it in the outermost instance of th
+new base class `VIModule`, which captures the optional keyword argument `samples`
+specifying the number of samples. The log likelihoods typically needed for loss
+calculation are automatically calculated whenever weights are sampled, aggregated, and
+returned once again by the outermost `VIModule`.
 
 # Core design and features
 
 `torch_bayesian` is designed around two core aims:
-1. Ease of use, even for users with
-little to no experience with Bayesian statistics
+1. Ease of use, even for users with little to no experience with Bayesian statistics
 2. Flexibility and extensibility as required for research and exploration
 
-| torch.nn          | Linear   | Conv[N]D   | Transformer   | Sequential   |
-|-------------------|----------|------------|---------------|--------------|
-| torch_bayesian.vi | VILinear | VIConv[N]D | VITransformer | VISequential |
+![Content overview](content_overview.png "Content overview for `torch_bayesian` and comparison with the interface of `torch.nn`")
 
 While ease of use colors all design decisions it features most prominently in the
 `pytorch`-like interface. While currently only the most common layer types provided by
@@ -102,7 +100,8 @@ settings for mean field Gaussian variational inference with Gaussian prior as de
 allowing beginner users to implement simple, unoptimized models without worrying about
 Bayesian settings.
 
-**include torch tutorial example here?**
+![Code example](code_example.png "Simple usage example for `torch_bayesian`. Colours related to the design graph below.")
+![Design graph](design_graph.png "Interaction graph of core components. Colors relate to the code example above.")
 
 While modular priors and predictive distributions are quite common even for packages
 with a simpler interface, flexible variational distributions are much more challenging
@@ -120,18 +119,19 @@ Another challenge is introduced by the prior term of the ELBO loss. It can only 
 calculated analytically for a very limited set of priors and variational distributions.
 However, like the rest of the ELBO it can be estimated from the log probability of the
 sampled weights under these two distributions. Therefore, `torch_bayesian` provides the
-option to return these as part of the forward pass. As a result, the only requirement on
-custom distributions is that there needs to be a method to differentiably sample from a
-variational distribution and that for both priors and variational distributions the log
-probability of a given sample can be computed.
+option to return these as part of the forward pass in the form of a `Tensor` containing
+an additional `log_probs` attribute similar to gradient tracking. As a result, the only
+requirement on custom distributions is that there needs to be a method to differentiably
+sample from a variational distribution and that for both priors and variational
+distributions the log probability of a given sample can be computed.
 
-Finally, in the age of large Neural Networks scalability and efficiency are always a
-concern. While BNNs are currently scaled to very large models and this is not a primary
-target of `torch_bayesian` it is kept in mind wherever possible. A core feature for this
-purpose is GPU compatibility, which comes with the challenge of various backends and
-device types. We address this by performing all core operations, in particular the layer
-forward passes with the methods from `torch.nn.functional`. This outsources backend
-maintenance to a large, community supported library.
+Finally, in the age of large Neural Networks, scalability and efficiency are always a
+concern. While BNNs are not currently scaled to very large models and this is not a
+primary target of `torch_bayesian` it is kept in mind wherever possible. A core feature
+for this purpose is GPU compatibility, which comes with the challenge of various
+backends and device types. We address this by performing all core operations, in
+particular the layer forward passes with the methods from `torch.nn.functional`. This
+outsources backend maintenance to a large, community supported library.
 
 Another, efficiency optimization is the automatic vectorization of the sampling process.
 `torch_bayesian` adds an additional wrapper around the forward pass, which catches the
