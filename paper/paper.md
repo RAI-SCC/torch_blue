@@ -30,36 +30,38 @@ bibliography: paper.bib
 # Summary
 
 Bayesian Neural Networks (BNN) integrate uncertainty quantification in all steps of the
-training and prediction process, thus enabling better-informed decisions. Variational
-Inference (VI) specifically strikes a balance between the ability to consider a large
-variety of distributions while maintaining low enough compute requirements to
-potentially allow scaling to larger models.
+training and prediction process, thus enabling better-informed decisions
+[@arbel2023primer]. Variational Inference (VI) [@hoffmann2013svi] specifically strikes a
+balance between the ability to consider a large variety of distributions while
+maintaining low enough compute requirements to potentially allow scaling to larger
+models.
 
 However, setting up and training BNNs is quite complicated and existing libraries all
 either lack flexibility, scalability, or tackle Bayesian computation in general, adding
 even more complexity and therefore a huge entry barrier. The most popular options - Pyro
-and Stan - fall in the last category. While both are quite powerful, their interfaces
-are designed for users experienced with Bayesian statistics. Even more importantly,
-neither of these directly supports BNNs by providing pre-programmed layers. This forces
-any BNNs to be implemented from scratch, which can be challenging even for non-Bayesian
-networks.
+[@bingham2019pyro] and Stan [@stan2025stan] - fall in the last category. While both are
+quite powerful, their interfaces are designed for users experienced with Bayesian
+statistics. Even more importantly, neither of these directly supports BNNs by providing
+pre-programmed layers. This forces any BNNs to be implemented from scratch, which can be
+challenging even for non-Bayesian networks.
 
 `torch_bayesian` addresses this by providing an interface that is almost identical to
-the widely used `pytorch` for basic use, providing a low entry barrier, as well as an
-advanced interface designed for exploration and research. Overall this allows users to
-set up models and even custom layers without worrying about the Bayesian intricacies
-under the hood.
+the widely used `pytorch` [@ansel2024pytorch] for basic use, providing a low entry
+barrier, as well as an advanced interface designed for exploration and research.
+Overall, this allows users to set up models and even custom layers without worrying
+about the Bayesian intricacies under the hood.
 
 # Statement of need
 
 To represent uncertainty BNNs do not consider their weights as point values, but
-distributed random variables. The optimization goal becomes adapting the weight
+random variables, i.e. distributions. The optimization goal becomes adapting the weight
 distributions to minimize their distance to the perfect distribution. This requires two
-assumptions. Firstly, the Kullback-Leibler divergence is typically used to define the
-distance between distributions. Secondly, it is non-trivial to optimize an object as
-complex as a distributions. VI answers this by electing a parametrized distribution and
-optimizing its parameters. Thus the Kullback-Leibler criterion can be simplified to the
-ELBO (**E**vidence **L**ower **BO**und) loss:
+assumptions. Firstly, the Kullback-Leibler divergence [@kullback1951information] is
+typically used to define the distance between distributions. Secondly, it is non-trivial
+to optimize an object as complex as a distributions. VI answers this by selecting a
+parametrized distribution and optimizing its parameters. Thus, the Kullback-Leibler
+criterion can be simplified to the ELBO (**E**vidence **L**ower **BO**und) loss
+[@jordan1999introduction]:
 $$\mathrm{ELBO} = \mathbb{E}_{W\sim q}[\underbrace{\log p(Y|X, W)}_\mathrm{Data~fitting} \underbrace{(\log q(W|\lambda) - \log p(W))}_\mathrm{Prior~matching}] \quad ,$$
 where $(X, Y)$ are the training inputs and labels, $W$ are the network weights, $q$ the
 variational distribution and $\lambda$ its current best fit parameters.
@@ -72,12 +74,12 @@ around Bayesian concepts - like plate notation - which will be unfamiliar to man
 primary machine learning users.
 
 `torch_bayesian` sacrifices this extreme flexibility to allow nearly fully automating
-VI with reparametrization (Bayes by Backprop). The ability to use multiple independent
-sampling dimensions is sacrificed to fully automate it in the outermost instance of th
-new base class `VIModule`, which captures the optional keyword argument `samples`
-specifying the number of samples. The log likelihoods typically needed for loss
-calculation are automatically calculated whenever weights are sampled, aggregated, and
-returned once again by the outermost `VIModule`.
+VI with reparametrization (Bayes by Backprop) [@blundell15bbb]. The ability to use
+multiple independent sampling dimensions is sacrificed to fully automate it in the
+outermost instance of the new base class `VIModule`, which captures the optional keyword
+argument `samples` specifying the number of samples. The log likelihoods typically
+needed for loss calculation are automatically calculated whenever weights are sampled,
+aggregated, and returned once again by the outermost `VIModule`.
 
 # Core design and features
 
