@@ -16,13 +16,15 @@ authors:
     - name: Asena K. Özdemir
       affiliation: 1
     - name: Markus Götz
-      affiliation: 1
+      affiliation: 1, 2
     - name: Charlotte Debus
       affiliation: 1
 affiliations:
     - name: Karlsruhe Institute of Technology, Germany
       index: 1
       ror: 04t3en479
+    - name: Helmholtz AI
+      index: 2
 date: 08 September 2025
 bibliography: paper.bib
 ---
@@ -31,7 +33,7 @@ bibliography: paper.bib
 
 Bayesian Neural Networks (BNN) integrate uncertainty quantification in all steps of the
 training and prediction process, thus enabling better-informed decisions
-[@arbel2023primer]. Variational Inference (VI) [@hoffmann2013svi] specifically strikes a
+[@arbel2023primer]. Variational Inference (VI) [@hoffman2013svi] specifically strikes a
 balance between the ability to consider a large variety of distributions while
 maintaining low enough compute requirements to potentially allow scaling to larger
 models.
@@ -103,6 +105,7 @@ allowing beginner users to implement simple, unoptimized models without worrying
 Bayesian settings.
 
 ![Code example](code_example.png "Simple usage example for `torch_bayesian`. Colours related to the design graph below.")
+
 ![Design graph](design_graph.png "Interaction graph of core components. Colors relate to the code example above.")
 
 While modular priors and predictive distributions are quite common even for packages
@@ -139,3 +142,12 @@ Another, efficiency optimization is the automatic vectorization of the sampling 
 `torch_bayesian` adds an additional wrapper around the forward pass, which catches the
 optional `samples` argument, creates the specified number of samples (default: 10), and
 vectorizes the forward pass via `pytorch`s `vmap` method.
+
+# Acknowledgements
+
+This work is supported by the German Federal Ministry of Research, Technology and Space
+under the 01IS22068 - EQUIPE grant. The authors gratefully acknowledge the computing
+time made available to them through the HAICORE@KIT partition and on the
+high-performance computer HoreKa at the NHR Center KIT. This center is jointly supported
+by the Federal Ministry of Education and Research and the state governments
+participating in the NHR ([www.nhr-verein.de/en/our-partners](www.nhr-verein.de/en/our-partners)).
