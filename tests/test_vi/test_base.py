@@ -114,15 +114,11 @@ def test_vimodule(device: torch.device) -> None:
     ):
         module1.get_variational_parameters("weight")
     with pytest.raises(NoVariablesError, match="DummyModule has no random variables"):
-        module1.get_log_probs(
-            [
-                torch.zeros(1),
-            ]
-        )
+        module1.get_log_probs(torch.zeros(1), "foo")
     with pytest.raises(
         NoVariablesError, match="DummyModule has no random variables to sample"
     ):
-        module1.sample_variables()
+        module1.sample_variable("foo")
 
     # Test variant with parameters
     var_dict1: Dict[str, Optional[Tuple[int, ...]]] = dict(
@@ -279,11 +275,13 @@ def test_get_log_probs(device: torch.device) -> None:
 
     module = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)
     assert module.random_variables is not None
-    params = [torch.empty(1, device=device)] * len(module.random_variables)
-    prior_log_prob, variational_log_prob = module.get_log_probs(params)
 
-    assert prior_log_prob == 2.0 * len(module.random_variables)
-    assert variational_log_prob == 3.0 * len(module.random_variables)
+    for variable in module.random_variables:
+        params = torch.empty(1, device=device)
+        prior_log_prob, variational_log_prob = module.get_log_probs(params, variable)
+
+        assert prior_log_prob == 2.0
+        assert variational_log_prob == 3.0
 
 
 def test_log_prob_setting(device: torch.device) -> None:

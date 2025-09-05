@@ -45,3 +45,26 @@ class VIReturn(Tensor):
         new_obj.data = temp.data
         new_obj.requires_grad = temp.requires_grad
         return new_obj
+
+    @staticmethod
+    def from_tensor(input_: Tensor, log_probs: Optional[Tensor]) -> "VIReturn":
+        """
+        Turn a torch.Tensor into a VIReturn.
+
+        This is an inplace operation and does not copy data.
+
+        Parameters
+        ----------
+        input_: Tensor
+            The Tensor to convert.
+        log_probs: Optional[Tensor]
+            The log probabilities to attach to input_.
+
+        Returns
+        -------
+        VIReturn
+            The input converted to a VIReturn with the specified log probabilities.
+        """
+        input_.__class__ = VIReturn
+        input_.log_probs = log_probs
+        return input_

@@ -349,7 +349,17 @@ def test_multihead_attention(
         )
     )
 
-    random_variable_shapes: Dict[str, Tuple[int, ...]] = dict()
+    random_variable_shapes: Dict[str, Optional[Tuple[int, ...]]] = dict(
+        in_proj_weight=None,
+        q_proj_weight=None,
+        k_proj_weight=None,
+        v_proj_weight=None,
+        out_proj_weight=None,
+        in_proj_bias=None,
+        out_proj_bias=None,
+        bias_k=None,
+        bias_v=None,
+    )
     if kdim is None and vdim is None:
         use_separate_proj_weight = False
         assert module.module._qkv_same_embed_dim
@@ -381,6 +391,8 @@ def test_multihead_attention(
 
     param_dict = dict(module.module.named_parameters())
     for var, shape in random_variable_shapes.items():
+        if module.module.variational_distribution[var] is None:
+            continue
         for param in variational_distribution.variational_parameters:
             name = module.module.variational_parameter_name(var, param)
             assert name in param_dict
@@ -409,6 +421,8 @@ def test_multihead_attention(
         out_proj_bias=None,
     )
     for var in random_variable_shapes:
+        if module.module.variational_distribution[var] is None:
+            continue
         weight_dict[var] = getattr(
             module.module, module.module.variational_parameter_name(var, primary_param)
         ).clone()
@@ -1320,6 +1334,9 @@ def test_transformer(
                     for var_dist, prior in zip(
                         layer.variational_distribution.values(), layer.prior.values()
                     ):
+                        if var_dist is None:
+                            assert prior is None
+                            continue
                         assert isinstance(var_dist, type(variational_distribution))
                         assert isinstance(prior, type(prior))
                     # Check bias propagates to all VIBaseLayers

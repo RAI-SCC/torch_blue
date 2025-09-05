@@ -46,7 +46,7 @@ def test_vilinear(device: torch.device) -> None:
     module2 = VILinear(
         in_features, out_features, bias=False, return_log_probs=False, device=device
     )
-    assert module2.random_variables == ("weight",)
+    assert module2.random_variables == ("weight", "bias")
     assert not hasattr(module2, "_bias_mean")
 
     sample2 = torch.randn(6, in_features, device=device)

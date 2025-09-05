@@ -95,7 +95,17 @@ class VIMultiheadAttention(VIModule):
             self.head_dim * num_heads == self.embed_dim
         ), "embed_dim must be divisible by num_heads"
 
-        variables: Dict[str, Tuple[int, ...]] = dict()
+        variables: Dict[str, Optional[Tuple[int, ...]]] = dict(
+            in_proj_weight=None,
+            q_proj_weight=None,
+            k_proj_weight=None,
+            v_proj_weight=None,
+            out_proj_weight=None,
+            in_proj_bias=None,
+            out_proj_bias=None,
+            bias_k=None,
+            bias_v=None,
+        )
         if not self._qkv_same_embed_dim:
             variables["q_proj_weight"] = (embed_dim, embed_dim)
             variables["k_proj_weight"] = (embed_dim, self.kdim)
@@ -169,74 +179,47 @@ class VIMultiheadAttention(VIModule):
             else:
                 query, key, value = (x.transpose(1, 0) for x in (query, key, value))
 
-        params = self.sample_variables()
-        if self.add_kv_bias:
-            bias_v = params.pop()
-            bias_k = params.pop()
-        else:
-            bias_k = bias_v = None
-
         if not self._qkv_same_embed_dim:
-            if self.bias:
-                (
-                    q_proj_weight,
-                    k_proj_weight,
-                    v_proj_weight,
-                    out_proj_weight,
-                    in_proj_bias,
-                    out_proj_bias,
-                ) = params
-            else:
-                q_proj_weight, k_proj_weight, v_proj_weight, out_proj_weight = params
-                in_proj_bias = out_proj_bias = None
-            in_proj_weight = None
-
             attn_output, attn_output_weights = F.multi_head_attention_forward(
                 query,
                 key,
                 value,
                 self.embed_dim,
                 self.num_heads,
-                in_proj_weight,
-                in_proj_bias,
-                bias_k=bias_k,
-                bias_v=bias_v,
-                add_zero_attn=self.add_zero_attn,
-                dropout_p=0.0,
-                out_proj_weight=out_proj_weight,
-                out_proj_bias=out_proj_bias,
+                self.in_proj_weight,
+                self.in_proj_bias,
+                self.bias_k,
+                self.bias_v,
+                self.add_zero_attn,
+                0.0,
+                self.out_proj_weight,
+                self.out_proj_bias,
                 training=self.training,
                 key_padding_mask=key_padding_mask,
                 need_weights=True,
                 attn_mask=attn_mask,
                 use_separate_proj_weight=True,
-                q_proj_weight=q_proj_weight,
-                k_proj_weight=k_proj_weight,
-                v_proj_weight=v_proj_weight,
+                q_proj_weight=self.q_proj_weight,
+                k_proj_weight=self.k_proj_weight,
+                v_proj_weight=self.v_proj_weight,
                 average_attn_weights=average_attn_weights,
                 is_causal=is_causal,
             )
         else:
-            if self.bias:
-                in_proj_weight, out_proj_weight, in_proj_bias, out_proj_bias = params
-            else:
-                in_proj_weight, out_proj_weight = params
-                in_proj_bias = out_proj_bias = None
-
             attn_output, attn_output_weights = F.multi_head_attention_forward(
                 query,
                 key,
                 value,
                 self.embed_dim,
                 self.num_heads,
-                in_proj_weight,
-                in_proj_bias,
-                bias_k=bias_k,
-                bias_v=bias_v,
-                add_zero_attn=self.add_zero_attn,
-                dropout_p=0.0,
-                out_proj_weight=out_proj_weight,
-                out_proj_bias=out_proj_bias,
+                self.in_proj_weight,
+                self.in_proj_bias,
+                self.bias_k,
+                self.bias_v,
+                self.add_zero_attn,
+                0.0,
+                self.out_proj_weight,
+                self.out_proj_bias,
                 training=self.training,
                 key_padding_mask=key_padding_mask,
                 need_weights=True,

@@ -160,9 +160,12 @@ def test_viconv1d(device: torch.device) -> None:
             "prior",
         ]:
             attr = test1.__dict__[key]
-            assert len(attr.keys()) == 1
-            for value in attr.values():
-                assert isinstance(value, type(args[key]))
+            assert len(attr.keys()) == 2
+            for name, value in attr.items():
+                if name == "bias":
+                    assert value is None
+                else:
+                    assert isinstance(value, type(args[key]))
         else:
             assert test1.__dict__[key] is args[key]
 
@@ -224,9 +227,12 @@ def test_viconv2d(device: torch.device) -> None:
             "prior",
         ]:
             attr = test1.__dict__[key]
-            assert len(attr.keys()) == 1
-            for value in attr.values():
-                assert isinstance(value, type(args[key]))
+            assert len(attr.keys()) == 2
+            for name, value in attr.items():
+                if name == "bias":
+                    assert value is None
+                else:
+                    assert isinstance(value, type(args[key]))
         else:
             assert test1.__dict__[key] is args[key]
 
@@ -284,9 +290,12 @@ def test_viconv3d(device: torch.device) -> None:
             "prior",
         ]:
             attr = test1.__dict__[key]
-            assert len(attr.keys()) == 1
-            for value in attr.values():
-                assert isinstance(value, type(args[key]))
+            assert len(attr.keys()) == 2
+            for name, value in attr.items():
+                if name == "bias":
+                    assert value is None
+                else:
+                    assert isinstance(value, type(args[key]))
         else:
             assert test1.__dict__[key] is args[key]
 

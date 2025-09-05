@@ -136,8 +136,9 @@ class _VIConvNd(VIModule):
         else:
             weight_shape = (out_channels, in_channels // groups, *kernel_size)
 
-        variable_shapes: Dict[str, Tuple[int, ...]] = dict(
+        variable_shapes: Dict[str, Optional[Tuple[int, ...]]] = dict(
             weight=weight_shape,
+            bias=None,
         )
         if bias:
             bias_shape = (out_channels,)
@@ -266,11 +267,7 @@ class VIConv1d(_VIConvNd):
             Output tensor of shape [N, C_out, W_out].
             Auto-sampling will add a sample dimension at the start for the overall output.
         """
-        params = self.sample_variables()
-
-        output = self._conv_forward(input_, *params)
-
-        return output
+        return self._conv_forward(input_, self.weight, self.bias)
 
 
 class VIConv2d(_VIConvNd):
@@ -386,11 +383,7 @@ class VIConv2d(_VIConvNd):
             Output tensor of shape [N, C_out, H_out, W_out].
             Auto-sampling will add a sample dimension at the start for the overall output.
         """
-        params = self.sample_variables()
-
-        output = self._conv_forward(input_, *params)
-
-        return output
+        return self._conv_forward(input_, self.weight, self.bias)
 
 
 class VIConv3d(_VIConvNd):
@@ -507,8 +500,4 @@ class VIConv3d(_VIConvNd):
             Output tensor of shape [N, C_out, D_out, H_out, W_out].
             Auto-sampling will add a sample dimension at the start for the overall output.
         """
-        params = self.sample_variables()
-
-        output = self._conv_forward(input_, *params)
-
-        return output
+        return self._conv_forward(input_, self.weight, self.bias)

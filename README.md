@@ -212,6 +212,8 @@ defaults are used if non are passed. More importantly, `VIModules` with weights 
 the names of the random variables and the values the shapes of the weight matrices as
 tuple or list.
 
+# TODO: FIX DOCUMENTATION
+
 The insertion order of this dictionary matters, as it becomes the order of the names
 in the module attribute `random_variables`. `random_variables`, the shapes, and a similar
 attribute of the variational distribution call `variational_parameters` are used to
