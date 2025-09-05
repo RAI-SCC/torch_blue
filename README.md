@@ -14,7 +14,7 @@ most components mirror components from [pytorch](https://pytorch.org/docs/stable
 
 ## Installation
 
-We heavily recommend installing ``torch_bayesian`` in a dedicated `Python3.8+`
+We heavily recommend installing ``torch_bayesian`` in a dedicated `Python3.9+`
 [virtual environment](https://docs.python.org/3/library/venv.html). You can install
 ``torch_bayesian`` directly from the GitHub repository via:
 
@@ -22,8 +22,8 @@ We heavily recommend installing ``torch_bayesian`` in a dedicated `Python3.8+`
 $ pip install git+https://github.com/RAI-SCC/torch_bayesian
 ```
 
-Alternatively, you can install ``torch_bayesian`` locally. To achieve this, there are two steps you
-need to follow:
+Alternatively, you can install ``torch_bayesian`` locally. To achieve this, there
+are two steps you need to follow:
 
 1. Clone the repository
 
@@ -210,21 +210,20 @@ expect `VIkwargs` (which you should be familiar with from [Level 2](#level-2)), 
 defaults are used if non are passed. More importantly, `VIModules` with weights call
 `super().__init__` with the argument `variable_shapes`. The keys of this dictionary are
 the names of the random variables and the values the shapes of the weight matrices as
-tuple or list.
-
-# TODO: FIX DOCUMENTATION
+tuple or list. The value may also be set to `None`, which will always be the value
+returned for that variable.
 
 The insertion order of this dictionary matters, as it becomes the order of the names
 in the module attribute `random_variables`. `random_variables`, the shapes, and a similar
 attribute of the variational distribution call `variational_parameters` are used to
-dynamically create the weight matrices. To get weight during the forward pass call the
-`sample_variables` method, which returns a tuple of sampled weight matrices. One for
-each entry in `random_variables` and in the same order. This call also internally
-calculates and stores the log probabilities, if required.
+dynamically create the weight matrices. The weight matrices can be accesses as
+attributes of the module, which will cause a sample to be drawn and its log prob to be
+stored if needed.
 
 Should you need to access the weight tensors directly you can use `getattr` and derive
 the name using the method `variational_parameter_name`.
 
 > [!IMPORTANT]
-> Make sure to access your weights using the method `sample_variables` since it also
-> takes care of calculating and storing log probabilities.
+> Every access of the weights will yield a new sample and log probability to be stored.
+> Aggregation of multiple log probs is handled internally, but unnecessary calls will
+> distort the result.

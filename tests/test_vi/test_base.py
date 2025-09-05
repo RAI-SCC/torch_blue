@@ -102,7 +102,6 @@ def test_vimodule(device: torch.device) -> None:
     assert not hasattr(module1, "variational_distribution")
     assert not hasattr(module1, "prior")
     assert not hasattr(module1, "_kaiming_init")
-    assert not hasattr(module1, "_rescale_prior")
     assert not hasattr(module1, "_prior_init")
 
     with pytest.raises(
@@ -204,6 +203,15 @@ def test_vimodule(device: torch.device) -> None:
     for prior in module2.prior.values():
         assert prior.mean == 1 / math.sqrt(3 * 3)  # type: ignore [attr-defined]
         assert prior.std == 2 / math.sqrt(3 * 3)  # type: ignore [attr-defined]
+
+    with pytest.raises(NoVariablesError, match="All module variables are set to None."):
+        _ = VIModule(
+            dict(a=None),
+            TestDistribution(),
+            TestPrior(),
+            rescale_prior=True,
+            device=device,
+        )
 
 
 def test_get_variational_parameters(device: torch.device) -> None:

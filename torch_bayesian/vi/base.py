@@ -42,7 +42,6 @@ def _forward_unimplemented(self: Module, *input_: Optional[Tensor]) -> Tensor:
 
 
 class VIModule(Module, metaclass=PostInitCallMeta):
-    # TODO: Fix documentation
     """
     Base class for Modules using Variational Inference.
 
@@ -55,9 +54,9 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     of whether the model should return the log probability of the sampled weight (i.e.,
     the log probability to obtain these specific values when sampling from the prior or
     variational distribution).These are needed for loss calculation by
-    :class:`~.KullbackLeiblerLoss`. This is handled automatically as part of
-    :meth:`~self.sample_variables` which calculates and stores the log probs, if
-    :attr:`~self.return_log_probs` is True. For evaluation, it can be set to `False`.
+    :class:`~.KullbackLeiblerLoss`. This is handled automatically as part of accessing
+    the weight matrices, if :attr:`~self.return_log_probs` is True. For evaluation, it
+    can be set to `False`.
 
     The outermost module will aggregate the log probabilities and pack the output and
     log probs into a :class:`~.VIReturn` object, which behaves like a pytorch Tensor.
@@ -86,7 +85,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     If the constructed module does not have its own weights, :meth:`super().__init__()`
     is called without arguments. In this setting the methods :meth:`get_log_probs`,
     :meth:`get_variational_parameters`, :meth:`reset_variational_parameters`, and
-    :meth:`sample_variables` cannot be used and raise
+    :meth:`sample_variable` cannot be used and raise
     :exc:`~torch_bayesian.vi.utils.NoVariablesError`.
 
     Any weight matrix in a BNN may require multiple parameters (e.g. mean and std).
@@ -96,10 +95,12 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     dictionary, where the keys are the random variable names as strings (e.g. "weight"
     and "bias") and the values are tuples of integers specifying the shape.
 
+    After initialization these variables can be accessed as an attribute under the
+    specified name. Each access will yield a new sample. The shape of a random variable
+    can be set to ``None``. In that case accessing it will always return ``None``.
+
     .. NOTE:: The insertion order of the dictionary becomes the order
-        :attr:`self.random_variables` and therefore also the oder the variables are
-        returned in by :meth:`~self.sample_variables`. This relies on deterministic
-        3.7+ key ordering.
+        :attr:`self.random_variables`.
 
     The names of the created attributes can be discovered using the
     :meth:`~self.variational_parameter_name()` method.
@@ -111,7 +112,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
 
     Parameters
     ----------
-    variable_shapes: Optional[Dict[str, Tuple[int, ...]]], default = None
+    variable_shapes: Optional[Dict[str, Optional[Tuple[int, ...]]]], default = None
         Shape specifications for all random variables. Keys are turned into
         :attr:`self.random_variables` in insertion order.
     VIkwargs
@@ -120,8 +121,8 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     Raises
     ------
     NoVariablesError
-        If the modul does not have Bayesian parameters of its own and a method requiring
-        them is called.
+        If the module does not have Bayesian parameters of its own and a method
+        requiring them is called.
     """
 
     forward: Callable[..., _tensor_list_t] = _forward_unimplemented
@@ -174,10 +175,9 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         self.prior = dict(zip(random_variables, prior))
 
         if rescale_prior:
-            self.rescale_prior(variable_shapes)
+            self._rescale_prior(variable_shapes)
 
         self._kaiming_init = kaiming_initialization
-        self._rescale_prior = rescale_prior
         self._prior_init = prior_initialization
         self._return_log_probs = return_log_probs
 
@@ -206,7 +206,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
             return None
         return tuple(self.variational_distribution.keys())
 
-    def rescale_prior(
+    def _rescale_prior(
         self, variable_shapes: Dict[str, Optional[Tuple[int, ...]]]
     ) -> None:
         """
@@ -223,9 +223,6 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         -------
         None
         """
-        if self.random_variables is None:
-            raise ValueError("Priors cannot be rescaled without random variables.")
-
         fan_in = self._calculate_fan_in(variable_shapes)
         for prior in self.prior.values():
             prior.kaiming_rescale(fan_in)
