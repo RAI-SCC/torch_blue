@@ -149,3 +149,7 @@ testpaths = [
 filterwarnings = [
     'ignore:There is a performance drop because we have not yet implemented the batching rule for aten*:UserWarning'
 ]
+
+[tool.coverage.run]
+source = ["torch_bayesian"]
+command_line = "-m pytest"
