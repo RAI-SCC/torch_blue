@@ -87,12 +87,10 @@ whenever weights are sampled, aggregated, and returned once again by the outermo
 
 ![Code example of a three-layer Bayesian MLP with cross-entropy loss in
 `torch_bayesian`. The highlight colors relate user-facing components to their position
-in \autoref{design_graph}. \label{code}](code_example.png "Simple usage example for
-`torch_bayesian`. Colors related to the design graph below.")
+in \autoref{design_graph}. \label{code}](code_example.png)
 
 ![Design graph of `torch_bayesian` colored highlights correspond to their practical
-applications in the code example (\autoref{code}). \label{design_graph}](design_graph.png
-"Interaction graph of core components. Colors relate to the code example above.")
+applications in the code example (\autoref{code}). \label{design_graph}](design_graph.png)
 
 # Core design and features
 
