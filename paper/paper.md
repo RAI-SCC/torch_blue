@@ -76,6 +76,13 @@ many approaches beyond VI. However, their interfaces are structured around Bayes
 concepts - like plate notation - which will be unfamiliar to many primary machine
 learning users.
 
+![Code example of a three-layer Bayesian MLP with cross-entropy loss in
+`torch_bayesian`. The highlight colors relate user-facing components to their position
+in \autoref{design_graph}. \label{code}](code_example.png)
+
+![Design graph of `torch_bayesian` colored highlights correspond to their practical
+applications in the code example (\autoref{code}). \label{design_graph}](design_graph.png)
+
 `torch_bayesian` sacrifices this extreme flexibility to allow nearly fully automating
 VI with reparametrization (Bayes by Backprop) [@blundell15bbb]. The ability to use
 multiple independent sampling dimensions is removed, which allows to fully automate a
@@ -100,15 +107,6 @@ there are minor differences the process of implementing custom layers is also ve
 similar to PyTorch. To illustrate this \autoref{code} and \ref{design_graph} show an
 application example and internal interactions of `torch_bayesian` with the colors
 connecting the abstract and applied components.
-
-![Code example of a three-layer Bayesian MLP with cross-entropy loss in
-`torch_bayesian`. The highlight colors relate user-facing components to their position
-in \autoref{design_graph}. \label{code}](code_example.png "Simple usage example for
-`torch_bayesian`. Colors related to the design graph below.")
-
-![Design graph of `torch_bayesian` colored highlights correspond to their practical
-applications in the code example (\autoref{code}). \label{design_graph}](design_graph.png
-"Interaction graph of core components. Colors relate to the code example above.")
 
 The additional arguments required to modify the Bayesian aspects of the layers are
 collected on a common group of keyword arguments called `VIkwargs`. These all use
