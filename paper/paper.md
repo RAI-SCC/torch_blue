@@ -97,7 +97,7 @@ aggregated, and returned once again by the outermost `VIModule`.
 
 ![Overview of the major components of `torch_bayesian` and corresponding non-Bayesian
 components of `pytorch`](content_overview.png "Content overview for `torch_bayesian`
-and comparison with the interface of `torch.nn`"){\label{overview}}
+and comparison with the interface of `torch.nn`"){label="overview"}
 
 While ease of use colors all design decisions it features most prominently in the
 `pytorch`-like interface. While currently only the most common layer types provided by
@@ -115,11 +115,11 @@ Bayesian settings.
 ![Code example of a three layer Bayesian MLP with cross-entropy los in `torch_bayesian`.
 The highlight colors relate user facing components to their position in
 \autoref{design_graph}](code_example.png "Simple usage example for `torch_bayesian`.
-Colours related to the design graph below."){\label{code}}
+Colours related to the design graph below."){label="code"}
 
 ![Design graph of `torch_bayesian` colored highlights correspond their pratical
 applications in the code example (\autoref{code})](design_graph.png "Interaction graph of core
-components. Colors relate to the code example above."){\label{design_graph}}
+components. Colors relate to the code example above."){label="design_graph"}
 
 While modular priors and predictive distributions are quite common even for packages
 with a simpler interface, flexible variational distributions are much more challenging
