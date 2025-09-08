@@ -92,10 +92,6 @@ whenever weights are sampled, aggregated, and returned once again by the outermo
 1. Ease of use, even for users with little to no experience with Bayesian statistics
 2. Flexibility and extensibility as required for research and exploration
 
-![Overview of the major components of `torch_bayesian` and corresponding non-Bayesian
-components of PyTorch. \label{overview}](content_overview.png "Content overview for
-`torch_bayesian` and comparison with the interface of `torch.nn`")
-
 While ease of use colors all design decisions, it features most prominently in the
 PyTorch-like interface. While currently only the most common layer types provided by
 PyTorch are supported, corresponding Bayesian layers follow an analogous naming
@@ -105,12 +101,6 @@ similar to PyTorch. To illustrate this \autoref{code} and \ref{design_graph} sho
 application example and internal interactions of `torch_bayesian` with the colors
 connecting the abstract and applied components.
 
-The additional arguments required to modify the Bayesian aspects of the layers are
-collected on a common group of keyword arguments called `VIkwargs`. These all use
-settings for mean field Gaussian variational inference with Gaussian prior as defaults
-allowing beginner users to implement simple, unoptimized models without worrying about
-Bayesian settings.
-
 ![Code example of a three-layer Bayesian MLP with cross-entropy loss in
 `torch_bayesian`. The highlight colors relate user-facing components to their position
 in \autoref{design_graph}. \label{code}](code_example.png "Simple usage example for
@@ -119,6 +109,12 @@ in \autoref{design_graph}. \label{code}](code_example.png "Simple usage example 
 ![Design graph of `torch_bayesian` colored highlights correspond to their practical
 applications in the code example (\autoref{code}). \label{design_graph}](design_graph.png
 "Interaction graph of core components. Colors relate to the code example above.")
+
+The additional arguments required to modify the Bayesian aspects of the layers are
+collected on a common group of keyword arguments called `VIkwargs`. These all use
+settings for mean field Gaussian variational inference with Gaussian prior as defaults
+allowing beginner users to implement simple, unoptimized models without worrying about
+Bayesian settings.
 
 An overview of the currently supported user-facing components is given in
 \autoref{overview}. While modular priors and predictive distributions are quite common
@@ -132,6 +128,10 @@ required random variables (e.g., mean and bias) and dynamically creating the ass
 class attributes during initialization, when the variational distribution is known. The
 modules also provide methods to either return samples of all random variables or the
 name of each attribute for direct access.
+
+![Overview of the major components of `torch_bayesian` and corresponding non-Bayesian
+components of PyTorch. \label{overview}](content_overview.png "Content overview for
+`torch_bayesian` and comparison with the interface of `torch.nn`")
 
 Another challenge is introduced by the prior term of the ELBO loss. It can only be
 calculated analytically for a very limited set of priors and variational distributions.
