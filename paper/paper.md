@@ -76,6 +76,13 @@ many approaches beyond VI. However, their interfaces are structured around Bayes
 concepts - like plate notation - which will be unfamiliar to many primary machine
 learning users.
 
+![Code example of a three-layer Bayesian MLP with cross-entropy loss in
+`torch_bayesian`. The highlight colors relate user-facing components to their position
+in \autoref{design_graph}. \label{code}](code_example.png)
+
+![Design graph of `torch_bayesian` colored highlights correspond to their practical
+applications in the code example (\autoref{code}). \label{design_graph}](design_graph.png)
+
 `torch_bayesian` sacrifices this extreme flexibility to allow nearly fully automating
 VI with reparametrization (Bayes by Backprop) [@blundell15bbb]. The ability to use
 multiple independent sampling dimensions is removed, which allows to fully automate a
@@ -84,13 +91,6 @@ which captures the optional keyword argument `samples` specifying the number of 
 The log likelihoods typically needed for loss calculation are automatically calculated
 whenever weights are sampled, aggregated, and returned once again by the outermost
 `VIModule`.
-
-![Code example of a three-layer Bayesian MLP with cross-entropy loss in
-`torch_bayesian`. The highlight colors relate user-facing components to their position
-in \autoref{design_graph}. \label{code}](code_example.png)
-
-![Design graph of `torch_bayesian` colored highlights correspond to their practical
-applications in the code example (\autoref{code}). \label{design_graph}](design_graph.png)
 
 # Core design and features
 
