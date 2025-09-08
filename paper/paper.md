@@ -93,7 +93,7 @@ aggregated, and returned once again by the outermost `VIModule`.
 2. Flexibility and extensibility as required for research and exploration
 
 \autoref{overview} gives an overview of user-facing components. \autoref{code} and
-\ref{design_graph} how an application sample and internal interactions of
+\ref{design_graph} show an application example and internal interactions of
 `torch_bayesian` with the colors connecting the abstract and applied components.
 
 ![Overview of the major components of `torch_bayesian` and corresponding non-Bayesian
