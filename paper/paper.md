@@ -88,6 +88,7 @@ aggregated, and returned once again by the outermost `VIModule`.
 # Core design and features
 
 `torch_bayesian` is designed around two core aims:
+
 1. Ease of use, even for users with little to no experience with Bayesian statistics
 2. Flexibility and extensibility as required for research and exploration
 
@@ -96,8 +97,8 @@ aggregated, and returned once again by the outermost `VIModule`.
 `torch_bayesian` with the colors connecting the abstract and applied components.
 
 ![Overview of the major components of `torch_bayesian` and corresponding non-Bayesian
-components of `pytorch`](content_overview.png "Content overview for `torch_bayesian`
-and comparison with the interface of `torch.nn`"){label="overview"}
+components of `pytorch`. \label{overview}](content_overview.png "Content overview for `torch_bayesian`
+and comparison with the interface of `torch.nn`")
 
 While ease of use colors all design decisions it features most prominently in the
 `pytorch`-like interface. While currently only the most common layer types provided by
@@ -114,12 +115,12 @@ Bayesian settings.
 
 ![Code example of a three layer Bayesian MLP with cross-entropy los in `torch_bayesian`.
 The highlight colors relate user facing components to their position in
-\autoref{design_graph}](code_example.png "Simple usage example for `torch_bayesian`.
-Colours related to the design graph below."){label="code"}
+\autoref{design_graph}. \label{code}](code_example.png "Simple usage example for `torch_bayesian`.
+Colours related to the design graph below.")
 
 ![Design graph of `torch_bayesian` colored highlights correspond their pratical
-applications in the code example (\autoref{code})](design_graph.png "Interaction graph of core
-components. Colors relate to the code example above."){label="design_graph"}
+applications in the code example (\autoref{code}). \label{design_graph}](design_graph.png "Interaction graph of core
+components. Colors relate to the code example above.")
 
 While modular priors and predictive distributions are quite common even for packages
 with a simpler interface, flexible variational distributions are much more challenging
