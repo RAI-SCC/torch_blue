@@ -85,6 +85,15 @@ The log likelihoods typically needed for loss calculation are automatically calc
 whenever weights are sampled, aggregated, and returned once again by the outermost
 `VIModule`.
 
+![Code example of a three-layer Bayesian MLP with cross-entropy loss in
+`torch_bayesian`. The highlight colors relate user-facing components to their position
+in \autoref{design_graph}. \label{code}](code_example.png "Simple usage example for
+`torch_bayesian`. Colors related to the design graph below.")
+
+![Design graph of `torch_bayesian` colored highlights correspond to their practical
+applications in the code example (\autoref{code}). \label{design_graph}](design_graph.png
+"Interaction graph of core components. Colors relate to the code example above.")
+
 # Core design and features
 
 `torch_bayesian` is designed around two core aims:
@@ -100,15 +109,6 @@ there are minor differences the process of implementing custom layers is also ve
 similar to PyTorch. To illustrate this \autoref{code} and \ref{design_graph} show an
 application example and internal interactions of `torch_bayesian` with the colors
 connecting the abstract and applied components.
-
-![Code example of a three-layer Bayesian MLP with cross-entropy loss in
-`torch_bayesian`. The highlight colors relate user-facing components to their position
-in \autoref{design_graph}. \label{code}](code_example.png "Simple usage example for
-`torch_bayesian`. Colors related to the design graph below.")
-
-![Design graph of `torch_bayesian` colored highlights correspond to their practical
-applications in the code example (\autoref{code}). \label{design_graph}](design_graph.png
-"Interaction graph of core components. Colors relate to the code example above.")
 
 The additional arguments required to modify the Bayesian aspects of the layers are
 collected on a common group of keyword arguments called `VIkwargs`. These all use
