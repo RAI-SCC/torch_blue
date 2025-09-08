@@ -8,7 +8,7 @@ from torch.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _tripl
 
 from .base import VIModule
 from .priors import MeanFieldNormalPrior
-from .utils.common_types import VIkwargs, VIReturn, _prior_any_t, _vardist_any_t
+from .utils.common_types import VIkwargs, _prior_any_t, _vardist_any_t
 from .variational_distributions import MeanFieldNormalVarDist
 
 
@@ -136,8 +136,9 @@ class _VIConvNd(VIModule):
         else:
             weight_shape = (out_channels, in_channels // groups, *kernel_size)
 
-        variable_shapes: Dict[str, Tuple[int, ...]] = dict(
+        variable_shapes: Dict[str, Optional[Tuple[int, ...]]] = dict(
             weight=weight_shape,
+            bias=None,
         )
         if bias:
             bias_shape = (out_channels,)
@@ -165,6 +166,15 @@ class VIConv1d(_VIConvNd):
 
     - ("weight", "bias") if bias == True
     - ("weight", )       if bias == False
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.Conv1d` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html>`__)
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     def __init__(
@@ -239,7 +249,7 @@ class VIConv1d(_VIConvNd):
             input_, weight, bias, self.stride, self.padding, self.dilation, self.groups
         )
 
-    def forward(self, input_: Tensor) -> VIReturn[Tensor]:
+    def forward(self, input_: Tensor) -> Tensor:
         """
         Forward computation.
 
@@ -256,21 +266,8 @@ class VIConv1d(_VIConvNd):
         output: Tensor
             Output tensor of shape [N, C_out, W_out].
             Auto-sampling will add a sample dimension at the start for the overall output.
-        log_probs: Tensor
-            Tensor of shape (2,) containing the total prior and variational log
-            probability (in that order) of the sampled weights and biases.
-
-            Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
-        params = self.sample_variables()
-
-        output = self._conv_forward(input_, *params)
-
-        if self._return_log_probs:
-            log_probs = self.get_log_probs(params)
-            return output, log_probs
-        else:
-            return output
+        return self._conv_forward(input_, self.weight, self.bias)
 
 
 class VIConv2d(_VIConvNd):
@@ -287,6 +284,15 @@ class VIConv2d(_VIConvNd):
 
     - ("weight", "bias") if bias == True
     - ("weight", )       if bias == False
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.Conv2d` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html>`__)
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     def __init__(
@@ -359,7 +365,7 @@ class VIConv2d(_VIConvNd):
             input_, weight, bias, self.stride, self.padding, self.dilation, self.groups
         )
 
-    def forward(self, input_: Tensor) -> VIReturn[Tensor]:
+    def forward(self, input_: Tensor) -> Tensor:
         """
         Forward computation.
 
@@ -376,21 +382,8 @@ class VIConv2d(_VIConvNd):
         output: Tensor
             Output tensor of shape [N, C_out, H_out, W_out].
             Auto-sampling will add a sample dimension at the start for the overall output.
-        log_probs: Tensor
-            Tensor of shape (2,) containing the total prior and variational log
-            probability (in that order) of the sampled weights and biases.
-
-            Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
-        params = self.sample_variables()
-
-        output = self._conv_forward(input_, *params)
-
-        if self._return_log_probs:
-            log_probs = self.get_log_probs(params)
-            return output, log_probs
-        else:
-            return output
+        return self._conv_forward(input_, self.weight, self.bias)
 
 
 class VIConv3d(_VIConvNd):
@@ -407,6 +400,15 @@ class VIConv3d(_VIConvNd):
 
     - ("weight", "bias") if bias == True
     - ("weight", )       if bias == False
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.Conv3d` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.Conv3d.html>`__)
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     def __init__(
@@ -479,7 +481,7 @@ class VIConv3d(_VIConvNd):
             input_, weight, bias, self.stride, self.padding, self.dilation, self.groups
         )
 
-    def forward(self, input_: Tensor) -> VIReturn[Tensor]:
+    def forward(self, input_: Tensor) -> Tensor:
         """
         Forward computation.
 
@@ -497,18 +499,5 @@ class VIConv3d(_VIConvNd):
         output: Tensor
             Output tensor of shape [N, C_out, D_out, H_out, W_out].
             Auto-sampling will add a sample dimension at the start for the overall output.
-        log_probs: Tensor
-            Tensor of shape (2,) containing the total prior and variational log
-            probability (in that order) of the sampled weights and biases.
-
-            Only returned if ``return_log_probs``. Otherwise, only **output** is returned.
         """
-        params = self.sample_variables()
-
-        output = self._conv_forward(input_, *params)
-
-        if self._return_log_probs:
-            log_probs = self.get_log_probs(params)
-            return output, log_probs
-        else:
-            return output
+        return self._conv_forward(input_, self.weight, self.bias)

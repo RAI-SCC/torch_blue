@@ -46,9 +46,9 @@ class MeanFieldNormalVarDist(VariationalDistribution):
 
     def log_prob(self, sample: Tensor, mean: Tensor, log_std: Tensor) -> Tensor:
         """
-        Compute the log likelihood of `sample` based on a normal distribution.
+        Compute the log probability of `sample` based on a normal distribution.
 
-        Calculates the log likelihood of `sample` based on the provided mean and log
+        Calculates the log probability of `sample` based on the provided mean and log
         standard deviation. All Tensors must have the same shape as `sample`.
 
         This calculation is affected by :data:`_globals._USE_NORM_CONSTANTS`, which can
@@ -57,7 +57,7 @@ class MeanFieldNormalVarDist(VariationalDistribution):
         Parameters
         ----------
         sample: Tensor
-            The weight configuration to calculate the log likelihood for.
+            The weight configuration to calculate the log probability for.
         mean: Tensor
             The means of the reference distribution.
         log_std: Tensor
@@ -66,7 +66,7 @@ class MeanFieldNormalVarDist(VariationalDistribution):
         Returns
         -------
         Tensor
-            The log likelihood of `sample` based on the provided mean and log_std.
+            The log probability of `sample` based on the provided mean and log_std.
         """
         variance = torch.exp(log_std) ** 2
         data_fitting = (sample - mean) ** 2 / variance

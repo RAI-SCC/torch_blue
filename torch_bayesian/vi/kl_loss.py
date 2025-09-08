@@ -1,11 +1,11 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, cast
 from warnings import warn
 
 from torch import Tensor
 from torch.nn import Module
 
 from .predictive_distributions import PredictiveDistribution
-from .utils.common_types import _log_prob_return_format
+from .utils.vi_return import VIReturn
 
 
 class KullbackLeiblerLoss(Module):
@@ -82,7 +82,7 @@ class KullbackLeiblerLoss(Module):
 
     def forward(
         self,
-        model_output: _log_prob_return_format[Tensor],
+        model_output: VIReturn,
         target: Tensor,
         dataset_size: Optional[int] = None,
     ) -> Tensor:
@@ -94,12 +94,8 @@ class KullbackLeiblerLoss(Module):
 
         Parameters
         ----------
-        model_output: Tuple[Tensor, Tensor]
-            The model output in with `return_log_probs` = ``True``. The first Tensor is
-            the sampled model prediction (Shape: (N, \*). The second Tensor contains
-            prior_log_prob and variational_log_prob - the log likelihood of the sampled
-            weights under the prior and variational distribution respectively - and has
-            shape (N, 2).
+        model_output: VIReturn
+            The model output including the log probabilities. Shape (N, \*)
         target: Tensor
             Target prediction. Shape (\*)
         dataset_size: Optional[int], default: None
@@ -111,9 +107,10 @@ class KullbackLeiblerLoss(Module):
         Tensor
             Negative ELBO loss. Shape: (1,)
         """
-        samples, log_probs = model_output
+        samples = model_output
+        log_probs = cast(Tensor, model_output.log_probs)
         # Average log probs separately and calculate prior matching term
-        mean_log_probs = log_probs.mean(dim=0)
+        mean_log_probs = log_probs.mean(dim=0) if log_probs.dim() != 1 else log_probs
 
         if (dataset_size is None) and (self.dataset_size is None):
             warn(

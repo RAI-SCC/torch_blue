@@ -63,8 +63,8 @@ def test_log_prob(norm_constants: bool, device: torch.device) -> None:
     assert log_prob2.device == device
 
 
-def test_reset_parameters(device: torch.device) -> None:
-    """Test BasicQuietPrior.reset_parameters()."""
+def test_reset_variational_parameters(device: torch.device) -> None:
+    """Test BasicQuietPrior.reset_variational_parameters()."""
     param_shape = (500, 400)
 
     class ModuleDummy(Module):
@@ -82,7 +82,7 @@ def test_reset_parameters(device: torch.device) -> None:
     mean0 = dummy.weight_mean.clone()
 
     iter1 = dummy.parameters()
-    prior.reset_parameters(dummy, "weight")
+    prior.reset_variational_parameters(dummy, "weight")
 
     mean = iter1.__next__().clone()
     log_std = iter1.__next__().clone()

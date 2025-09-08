@@ -21,11 +21,11 @@ class UniformPrior(Prior):
     @staticmethod
     def log_prob(sample: Tensor) -> Tensor:
         """
-        Compute the log likelihood of a sample based on the prior.
+        Compute the log probability of a sample based on the prior.
 
-        Since any sample is equally likely, the log likelihood for each is equal with an
+        Since any sample is equally likely, the log probability for each is equal with an
         infinite normalization constant. Since this is hardly useful for practical use
-        and constants may be offset during training, the log likelihood is always
+        and constants may be offset during training, the log probability is always
         returned as zero.
 
         This is not affected by :data:`_globals._USE_NORM_CONSTANTS`.
@@ -33,11 +33,11 @@ class UniformPrior(Prior):
         Parameters
         ----------
         sample: Tensor
-            A Tensor of values to calculate the log likelihood for.
+            A Tensor of values to calculate the log probability for.
 
         Returns
         -------
         Tensor
-            The log likelihood of the sample under the prior, i.e. zero.
+            The log probability of the sample under the prior, i.e. zero.
         """
         return torch.tensor([0.0], device=sample.device)

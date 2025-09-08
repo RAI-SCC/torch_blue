@@ -1,7 +1,6 @@
-from typing import TYPE_CHECKING, Optional, Tuple, TypedDict, TypeVar, Union
+from typing import TYPE_CHECKING, Optional, TypedDict
 
 import torch
-from torch import Tensor
 from torch.nn.common_types import _scalar_or_tuple_any_t
 from typing_extensions import TypeAlias
 
@@ -12,17 +11,12 @@ if TYPE_CHECKING:  # pragma: no cover
 _prior_any_t: TypeAlias = _scalar_or_tuple_any_t["Prior"]
 _vardist_any_t: TypeAlias = _scalar_or_tuple_any_t["VariationalDistribution"]
 
-T = TypeVar("T")
-_log_prob_return_format = Tuple[T, Tensor]
-VIReturn = Union[T, _log_prob_return_format[T]]
-
 
 class VIkwargs(TypedDict):
     """
     Common keyword arguments for most VIModules.
 
-    All :class:`~torch_bayesian.vi.VIBaseModule` and most
-    :class:`~torch_bayesian.vi.VIModule` accept these as keyword arguments. Unless
+    Most :class:`~torch_bayesian.vi.VIModule` accept these as keyword arguments. Unless
     specified otherwise, they use the defaults below.
 
     This class is only used for documentation and type hinting.
@@ -46,7 +40,7 @@ class VIkwargs(TypedDict):
         If ``True`` parameters are initialized according to the prior. If ``False``
         parameters are initialized similar to non-Bayesian networks.
     return_log_probs: bool, default: True
-        If ``True`` the model forward pass returns the log likelihood of the sampled
+        If ``True`` the model forward pass returns the log probability of the sampled
         weights. This is required for use of
         :class:`~torch_bayesian.vi.KullbackLeiblerLoss`.
     device: Optional[torch.device], default: None

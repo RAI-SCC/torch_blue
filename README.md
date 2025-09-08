@@ -10,10 +10,11 @@ most components mirror components from [pytorch](https://pytorch.org/docs/stable
   - [Level 1](#level-1)
   - [Level 2](#level-2)
   - [Level 3](#level-3)
+  - [Level 4](#level-4)
 
 ## Installation
 
-We heavily recommend installing ``torch_bayesian`` in a dedicated `Python3.8+`
+We heavily recommend installing ``torch_bayesian`` in a dedicated `Python3.9+`
 [virtual environment](https://docs.python.org/3/library/venv.html). You can install
 ``torch_bayesian`` directly from the GitHub repository via:
 
@@ -21,8 +22,8 @@ We heavily recommend installing ``torch_bayesian`` in a dedicated `Python3.8+`
 $ pip install git+https://github.com/RAI-SCC/torch_bayesian
 ```
 
-Alternatively, you can install ``torch_bayesian`` locally. To achieve this, there are two steps you
-need to follow:
+Alternatively, you can install ``torch_bayesian`` locally. To achieve this, there
+are two steps you need to follow:
 
 1. Clone the repository
 
@@ -79,6 +80,7 @@ Three levels are introduced:
 - [Level 1](#level-1): Simple sequential layer stacks
 - [Level 2](#level-2): Customizing Bayesian assumptions and VI kwargs
 - [Level 3](#level-3): Non-sequential models and log probabilities
+- [Level 4](#level-4): Custom modules with weights
 
 ### Level 1
 
@@ -165,61 +167,63 @@ probability of the actually used weights (which are sampled on each forward pass
 variational and prior distribution. Since it is quite inefficient to save the samples
 these log probabilities are evaluated during the forward pass and returned by the model.
 Since this is only necessary for training it can be controlled with the argument
-return_log_probs. Once the model is initialized this flag can be changed by setting
+`return_log_probs`. Once the model is initialized this flag can be changed by setting
 `VIModule.return_log_probs`, which either enables (`True`) or disables (`False`) the
 returning of the log probabilities for all submodules.
 
-When creating advance `VIModule`s you will need to consider, that provided modules
-return a tuple during training. The first element of this tuple is the usual model
-output. The second element is a Tensor containing two values: prior_log_prob and
-variational_log_prob. Your modules must be able to handle both cases (by checking
-`return_log_probs`) and return log probs accordingly. If you have multiple submodels
-returning log probs you can just add them. Generally, this will follow the pattern:
-
-```python
-from torch import Tensor
-
-from torch_bayesian.vi import VIModule, VIReturn
-
-
-class VINetwork(VIModule):
-  def __init__(self) -> None:
-    super().__init__()
-    self.module1 = ... # some VIModule
-    self.module2 = ... # another VIModule
-
-  def foward(self, input_: Tensor) -> VIReturn[Tensor]:
-      if self._return_log_probs:
-          input_, log_probs1 = self.module1(input_)
-          output, log_probs2 = self.module2(input_)
-          log_probs = log_probs1 + log_probs2
-          return output, log_probs
-      else:
-          input_ = self.module1(input_)
-          output = self.module2(input_)
-          return output
-```
-
-`VIReturn` is a type alias that encapsulates this shifting return type. Just provide the
-type of the layer output to it.
-
-Creating custom `VIModules` with parameters goes beyond the scope of this guide.
+While `torch_bayesian` calculates and aggregates log probs internally, this is handled
+by the outermost `VIModule`. This module will not have the expected output signature
+when returning log probs, but instead return a `VIReturn` object. This class is pytorch
+`Tensor` that also contains log prob information in its additional `log_probs`
+attribute. This is the format `torch_bayesian` losses expect. Therefore, if you feed the
+output directly into a loss there should be no issues. While all pytorch tensor
+operations can be performed on `VIReturns` many will delete the log prob information and
+transform the object back into a `Tensor`. This needs to be considered when performing
+further operations on the model output. The simplest way to avoid issues is to wrap all
+operations - except the loss - in a `VIModule` since log prob aggregation is only
+performed by the outermost module. For deployment `return_log_probs` should be set to
+`False`. If multiple `Tensor`s are returned by the model, each will carry all log probs.
 
 > [!NOTE]
-> Due to [Autosampling](#autosampling) all output Tensors, i.e. each Tensor
-> in the model output and the Tensor containing the log probs has an additional
+> Always make sure your outermost module is a VIModule and keep in mind that the output
+> of that module will be a `VIReturn` object, which behaves like a `Tensor`, carries
+> weight log probabilities, if `return_log_probs == True`. Losses in `torch_baysian`
+> expect this format.
+
+> [!NOTE]
+> Due to Autosampling all output Tensors, i.e. each `VIReturn`
+> in the model output and the `Tensor` containing the log probs has an additional
 > dimension at the beginning representing the multiple samples necessary to properly
 > evaluate the stochastic forward pass. This is only relevant for VIModules that are not
 > contained within other VIModules. Loss functions are designed to expect and handle
 > this output format, i.e. you can simply feed the model output into the loss and
 > everything will work.
 
-## Variational Inference
+### Level 4
 
-### The Prior
+Arguably, creating `VIModule`s with Bayesian weights - which are typically called random
+variables in documentation and code - is arguably simpler than in pytorch. Since a
+different number of weight matrices needs to be created based on the variational
+distribution, the process is completely automated. For `VIModules` without weights
+`super().__init__` is called without arguments. Modules with random variables
+expect `VIkwargs` (which you should be familiar with from [Level 2](#level-2)), but
+defaults are used if non are passed. More importantly, `VIModules` with weights call
+`super().__init__` with the argument `variable_shapes`. The keys of this dictionary are
+the names of the random variables and the values the shapes of the weight matrices as
+tuple or list. The value may also be set to `None`, which will always be the value
+returned for that variable.
 
-### The Variational Distribution
+The insertion order of this dictionary matters, as it becomes the order of the names
+in the module attribute `random_variables`. `random_variables`, the shapes, and a similar
+attribute of the variational distribution call `variational_parameters` are used to
+dynamically create the weight matrices. The weight matrices can be accesses as
+attributes of the module, which will cause a sample to be drawn and its log prob to be
+stored if needed.
 
-### The Predictive Distribution
+Should you need to access the weight tensors directly you can use `getattr` and derive
+the name using the method `variational_parameter_name`.
 
-### Autosampling
+> [!IMPORTANT]
+> Every access of the weights will yield a new sample and log probability to be stored.
+> Aggregation of multiple log probs is handled internally, but unnecessary calls will
+> distort the result.

@@ -78,9 +78,9 @@ def test_parameter_checking() -> None:
 
     with pytest.warns(
         UserWarning,
-        match=r'Module \[Test6\] is missing the "reset_parameters" method*',
+        match=r'Module \[Test6\] is missing the "reset_variational_parameters" method*',
     ):
-        test.reset_parameters(test, "mean")  # type: ignore [arg-type]
+        test.reset_variational_parameters(test, "mean")  # type: ignore [arg-type]
 
     class Test7(Prior):
         distribution_parameters = ("mean", "log_std")

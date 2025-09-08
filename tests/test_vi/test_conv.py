@@ -78,8 +78,8 @@ def test_viconvnd(device: torch.device) -> None:
         if key == "bias":
             continue
         if key == "variational_distribution" or key == "prior":
-            assert isinstance(test1.__dict__[key][0], type(args[key]))
-            assert isinstance(test1.__dict__[key][1], type(args[key]))
+            assert isinstance(test1.__dict__[key]["weight"], type(args[key]))
+            assert isinstance(test1.__dict__[key]["bias"], type(args[key]))
         else:
             assert test1.__dict__[key] is args[key]
 
@@ -134,7 +134,8 @@ def test_viconv1d(device: torch.device) -> None:
 
     sample = torch.randn((6, args["in_channels"], 7), device=device)
     test1 = VIConv1d(**args, return_log_probs=True)  # type: ignore
-    out1, lps1 = test1(sample, samples=5)
+    out1 = test1(sample, samples=5)
+    lps1 = out1.log_probs
     assert out1.shape == (5, 6, args["out_channels"], 3)
     assert out1.device == device
     assert lps1.shape == (5, 2)
@@ -147,8 +148,6 @@ def test_viconv1d(device: torch.device) -> None:
             assert not hasattr(test1, "_bias_mean")
             assert not hasattr(test1, "_bias_log_std")
         elif key in [
-            "variational_distribution",
-            "prior",
             "kernel_size",
             "stride",
             "padding",
@@ -156,6 +155,17 @@ def test_viconv1d(device: torch.device) -> None:
         ]:
             assert isinstance(test1.__dict__[key][0], type(args[key]))
             assert len(test1.__dict__[key]) == 1
+        elif key in [
+            "variational_distribution",
+            "prior",
+        ]:
+            attr = test1.__dict__[key]
+            assert len(attr.keys()) == 2
+            for name, value in attr.items():
+                if name == "bias":
+                    assert value is None
+                else:
+                    assert isinstance(value, type(args[key]))
         else:
             assert test1.__dict__[key] is args[key]
 
@@ -187,7 +197,8 @@ def test_viconv2d(device: torch.device) -> None:
 
     sample = torch.randn((6, args["in_channels"], 7, 4), device=device)
     test1 = VIConv2d(**args, return_log_probs=True)  # type: ignore
-    out1, lps1 = test1(sample, samples=5)
+    out1 = test1(sample, samples=5)
+    lps1 = out1.log_probs
     assert out1.shape == (5, 6, args["out_channels"], 3, 1)
     assert out1.device == device
     assert lps1.shape == (5, 2)
@@ -200,8 +211,6 @@ def test_viconv2d(device: torch.device) -> None:
             assert not hasattr(test1, "_bias_mean")
             assert not hasattr(test1, "_bias_log_std")
         elif key in [
-            "variational_distribution",
-            "prior",
             "kernel_size",
             "stride",
             "padding",
@@ -213,6 +222,17 @@ def test_viconv2d(device: torch.device) -> None:
             else:
                 assert test1.__dict__[key][0] is args[key]
                 assert len(test1.__dict__[key]) == 2
+        elif key in [
+            "variational_distribution",
+            "prior",
+        ]:
+            attr = test1.__dict__[key]
+            assert len(attr.keys()) == 2
+            for name, value in attr.items():
+                if name == "bias":
+                    assert value is None
+                else:
+                    assert isinstance(value, type(args[key]))
         else:
             assert test1.__dict__[key] is args[key]
 
@@ -244,7 +264,8 @@ def test_viconv3d(device: torch.device) -> None:
 
     sample = torch.randn((6, args["in_channels"], 7, 4, 9), device=device)
     test1 = VIConv3d(**args, return_log_probs=True)  # type: ignore
-    out1, lps1 = test1(sample, samples=5)
+    out1 = test1(sample, samples=5)
+    lps1 = out1.log_probs
     assert out1.shape == (5, 6, args["out_channels"], 3, 1, 4)
     assert out1.device == device
     assert lps1.shape == (5, 2)
@@ -257,19 +278,24 @@ def test_viconv3d(device: torch.device) -> None:
             assert not hasattr(test1, "_bias_mean")
             assert not hasattr(test1, "_bias_log_std")
         elif key in [
-            "variational_distribution",
-            "prior",
             "kernel_size",
             "stride",
             "padding",
             "dilation",
         ]:
-            if key in ["variational_distribution", "prior"]:
-                assert isinstance(test1.__dict__[key][0], type(args[key]))
-                assert len(test1.__dict__[key]) == 1
-            else:
-                assert test1.__dict__[key][0] is args[key]
-                assert len(test1.__dict__[key]) == 3
+            assert test1.__dict__[key][0] is args[key]
+            assert len(test1.__dict__[key]) == 3
+        elif key in [
+            "variational_distribution",
+            "prior",
+        ]:
+            attr = test1.__dict__[key]
+            assert len(attr.keys()) == 2
+            for name, value in attr.items():
+                if name == "bias":
+                    assert value is None
+                else:
+                    assert isinstance(value, type(args[key]))
         else:
             assert test1.__dict__[key] is args[key]
 

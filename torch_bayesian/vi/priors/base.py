@@ -8,7 +8,7 @@ from torch import Tensor
 from ..utils import PostInitCallMeta
 
 if TYPE_CHECKING:
-    from ..base import VIBaseModule  # pragma: no cover
+    from ..base import VIModule  # pragma: no cover
 
 
 class Prior(metaclass=PostInitCallMeta):
@@ -21,7 +21,7 @@ class Prior(metaclass=PostInitCallMeta):
     decay.
 
     Each prior must name the :attr:`~self.distribution_parameters` that define it as
-    well as the way to calculate the log likelihood of a weight configuration in the
+    well as the way to calculate the log probability of a weight configuration in the
     :meth:`~self.log_prob` method.
 
     Generally, each name in :attr:`~self.distribution_parameters` should also be an
@@ -38,7 +38,7 @@ class Prior(metaclass=PostInitCallMeta):
     handled during rescaling.
 
     To enable the ``prior_initialization`` functionality, the class must implement the
-    :meth:`~self.reset_parameters` method. Which initializes the parameters for one
+    :meth:`~self.reset_variational_parameters` method. Which initializes the parameters for one
     random variable of a model, whose variational parameters are supported by the prior,
     to the prior values.
 
@@ -52,7 +52,7 @@ class Prior(metaclass=PostInitCallMeta):
     _scaling_parameters: Tuple[str, ...], default: :attr:`~distribution_parameters`
         Parameters that need to be rescaled for prior rescaling.
     log_prob: Callable[..., Tensor]
-        Function to calculate the log likelihood of a weight configuration under this
+        Function to calculate the log probability of a weight configuration under this
         prior.
     """
 
@@ -114,13 +114,13 @@ class Prior(metaclass=PostInitCallMeta):
                 else:
                     setattr(self, parameter, param * scale)
 
-    def reset_parameters(self, module: "VIBaseModule", variable: str) -> None:
+    def reset_variational_parameters(self, module: "VIModule", variable: str) -> None:
         """
-        Initialize the parameters of a VIBaseModule according to the prior distribution.
+        Initialize the parameters of a VIModule according to the prior distribution.
 
         To enable the ``prior_initialization`` functionality, the class must implement
         this method. It initializes the parameters for one random variable of a
-        :class:`~torch_bayesian.vi.VIBaseModule`, whose variational parameters are
+        :class:`~torch_bayesian.vi.VIModule`, whose variational parameters are
         supported by the prior, to the prior values. To that end the name of the random
         variable to initialize is passed to the method.
 
@@ -134,7 +134,7 @@ class Prior(metaclass=PostInitCallMeta):
 
         Parameters
         ----------
-        module: VIBaseModule
+        module: VIModule
             The module containing the parameters to reset.
         variable: str
             The name of the random variable to reset as given by
@@ -146,7 +146,7 @@ class Prior(metaclass=PostInitCallMeta):
         None
         """
         warn(
-            f'Module [{type(self).__name__}] is missing the "reset_parameters" method'
+            f'Module [{type(self).__name__}] is missing the "reset_variational_parameters" method'
             f" and therefore does not support prior initialization."
         )
 

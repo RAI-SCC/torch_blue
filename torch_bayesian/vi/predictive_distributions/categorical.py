@@ -70,7 +70,7 @@ class CategoricalPredictiveDistribution(PredictiveDistribution):
         reference: Tensor, parameters: Tensor, eps: float = 1e-5
     ) -> Tensor:
         """
-        Calculate the log likelihood of the label based on the class probabilities.
+        Calculate the log probability of the label based on the class probabilities.
 
         This is not affected by :data:`_globals._USE_NORM_CONSTANTS`.
 
@@ -88,7 +88,7 @@ class CategoricalPredictiveDistribution(PredictiveDistribution):
         Returns
         -------
         Tensor
-            The log likelihood of the label under the predicted class probabilities.
+            The log probability of the label under the predicted class probabilities.
             Shape: (1,).
         """
         parameters = torch.log(parameters + eps)

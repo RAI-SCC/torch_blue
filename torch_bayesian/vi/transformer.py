@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -11,7 +11,7 @@ from .base import VIModule
 from .linear import VILinear
 from .priors import MeanFieldNormalPrior, Prior
 from .sequential import VIResidualConnection
-from .utils.common_types import VIkwargs, VIReturn, _prior_any_t, _vardist_any_t
+from .utils.common_types import VIkwargs, _prior_any_t, _vardist_any_t
 from .variational_distributions import MeanFieldNormalVarDist, VariationalDistribution
 
 
@@ -38,6 +38,15 @@ class VIMultiheadAttention(VIModule):
     - ("in_proj_bias", "out_proj_bias") if ``bias`` is ``True``.
     - ("bias_k", "bias_v") if ``add_bias_kv`` is ``True``.
 
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.MultiheadAttention` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention.html>`__),
+        except ``dropout``, which is not relevant for BNNs.
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     __constants__ = ["batch_first"]
@@ -86,7 +95,17 @@ class VIMultiheadAttention(VIModule):
             self.head_dim * num_heads == self.embed_dim
         ), "embed_dim must be divisible by num_heads"
 
-        variables: Dict[str, Tuple[int, ...]] = dict()
+        variables: Dict[str, Optional[Tuple[int, ...]]] = dict(
+            in_proj_weight=None,
+            q_proj_weight=None,
+            k_proj_weight=None,
+            v_proj_weight=None,
+            out_proj_weight=None,
+            in_proj_bias=None,
+            out_proj_bias=None,
+            bias_k=None,
+            bias_v=None,
+        )
         if not self._qkv_same_embed_dim:
             variables["q_proj_weight"] = (embed_dim, embed_dim)
             variables["k_proj_weight"] = (embed_dim, self.kdim)
@@ -118,7 +137,7 @@ class VIMultiheadAttention(VIModule):
         key_padding_mask: Optional[Tensor] = None,
         average_attn_weights: bool = True,
         is_causal: bool = False,
-    ) -> VIReturn[Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tuple[Tensor, Optional[Tensor]]:
         """
         Compute attention outputs using query, key, and value embeddings.
 
@@ -160,74 +179,47 @@ class VIMultiheadAttention(VIModule):
             else:
                 query, key, value = (x.transpose(1, 0) for x in (query, key, value))
 
-        params = self.sample_variables()
-        if self.add_kv_bias:
-            bias_v = params.pop()
-            bias_k = params.pop()
-        else:
-            bias_k = bias_v = None
-
         if not self._qkv_same_embed_dim:
-            if self.bias:
-                (
-                    q_proj_weight,
-                    k_proj_weight,
-                    v_proj_weight,
-                    out_proj_weight,
-                    in_proj_bias,
-                    out_proj_bias,
-                ) = params
-            else:
-                q_proj_weight, k_proj_weight, v_proj_weight, out_proj_weight = params
-                in_proj_bias = out_proj_bias = None
-            in_proj_weight = None
-
             attn_output, attn_output_weights = F.multi_head_attention_forward(
                 query,
                 key,
                 value,
                 self.embed_dim,
                 self.num_heads,
-                in_proj_weight,
-                in_proj_bias,
-                bias_k=bias_k,
-                bias_v=bias_v,
-                add_zero_attn=self.add_zero_attn,
-                dropout_p=0.0,
-                out_proj_weight=out_proj_weight,
-                out_proj_bias=out_proj_bias,
+                self.in_proj_weight,
+                self.in_proj_bias,
+                self.bias_k,
+                self.bias_v,
+                self.add_zero_attn,
+                0.0,
+                self.out_proj_weight,
+                self.out_proj_bias,
                 training=self.training,
                 key_padding_mask=key_padding_mask,
                 need_weights=True,
                 attn_mask=attn_mask,
                 use_separate_proj_weight=True,
-                q_proj_weight=q_proj_weight,
-                k_proj_weight=k_proj_weight,
-                v_proj_weight=v_proj_weight,
+                q_proj_weight=self.q_proj_weight,
+                k_proj_weight=self.k_proj_weight,
+                v_proj_weight=self.v_proj_weight,
                 average_attn_weights=average_attn_weights,
                 is_causal=is_causal,
             )
         else:
-            if self.bias:
-                in_proj_weight, out_proj_weight, in_proj_bias, out_proj_bias = params
-            else:
-                in_proj_weight, out_proj_weight = params
-                in_proj_bias = out_proj_bias = None
-
             attn_output, attn_output_weights = F.multi_head_attention_forward(
                 query,
                 key,
                 value,
                 self.embed_dim,
                 self.num_heads,
-                in_proj_weight,
-                in_proj_bias,
-                bias_k=bias_k,
-                bias_v=bias_v,
-                add_zero_attn=self.add_zero_attn,
-                dropout_p=0.0,
-                out_proj_weight=out_proj_weight,
-                out_proj_bias=out_proj_bias,
+                self.in_proj_weight,
+                self.in_proj_bias,
+                self.bias_k,
+                self.bias_v,
+                self.add_zero_attn,
+                0.0,
+                self.out_proj_weight,
+                self.out_proj_bias,
                 training=self.training,
                 key_padding_mask=key_padding_mask,
                 need_weights=True,
@@ -239,11 +231,7 @@ class VIMultiheadAttention(VIModule):
         if self.batch_first and is_batched:
             attn_output = attn_output.transpose(1, 0)
 
-        if self._return_log_probs:
-            log_probs = self.get_log_probs(params)
-            return (attn_output, attn_output_weights), log_probs
-        else:
-            return attn_output, attn_output_weights
+        return attn_output, attn_output_weights
 
 
 class VITransformerEncoderLayer(VIModule):
@@ -256,6 +244,16 @@ class VITransformerEncoderLayer(VIModule):
 
     This does not support the ``dropout`` argument.
     In addition to all other arguments, this class accepts :class:`~.VIkwargs`.
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.TransformerEncoderLayer` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.TransformerEncoderLayer.html>`__),
+        except ``dropout``, which is not relevant for BNNs.
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     def __init__(
@@ -304,7 +302,7 @@ class VITransformerEncoderLayer(VIModule):
         self.norm1 = LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
         self.norm2 = LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
 
-        self._return_log_probs = return_log_probs
+        self.return_log_probs = return_log_probs
 
     def forward(
         self,
@@ -312,7 +310,7 @@ class VITransformerEncoderLayer(VIModule):
         src_mask: Optional[Tensor] = None,
         src_key_padding_mask: Optional[Tensor] = None,
         is_causal: bool = False,
-    ) -> VIReturn[Tensor]:
+    ) -> Tensor:
         """
         Pass the input through the encoder layer.
 
@@ -339,29 +337,7 @@ class VITransformerEncoderLayer(VIModule):
         )
         x = src
         # _ff_block already includes residual connection
-        if self._return_log_probs and self.norm_first:
-            (x1, _), lps1 = self._sa_block(
-                self.norm1(x), src_mask, src_key_padding_mask, is_causal=is_causal
-            )
-            x2 = x + x1
-            x3, lps2 = self._ff_block(self.norm2(x2))
-            x4 = x3
-
-            lps1, lps2 = cast(Tuple[Tensor, Tensor], (lps1, lps2))
-            log_probs = lps1 + lps2
-            return x4, log_probs
-        elif self._return_log_probs:
-            (x1, _), lps1 = self._sa_block(
-                x, src_mask, src_key_padding_mask, is_causal=is_causal
-            )
-            x2 = x + x1
-            x3, lps2 = self._ff_block(self.norm1(x2))
-            x4 = self.norm2(x3)
-
-            lps1, lps2 = cast(Tuple[Tensor, Tensor], (lps1, lps2))
-            log_probs = lps1 + lps2
-            return x4, log_probs
-        elif self.norm_first:
+        if self.norm_first:
             x = (
                 x
                 + self._sa_block(
@@ -386,7 +362,7 @@ class VITransformerEncoderLayer(VIModule):
         attn_mask: Optional[Tensor] = None,
         key_padding_mask: Optional[Tensor] = None,
         is_causal: bool = False,
-    ) -> VIReturn[Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tuple[Tensor, Tensor]:
         x = self.self_attn(
             x,
             x,
@@ -408,6 +384,16 @@ class VITransformerDecoderLayer(VIModule):
 
     This does not support the ``dropout`` argument.
     In addition to all other arguments, this class accepts :class:`~.VIkwargs`.
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.TransformerDecoder` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.TransformerDecoder.html>`__),
+        except ``dropout``, which is not relevant for BNNs.
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     def __init__(
@@ -469,7 +455,7 @@ class VITransformerDecoderLayer(VIModule):
         self.norm2 = LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
         self.norm3 = LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
 
-        self._return_log_probs = return_log_probs
+        self.return_log_probs = return_log_probs
 
     def forward(
         self,
@@ -481,7 +467,7 @@ class VITransformerDecoderLayer(VIModule):
         memory_key_padding_mask: Optional[Tensor] = None,
         tgt_is_causal: bool = False,
         memory_is_causal: bool = False,
-    ) -> VIReturn[Tensor]:
+    ) -> Tensor:
         """
         Pass the input through the decoder layer.
 
@@ -492,41 +478,7 @@ class VITransformerDecoderLayer(VIModule):
         """
         x = tgt
         # _ff_block already includes residual connection
-        if self._return_log_probs and self.norm_first:
-            (x1, _), lps1 = self._sa_block(
-                self.norm1(x), tgt_mask, tgt_key_padding_mask, tgt_is_causal
-            )
-            x = x + x1
-            (x2, _), lps2 = self._mha_block(
-                self.norm2(x),
-                memory,
-                memory_mask,
-                memory_key_padding_mask,
-                memory_is_causal,
-            )
-            x = x + x2
-            x3, lps3 = self._ff_block(self.norm3(x))
-            x = x3
-
-            lps1, lps2, lps3 = cast(Tuple[Tensor, Tensor, Tensor], (lps1, lps2, lps3))
-            log_probs = lps1 + lps2 + lps3
-            return x, log_probs
-        elif self._return_log_probs:
-            (x1, _), lps1 = self._sa_block(
-                x, tgt_mask, tgt_key_padding_mask, tgt_is_causal
-            )
-            x = self.norm1(x + x1)
-            (x2, _), lps2 = self._mha_block(
-                x, memory, memory_mask, memory_key_padding_mask, memory_is_causal
-            )
-            x = self.norm2(x + x2)
-            x3, lps3 = self._ff_block(x)
-            x = self.norm3(x3)
-
-            lps1, lps2, lps3 = cast(Tuple[Tensor, Tensor, Tensor], (lps1, lps2, lps3))
-            log_probs = lps1 + lps2 + lps3
-            return x, log_probs
-        elif self.norm_first:
+        if self.norm_first:
             x = x + self._sa_block(self.norm1(x), tgt_mask, tgt_key_padding_mask)[0]
             x = (
                 x
@@ -557,7 +509,7 @@ class VITransformerDecoderLayer(VIModule):
         attn_mask: Optional[Tensor] = None,
         key_padding_mask: Optional[Tensor] = None,
         is_causal: bool = False,
-    ) -> VIReturn[Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tuple[Tensor, Tensor]:
         x = self.self_attn(
             x,
             x,
@@ -575,7 +527,7 @@ class VITransformerDecoderLayer(VIModule):
         attn_mask: Optional[Tensor] = None,
         key_padding_mask: Optional[Tensor] = None,
         is_causal: bool = False,
-    ) -> VIReturn[Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tuple[Tensor, Tensor]:
         x = self.multihead_attn(
             x,
             mem,
@@ -609,7 +561,7 @@ class VITransformerDecoder(VIModule):
         )
         self.norm = norm
         self.num_layers = num_layers
-        self._return_log_probs = return_log_probs
+        self.return_log_probs = return_log_probs
 
     def forward(
         self,
@@ -621,7 +573,7 @@ class VITransformerDecoder(VIModule):
         memory_key_padding_mask: Optional[Tensor] = None,
         tgt_is_causal: Optional[bool] = None,
         memory_is_causal: bool = False,
-    ) -> VIReturn[Tensor]:
+    ) -> Tensor:
         """
         Pass the input through the decoder layers in turn.
 
@@ -635,38 +587,20 @@ class VITransformerDecoder(VIModule):
         seq_len = _get_seq_len(tgt, self.layers[0].self_attn.batch_first)
         tgt_is_causal = _detect_is_causal_mask(tgt_mask, tgt_is_causal, seq_len)
 
-        if self._return_log_probs:
-            log_probs = torch.zeros(2, device=tgt.device)
-            for mod in self.layers:
-                output, lps = mod(
-                    output,
-                    memory,
-                    tgt_mask=tgt_mask,
-                    memory_mask=memory_mask,
-                    tgt_key_padding_mask=tgt_key_padding_mask,
-                    memory_key_padding_mask=memory_key_padding_mask,
-                    tgt_is_causal=tgt_is_causal,
-                    memory_is_causal=memory_is_causal,
-                )
-                log_probs = log_probs + lps
-            if self.norm is not None:
-                output = self.norm(output)
-            return output, log_probs
-        else:
-            for mod in self.layers:
-                output = mod(
-                    output,
-                    memory,
-                    tgt_mask=tgt_mask,
-                    memory_mask=memory_mask,
-                    tgt_key_padding_mask=tgt_key_padding_mask,
-                    memory_key_padding_mask=memory_key_padding_mask,
-                    tgt_is_causal=tgt_is_causal,
-                    memory_is_causal=memory_is_causal,
-                )
-            if self.norm is not None:
-                output = self.norm(output)
-            return output
+        for mod in self.layers:
+            output = mod(
+                output,
+                memory,
+                tgt_mask=tgt_mask,
+                memory_mask=memory_mask,
+                tgt_key_padding_mask=tgt_key_padding_mask,
+                memory_key_padding_mask=memory_key_padding_mask,
+                tgt_is_causal=tgt_is_causal,
+                memory_is_causal=memory_is_causal,
+            )
+        if self.norm is not None:
+            output = self.norm(output)
+        return output
 
 
 class VITransformerEncoder(VIModule):
@@ -699,7 +633,7 @@ class VITransformerEncoder(VIModule):
         mask: Optional[Tensor] = None,
         src_key_padding_mask: Optional[Tensor] = None,
         is_causal: Optional[bool] = None,
-    ) -> VIReturn[Tensor]:
+    ) -> Tensor:
         """
         Pass the input through the encoder layers in turn.
 
@@ -730,30 +664,16 @@ class VITransformerEncoder(VIModule):
         seq_len = _get_seq_len(src, self.layers[0].self_attn.batch_first)
         is_causal = _detect_is_causal_mask(mask, is_causal, seq_len)
 
-        if self._return_log_probs:
-            log_probs = torch.zeros(2, device=src.device)
-            for mod in self.layers:
-                output, lps = mod(
-                    output,
-                    src_mask=mask,
-                    src_key_padding_mask=src_key_padding_mask,
-                    is_causal=is_causal,
-                )
-                log_probs = log_probs + lps
-            if self.norm is not None:
-                output = self.norm(output)
-            return output, log_probs
-        else:
-            for mod in self.layers:
-                output = mod(
-                    output,
-                    src_mask=mask,
-                    src_key_padding_mask=src_key_padding_mask,
-                    is_causal=is_causal,
-                )
-            if self.norm is not None:
-                output = self.norm(output)
-            return output
+        for mod in self.layers:
+            output = mod(
+                output,
+                src_mask=mask,
+                src_key_padding_mask=src_key_padding_mask,
+                is_causal=is_causal,
+            )
+        if self.norm is not None:
+            output = self.norm(output)
+        return output
 
 
 class VITransformer(VIModule):
@@ -766,6 +686,16 @@ class VITransformer(VIModule):
 
     This does not support the ``dropout`` argument.
     In addition to all other arguments, this class accepts :class:`~.VIkwargs`.
+
+    Parameters
+    ----------
+    torch_args
+        The same arguments and keyword arguments as the pytorch version
+        :class:`~nn.Transformer` (documentation
+        `here <https://pytorch.org/docs/stable/generated/torch.nn.Transformer.html>`__),
+        except ``dropout``, which is not relevant for BNNs.
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
     """
 
     def __init__(
@@ -863,7 +793,7 @@ class VITransformer(VIModule):
         src_is_causal: Optional[bool] = None,
         tgt_is_causal: Optional[bool] = None,
         memory_is_causal: bool = False,
-    ) -> VIReturn[Tensor]:
+    ) -> Tensor:
         """
         Take in and process masked source/target sequences.
 
@@ -872,40 +802,20 @@ class VITransformer(VIModule):
 
         This implementation also currently does not support the torch fastpath.
         """
-        if self._return_log_probs:
-            memory, encoder_log_probs = self.encoder(
-                src,
-                mask=src_mask,
-                src_key_padding_mask=src_key_padding_mask,
-                is_causal=src_is_causal,
-            )
-            output, decoder_log_probs = self.decoder(
-                tgt,
-                memory,
-                tgt_mask=tgt_mask,
-                memory_mask=memory_mask,
-                tgt_key_padding_mask=tgt_key_padding_mask,
-                memory_key_padding_mask=memory_key_padding_mask,
-                tgt_is_causal=tgt_is_causal,
-                memory_is_causal=memory_is_causal,
-            )
-            log_probs = encoder_log_probs + decoder_log_probs
-            return output, log_probs
-        else:
-            memory = self.encoder(
-                src,
-                mask=src_mask,
-                src_key_padding_mask=src_key_padding_mask,
-                is_causal=src_is_causal,
-            )
-            output = self.decoder(
-                tgt,
-                memory,
-                tgt_mask=tgt_mask,
-                memory_mask=memory_mask,
-                tgt_key_padding_mask=tgt_key_padding_mask,
-                memory_key_padding_mask=memory_key_padding_mask,
-                tgt_is_causal=tgt_is_causal,
-                memory_is_causal=memory_is_causal,
-            )
-            return output
+        memory = self.encoder(
+            src,
+            mask=src_mask,
+            src_key_padding_mask=src_key_padding_mask,
+            is_causal=src_is_causal,
+        )
+        output = self.decoder(
+            tgt,
+            memory,
+            tgt_mask=tgt_mask,
+            memory_mask=memory_mask,
+            tgt_key_padding_mask=tgt_key_padding_mask,
+            memory_key_padding_mask=memory_key_padding_mask,
+            tgt_is_causal=tgt_is_causal,
+            memory_is_causal=memory_is_causal,
+        )
+        return output

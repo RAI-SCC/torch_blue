@@ -10,7 +10,6 @@ from torch_bayesian.vi import (
     VILinear,
     VIModule,
     VIMultiheadAttention,
-    VIReturn,
     VITransformer,
     VITransformerDecoder,
     VITransformerDecoderLayer,
@@ -31,13 +30,11 @@ class Filter(VIModule):
         super().__init__()
         self.module = module
 
-    def forward(self, *args: Any, **kwargs: Any) -> VIReturn[Tensor]:
+    def forward(self, *args: Any, **kwargs: Any) -> Tensor:
         """Forward call."""
         out = self.module(*args, **kwargs)
-        if out[1] is None:
+        if isinstance(out, tuple) and out[1] is None:
             return out[0]
-        elif out[0][1] is None:
-            return out[0][0], out[1]
         else:
             return out
 
@@ -321,7 +318,6 @@ def test_multihead_attention(
     device: torch.device,
 ) -> None:
     """Test VIMultiheadAttention."""
-    return_log_probs = True
     samples = 100
     primary_param = variational_distribution.variational_parameters[0]
 
@@ -353,7 +349,17 @@ def test_multihead_attention(
         )
     )
 
-    random_variable_shapes: Dict[str, Tuple[int, ...]] = dict()
+    random_variable_shapes: Dict[str, Optional[Tuple[int, ...]]] = dict(
+        in_proj_weight=None,
+        q_proj_weight=None,
+        k_proj_weight=None,
+        v_proj_weight=None,
+        out_proj_weight=None,
+        in_proj_bias=None,
+        out_proj_bias=None,
+        bias_k=None,
+        bias_v=None,
+    )
     if kdim is None and vdim is None:
         use_separate_proj_weight = False
         assert module.module._qkv_same_embed_dim
@@ -385,6 +391,8 @@ def test_multihead_attention(
 
     param_dict = dict(module.module.named_parameters())
     for var, shape in random_variable_shapes.items():
+        if module.module.variational_distribution[var] is None:
+            continue
         for param in variational_distribution.variational_parameters:
             name = module.module.variational_parameter_name(var, param)
             assert name in param_dict
@@ -413,6 +421,8 @@ def test_multihead_attention(
         out_proj_bias=None,
     )
     for var in random_variable_shapes:
+        if module.module.variational_distribution[var] is None:
+            continue
         weight_dict[var] = getattr(
             module.module, module.module.variational_parameter_name(var, primary_param)
         ).clone()
@@ -472,10 +482,6 @@ def test_multihead_attention(
             average_attn_weights=False,
             samples=samples,
         )
-
-        if return_log_probs:
-            model_return, log_probs = model_return
-            log_probs = log_probs.mean(dim=0)
 
         out, weights = model_return
 
@@ -567,16 +573,20 @@ def test_decoder_layer(device: torch.device) -> None:
     tgt = torch.rand((7, 4, d_model), device=device)
     mem = torch.rand((7, 4, d_model), device=device)
 
-    (sa_out, sa_weights), sa_lps = module2._sa_block(tgt)
-    (sa_ref, sa_rweight), sa_rlp = module2.self_attn(tgt, tgt, tgt)
+    sa_ref, sa_rweight = module2.self_attn(tgt, tgt, tgt)
+    sa_rlp = module2.gather_log_probs()
+    sa_out, sa_weights = module2._sa_block(tgt)
+    sa_lps = module2.gather_log_probs()
     assert sa_out.shape == sa_ref.shape
     assert torch.allclose(sa_out, sa_ref)
     assert torch.allclose(sa_lps, sa_rlp)
     assert sa_out.device == device
     assert sa_ref.device == device
 
-    (mha_out, mha_weights), mha_lps = module2._mha_block(tgt, mem)
-    (mha_ref, mha_rweight), mha_rlp = module2.multihead_attn(tgt, mem, mem)
+    mha_out, mha_weights = module2._mha_block(tgt, mem)
+    mha_lps = module2.gather_log_probs()
+    mha_ref, mha_rweight = module2.multihead_attn(tgt, mem, mem)
+    mha_rlp = module2.gather_log_probs()
     assert mha_out.shape == mha_ref.shape
     assert torch.allclose(mha_out, mha_ref)
     assert torch.allclose(mha_lps, mha_rlp)
@@ -593,7 +603,7 @@ def test_decoder_layer(device: torch.device) -> None:
     assert torch.allclose(out1, ref1, atol=1e-6)
 
     module2.return_log_probs = True
-    out2, _ = module2(tgt, mem)
+    out2 = module2(tgt, mem)
     out2.sum().backward()
     assert torch.allclose(out1, out2, atol=1e-6)
 
@@ -607,7 +617,7 @@ def test_decoder_layer(device: torch.device) -> None:
     assert torch.allclose(out3, ref2, atol=1e-6)
 
     module3.return_log_probs = True
-    out4, _ = module3(tgt, mem)
+    out4 = module3(tgt, mem)
     out4.sum().backward()
     assert torch.allclose(out3, out4, atol=1e-6)
 
@@ -671,8 +681,10 @@ def test_encoder_layer(device: torch.device) -> None:
 
     src = torch.rand((7, 4, d_model), device=device)
 
-    (sa_out, sa_weights), sa_lps = module2._sa_block(src)
-    (sa_ref, sa_rweight), sa_rlp = module2.self_attn(src, src, src)
+    sa_out, sa_weights = module2._sa_block(src)
+    sa_lps = module2.gather_log_probs()
+    sa_ref, sa_rweight = module2.self_attn(src, src, src)
+    sa_rlp = module2.gather_log_probs()
     assert sa_out.shape == sa_ref.shape
     assert torch.allclose(sa_out, sa_ref)
     assert torch.allclose(sa_lps, sa_rlp)
@@ -688,7 +700,7 @@ def test_encoder_layer(device: torch.device) -> None:
     assert torch.allclose(out1, ref1)
 
     module2.return_log_probs = True
-    out2, _ = module2(src)
+    out2 = module2(src)
     out2.sum().backward()
     assert torch.allclose(out1, out2, atol=2e-7)
 
@@ -701,7 +713,7 @@ def test_encoder_layer(device: torch.device) -> None:
     assert torch.allclose(out3, ref2, atol=2e-7)
 
     module3.return_log_probs = True
-    out4, _ = module3(src)
+    out4 = module3(src)
     out4.sum().backward()
     assert torch.allclose(out3, out4, atol=2e-7)
 
@@ -747,7 +759,7 @@ def test_decoder(device: torch.device) -> None:
     assert out1.device == device
 
     module1.return_log_probs = True
-    out2, _ = module1(tgt, memory)
+    out2 = module1(tgt, memory)
     out2.sum().backward()
     assert out1.shape == out2.shape
     assert torch.allclose(out1, out2, atol=1e-6)
@@ -772,7 +784,7 @@ def test_decoder(device: torch.device) -> None:
     assert out3.device == device
 
     module2.return_log_probs = True
-    out4, _ = module2(tgt, memory)
+    out4 = module2(tgt, memory)
     out4.sum().backward()
     assert out3.shape == out4.shape
     assert torch.allclose(out3, out4, atol=1e-6)
@@ -819,7 +831,7 @@ def test_encoder(device: torch.device) -> None:
     assert out1.device == device
 
     module1.return_log_probs = True
-    out2, _ = module1(src)
+    out2 = module1(src)
     out2.sum().backward()
     assert out1.shape == out2.shape
     assert torch.allclose(out1, out2, atol=2e-7)
@@ -844,7 +856,7 @@ def test_encoder(device: torch.device) -> None:
     assert out3.device == device
 
     module2.return_log_probs = True
-    out4, _ = module2(src)
+    out4 = module2(src)
     out4.sum().backward()
     assert out3.shape == out4.shape
     assert torch.allclose(out3, out4, atol=1e-6)
@@ -1319,8 +1331,11 @@ def test_transformer(
                 if layer.random_variables is not None:
                     # Check vardist and prior propagate to all VIBaseLayers
                     for var_dist, prior in zip(
-                        layer.variational_distribution, layer.prior
+                        layer.variational_distribution.values(), layer.prior.values()
                     ):
+                        if var_dist is None:
+                            assert prior is None
+                            continue
                         assert isinstance(var_dist, type(variational_distribution))
                         assert isinstance(prior, type(prior))
                     # Check bias propagates to all VIBaseLayers
@@ -1356,7 +1371,7 @@ def test_transformer(
     sample_output = module(sample_src, sample_tgt, samples=num_samples)
 
     if return_log_probs:
-        sample_output, log_probs = sample_output
+        log_probs = sample_output.log_probs
         sample_output += (
             log_probs.sum()
         )  # this makes the backward below also track logprobs
