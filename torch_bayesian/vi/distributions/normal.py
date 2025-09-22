@@ -25,7 +25,7 @@ class MeanFieldNormal(Distribution):
 
     As variational distribution it is often the default assumption.
 
-    As predictive distribution makes the Kullback0Leibler loss similar to MSE loss.
+    As predictive distribution makes the Kullback-Leibler loss similar to MSE loss.
 
     Parameters
     ----------
