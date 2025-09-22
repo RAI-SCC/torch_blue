@@ -5,11 +5,9 @@ from torch.nn.common_types import _scalar_or_tuple_any_t
 from typing_extensions import TypeAlias
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ..priors import Prior
-    from ..variational_distributions import VariationalDistribution
+    from ..distributions import Distribution
 
-_prior_any_t: TypeAlias = _scalar_or_tuple_any_t["Prior"]
-_vardist_any_t: TypeAlias = _scalar_or_tuple_any_t["VariationalDistribution"]
+_dist_any_t: TypeAlias = _scalar_or_tuple_any_t["Distribution"]
 
 
 class VIkwargs(TypedDict):
@@ -23,15 +21,14 @@ class VIkwargs(TypedDict):
 
     Parameters
     ----------
-    variational_distribution: Union[VarDist, List[VarDist]], default: :class:`MeanFieldNormalVarDist()<torch_bayesian.vi.variational_distributions.MeanFieldNormalVarDist>`
-        Either one
-        :class:`torch_bayesian.vi.variational_distributionss.VariationalDistribution` ,
+    variational_distribution: Union[Distribution, List[Distribution]], default: :class:`MeanFieldNormal()<torch_bayesian.vi.distributions.MeanFieldNormal>`
+        Either one :class:`torch_bayesian.vi.distributions.Distribution` ,
         which is used for all random variables, or a list of them, one for each random
         variable. This specifies the assumed parametrization of the weight distribution.
-    prior: Union[Prior, List[Prior]], default: :class:`MeanFieldNormalPrior()<torch_bayesian.vi.priors.MeanFieldNormalPrior>`
-        Either one :class:`~torch_bayesian.vi.priors.Prior` , which is used for all
-        random variables, or a list of them, one for each random variable. This
-        specifies the previous knowledge about the weight distribution.
+    prior: Union[Distribution, List[Distribution]], default: :class:`MeanFieldNormal()<torch_bayesian.vi.distributions.MeanFieldNormal>`
+        Either one :class:`~torch_bayesian.vi.distributions.Distribution` , which is
+        used for all random variables, or a list of them, one for each random variable.
+        This specifies the previous knowledge about the weight distribution.
     rescale_prior: bool, default: False
         If ``True`` , the priors :attr:`_scaling_parameters` are scaled with the sqrt of
         the layer width. This may be necessary to maintain normalization for wide
@@ -49,8 +46,8 @@ class VIkwargs(TypedDict):
         The torch.dtype of the module parameters.
     """
 
-    variational_distribution: _vardist_any_t
-    prior: _prior_any_t
+    variational_distribution: _dist_any_t
+    prior: _dist_any_t
     rescale_prior: bool
     kaiming_initialization: bool
     prior_initialization: bool

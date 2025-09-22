@@ -5,9 +5,8 @@ from torch import Tensor
 from torch.nn import functional as F  # noqa: N812
 
 from .base import VIModule
-from .priors import MeanFieldNormalPrior
-from .utils.common_types import VIkwargs, _prior_any_t, _vardist_any_t
-from .variational_distributions import MeanFieldNormalVarDist
+from .distributions import MeanFieldNormal
+from .utils.common_types import VIkwargs, _dist_any_t
 
 
 class VILinear(VIModule):
@@ -43,8 +42,8 @@ class VILinear(VIModule):
         self,
         in_features: int,
         out_features: int,
-        variational_distribution: _vardist_any_t = MeanFieldNormalVarDist(),
-        prior: _prior_any_t = MeanFieldNormalPrior(),
+        variational_distribution: _dist_any_t = MeanFieldNormal(),
+        prior: _dist_any_t = MeanFieldNormal(),
         bias: bool = True,
         rescale_prior: bool = False,
         kaiming_initialization: bool = True,
@@ -78,7 +77,7 @@ class VILinear(VIModule):
 
         # If the variational distribution is stable we might be able to use the stable fast path
         if all(
-            (dist is None) or isinstance(dist, MeanFieldNormalVarDist)
+            (dist is None) or isinstance(dist, MeanFieldNormal)
             for dist in self.variational_distribution.values()
         ):
             self._fast_path = True
@@ -121,5 +120,5 @@ class VILinear(VIModule):
             bias_variance = None
         output_mean = F.linear(input_, weight_mean, bias_mean)
         output_std = F.linear(input_.pow(2), weight_variance, bias_variance).sqrt()
-        output = MeanFieldNormalVarDist._normal_sample(output_mean, output_std)
+        output = MeanFieldNormal._normal_sample(output_mean, output_std)
         return output

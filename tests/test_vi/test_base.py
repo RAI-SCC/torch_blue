@@ -9,9 +9,8 @@ from torch._C._functorch import get_unwrapped
 from torch.nn import Module
 
 from torch_bayesian.vi import VIModule, VIReturn
-from torch_bayesian.vi.priors import Prior
+from torch_bayesian.vi.distributions import Distribution
 from torch_bayesian.vi.utils import NoVariablesError
-from torch_bayesian.vi.variational_distributions import VariationalDistribution
 
 
 def test_expand_to_samples(device: torch.device) -> None:
@@ -127,23 +126,27 @@ def test_vimodule(device: torch.device) -> None:
     var_params = ("mean", "std")
     default_params = (0.0, 0.3)
 
-    class TestDistribution(VariationalDistribution):
-        variational_parameters = var_params
+    class TestDistribution(Distribution):
+        is_variational_distribution = True
+        distribution_parameters = var_params
         _default_variational_parameters = default_params
 
         def sample(self, mean: Tensor, std: Tensor) -> Tensor:
             pass
 
-        def log_prob(self, sample: Tensor, mean: Tensor, std: Tensor) -> Tensor:
+        def variational_log_prob(
+            self, sample: Tensor, mean: Tensor, std: Tensor
+        ) -> Tensor:
             pass
 
-    class TestPrior(Prior):
+    class TestPrior(Distribution):
+        is_prior = True
         distribution_parameters = ("mean", "std")
         _scaling_parameters = ("mean", "std")
         mean: float = 1.0
         std: float = 2.0
 
-        def log_prob(self, x: Tensor) -> Tensor:
+        def prior_log_prob(self, x: Tensor) -> Tensor:
             pass
 
     module2 = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)
@@ -172,7 +175,7 @@ def test_vimodule(device: torch.device) -> None:
     # Test prior based initialization
     with pytest.warns(
         UserWarning,
-        match=r'Module \[TestPrior\] is missing the "reset_variational_parameters" method*',
+        match=r'Module \[TestPrior\] is missing the "reset_parameters_to_prior" method*',
     ):
         _ = VIModule(
             var_dict1,
@@ -223,21 +226,25 @@ def test_get_variational_parameters(device: torch.device) -> None:
     var_params = ("mean", "log_std")
     default_params = (0.0, 0.3)
 
-    class TestDistribution(VariationalDistribution):
-        variational_parameters = var_params
+    class TestDistribution(Distribution):
+        is_variational_distribution = True
+        distribution_parameters = var_params
         _default_variational_parameters = default_params
 
         def sample(self, mean: Tensor, std: Tensor) -> Tensor:
             pass
 
-        def log_prob(self, sample: Tensor, mean: Tensor, std: Tensor) -> Tensor:
+        def variational_log_prob(
+            self, sample: Tensor, mean: Tensor, std: Tensor
+        ) -> Tensor:
             pass
 
-    class TestPrior(Prior):
+    class TestPrior(Distribution):
+        is_prior = True
         distribution_parameters = ("mean", "log_std")
         _scaling_parameters = ()
 
-        def log_prob(self, x: Tensor) -> Tensor:
+        def prior_log_prob(self, x: Tensor) -> Tensor:
             pass
 
     module = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)
@@ -264,21 +271,25 @@ def test_get_log_probs(device: torch.device) -> None:
     var_params = ("mean", "log_std")
     default_params = (0.0, 0.3)
 
-    class TestDistribution(VariationalDistribution):
-        variational_parameters = var_params
+    class TestDistribution(Distribution):
+        is_variational_distribution = True
+        distribution_parameters = var_params
         _default_variational_parameters = default_params
 
         def sample(self, mean: Tensor, std: Tensor) -> Tensor:
             pass
 
-        def log_prob(self, sample: Tensor, mean: Tensor, std: Tensor) -> Tensor:
+        def variational_log_prob(
+            self, sample: Tensor, mean: Tensor, std: Tensor
+        ) -> Tensor:
             return torch.tensor(3.0)
 
-    class TestPrior(Prior):
+    class TestPrior(Distribution):
+        is_prior = True
         distribution_parameters = ("mean", "log_std")
         _scaling_parameters = ()
 
-        def log_prob(self, x: Tensor) -> Tensor:
+        def prior_log_prob(self, x: Tensor) -> Tensor:
             return torch.tensor(2.0, device=x.device)
 
     module = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)

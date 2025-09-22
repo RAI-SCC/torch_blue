@@ -36,6 +36,7 @@ class NonBayesian(Distribution):
     is_variational_distribution = True
     is_predictive_distribution = True
     distribution_parameters = ("mean",)
+    mean = None
     _default_variational_parameters = (0.0,)
     _scaling_parameters = ()
 

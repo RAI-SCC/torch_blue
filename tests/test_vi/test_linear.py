@@ -5,8 +5,7 @@ import torch
 from torch import Tensor
 
 from torch_bayesian.vi import VILinear, VIReturn
-from torch_bayesian.vi.priors import MeanFieldNormalPrior
-from torch_bayesian.vi.variational_distributions import NonBayesian
+from torch_bayesian.vi.distributions import MeanFieldNormal, NonBayesian
 
 
 def test_vilinear(device: torch.device) -> None:
@@ -99,7 +98,7 @@ def test_vilinear(device: torch.device) -> None:
 
     in_features = 6
     out_features = 5
-    prior = MeanFieldNormalPrior(mean=1.0, std=exp(5.0))
+    prior = MeanFieldNormal(mean=1.0, std=exp(5.0))
     module5 = VILinear(
         in_features,
         out_features,

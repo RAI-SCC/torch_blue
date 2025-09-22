@@ -4,7 +4,8 @@ from warnings import warn
 from torch import Tensor
 from torch.nn import Module
 
-from .predictive_distributions import PredictiveDistribution
+from .distributions import Distribution
+from .utils import UnsupportedDistributionError
 from .utils.vi_return import VIReturn
 
 
@@ -19,12 +20,10 @@ class KullbackLeiblerLoss(Module):
 
     Parameters
     ----------
-    predictive_distribution: :class:`~.predictive_distributions.PredictiveDistribution`
+    predictive_distribution: :class:`~.distributions.Distribution`
         Assumed distribution of the outputs. Typically,
-        :class:`~.predictive_distributions.CategoricalPredictiveDistribution` for
-        classification and
-        :class:`~.predictive_distributions.MeanFieldNormalPredictiveDistribution` for
-        regression.
+        :class:`~.distributions.Categorical` for classification and
+        :class:`~.distributions.MeanFieldNormal` for regression.
     dataset_size: Optional[int]
         Size of the training dataset. Required for loss calculation. If not provided,
         it must be provided to the :meth:`~forward` method.
@@ -47,12 +46,19 @@ class KullbackLeiblerLoss(Module):
 
     def __init__(
         self,
-        predictive_distribution: PredictiveDistribution,
+        predictive_distribution: Distribution,
         dataset_size: Optional[int] = None,
         heat: float = 1.0,
         track: bool = False,
     ) -> None:
         super().__init__()
+
+        if not predictive_distribution.is_predictive_distribution:
+            raise UnsupportedDistributionError(
+                f"{predictive_distribution.__class__.__name__} does not support use as"
+                f"predictive distribution"
+            )
+
         self.predictive_distribution = predictive_distribution
         self.dataset_size = dataset_size
         self.heat = heat

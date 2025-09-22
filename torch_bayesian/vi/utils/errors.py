@@ -7,3 +7,13 @@ class NoVariablesError(Exception):
     """
 
     pass
+
+
+class UnsupportedDistributionError(ValueError):
+    """
+    Raised if a distribution is used in an unsupported way.
+
+    Certain :class:`~torch_bayesian.vi.distributions.Distribution`s may not support
+    being used as prior, variational distribution or predictive distribution. When
+    attempting to still use them in such a way this error is raised.
+    """
