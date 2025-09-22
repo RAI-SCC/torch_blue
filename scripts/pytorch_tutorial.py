@@ -8,7 +8,7 @@ from torchvision.transforms import ToTensor
 
 from torch_bayesian import vi
 from torch_bayesian.vi import VIModule
-from torch_bayesian.vi.predictive_distributions import CategoricalPredictiveDistribution
+from torch_bayesian.vi.distributions import Categorical
 
 
 def torch_tutorial() -> None:
@@ -72,7 +72,7 @@ def torch_tutorial() -> None:
     model.return_log_probs = True
     print(model)
 
-    predictive_distribution = CategoricalPredictiveDistribution()
+    predictive_distribution = Categorical()
     loss_fn = vi.KullbackLeiblerLoss(
         predictive_distribution, dataset_size=len(training_data)
     )
