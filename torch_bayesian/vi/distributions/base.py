@@ -13,7 +13,169 @@ if TYPE_CHECKING:
 
 
 class Distribution(metaclass=PostInitCallMeta):
-    """Base class for distributions."""
+    r"""
+    Base class for distributions.
+
+    Distributions for variational implemented as subclasses of this. However, not all
+    distributions can function or make sense in all available roles. Furthermore,
+    each role has distinct requirements, which can be implemented independently.
+    Available roles are prior, variational distribution, and predictive distribution.
+
+    To simplify detection of correct usage this class has the three attributes
+    :attr:`~self.is_prior`, :attr:`~self.is_variational_distribution`, and
+    :attr:`~self.is_predictive_distribution`, which are `False` by default. When
+    implementing custom distributions the flags for the intended usages must be set to
+    `True`. This also implements initialization time checking that provides feedback if
+    any required components for the flagged uses is missing.
+
+    A prior specifies knowledge about the parameter distribution before training. In
+    Bayesian training, weights are generally drawn towards the prior, unless they take
+    an important role. Mathematically, this prior pull can take the same role as weight
+    decay.
+
+
+    Each prior must name the :attr:`~self.distribution_parameters` that define it as
+    well as the way to calculate the log likelihood of a weight configuration in the
+    :meth:`~self.prior_log_prob` method.
+
+    Generally, each name in :attr:`~self.distribution_parameters` should also be an
+    attribute of the class storing that parameter. This is necessary since the prior
+    typically needs to be rescaled based on the layer width. By default, each parameter
+    is assumed to require scaling, but in certain cases like the shape parameter of a
+    Gamma distribution, this might not be the case. It that case the subset of scaling
+    parameters must be specified in :attr:`~self._scaling_parameters`. Non-scaling
+    parameters are technically not required to be a class attribute.
+
+    Furthermore, parameters might only assume positive values. These should be stored as
+    logarithm of their true value, mapping them to the whole real line. Their parameter
+    name should begin with the prefix "log\_", which is automatically detected and
+    handled during rescaling.
+
+    To enable the ``prior_initialization`` functionality, the class must implement the
+    :meth:`~self.reset_parameters` method. Which initializes the parameters for one
+    random variable of a model, whose variational parameters are supported by the prior,
+    to the prior values.
+
+    Parameters
+    ----------
+    distribution_parameters: Tuple[str, ...]
+        Parameters characterizing the prior and can be set during prior based
+        initialization.
+    _required_parameters: Tuple[str, ...], default: ()
+        Parameters besides a sample needed to calculate :meth:`~log_prob`.
+    _scaling_parameters: Tuple[str, ...], default: :attr:`~distribution_parameters`
+        Parameters that need to be rescaled for prior rescaling.
+
+    Methods
+    -------
+    prior_log_prob: Callable[..., Tensor]
+        Function to calculate the log likelihood of a weight configuration under this
+        prior.
+
+
+    A variational distribution specifies the parametrization used to fit the true weight
+    distribution, i.e., the weight posterior.
+
+    Each prior must name the :attr:`~self.distribution_parameters` that will be
+    optimized during training it as well as a default for each parameter in
+    :attr:`~self._default_variational_parameters`. It is important to note that the
+    first parameter is assumed to be a form of mean or mode of the distribution that
+    might be used as the weight in a non-Bayesian version of the network. While a
+    default value for it must be given, it will usually be ignored in initialization in
+    favor of initializing it similar to non-Bayesian weights.
+
+    Additionally, a :meth:`~self.sample` method must be defined that accepts one tensor
+    for each variational parameter and returns a sample from the specified
+    distributions. Finally, the way to calculate the log likelihood of a weight
+    configuration in the :meth:`~self.variational_log_prob` method is required.
+
+    Attributes
+    ----------
+    distribution_parameters : Tuple[str, ...]
+        The names of the variational parameters that characterize the distribution.
+        These are fit during training.
+    _default_variational_parameters : Tuple[float, ...]
+        Default initialization values for the variational parameters. If the parameter
+        is "mean", "mode" or "loc", it is initialized analogously to non-Bayesian
+        weights and the default is ignored.
+
+    Methods
+    -------
+    sample : Callable[[Tensor, ...], Tensor]
+        This method is used to sample the weigh matrices in the forward pass.
+        The sample method needs to be implemented by each subclass. It accepts one
+        Tensor for each variational parameter in the order specified in
+        :attr:`variational_parameters` and returns a sample from the distribution
+        of the same shape. All input Tensors must have the same shape.
+    variational_log_prob : Callable[[Tensor, ...], Tensor]
+        This method is used to calculate the log likelihood of a weight configuration
+        under this distribution. The log_prob method needs to be implemented by each
+        subclass. It accepts one Tensor containing the weight configuration and one
+        Tensor for each variational parameter in the order specified in
+        :attr:`variational_parameters` and returns the log likelihood of the weight
+        configuration. All input Tensors must have the same shape.
+
+
+    A predictive distribution is the assumed distribution of the model outputs. Its
+    parameters should be derivable from sufficient samples for the same prediction.
+    Each distribution must define which parameters are used to represent a prediction.
+    For example, regression might use a predictive mean and standard deviation, while
+    classification might use a probability for each class.
+
+    Furthermore, the distribution must be able to assign a probability to each possible
+    prediction given the expected prediction. This is required for loss calculation.
+    Typically, it is enough for subclasses to define :meth:`~log_prob_from_parameters`
+    and :meth:`~predictive_parameters_from_samples`, which the class automatically uses
+    to first calculate the predictive parameters from the provided samples and then the
+    log likelihood of those samples from the parameters. In case this detour does not
+    work :meth:`~log_prob_from_samples` can be overwritten. However,
+    :meth:`~predictive_parameters_from_samples` should still be defined to allow
+    extracting predictions.
+
+    Parameters
+    ----------
+    distribution_parameters: Tuple[str, ...]
+        String names of the predictive parameters. Mainly for documentation purposes.
+
+    Methods
+    -------
+    predictive_parameters_from_samples: Callable[[Tensor], Union[Tensor, Tuple[Tensor, ...]]]
+        Abstract method that accepts the output of a model as Tensor of shape (S, \*),
+        where S is the number of samples. Calculates the predictive parameters implied
+        by the samples.
+
+    Parameters
+    ----------
+        samples: Tensor
+            The model output as Tensor of shape (S, B, \*), where S is the number of
+            samples and B is the batch size.
+
+    Returns
+    -------
+        Union[Tensor, Tuple[Tensor, ...]]
+            One Tensor for each predictive parameter in the order specified in
+            :attr:`~self.distribution_parameters`.
+
+    log_prob_from_parameters: Callable[[Tensor, Union[Tensor, Tuple[Tensor, ...]]], Tensor]
+        Abstract method that accepts a reference and the predictive parameters as
+        calculated by :meth:`~predictive_parameters_from_samples` and calculates the log
+        likelihood of the reference under the predicted distribution.
+
+    Parameters
+    ----------
+        reference: Tensor
+            The ground truth or label as Tensor of shape (B, \*), where B is the batch
+            size.
+        parameters: Union[Tensor, Tuple[Tensor, ...]]
+            The parameters specifying the predicted distribution in the order specified
+            in :attr:`~self.distribution_parameters`.
+
+    Returns
+    -------
+        Tensor
+            The log likelihood of the reference under the predicted distribution.
+            Shape: (1,).
+    """
 
     distribution_parameters: Tuple[str, ...]
     _default_variational_parameters: Tuple[float, ...]

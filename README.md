@@ -138,17 +138,17 @@ from the table below based on the loss you would use in pytorch (more details
 While the interface of `VIModule`s is kept intentionally similar to pytorch, there are
 additional arguments that customize the Bayesian assumptions that all provided layers
 accept and custom modules should generally accept and pass on to submodules:
-- variational_distribution (`VariationalDistribution`): defines the weight distribution
-and variational parameters (more details [here](#the-variational-distribution)). The
-default `MeanFieldNormalVarDist` assumes normal distributed, uncorrelated weights
-described by a mean and a standard deviation. While there are currently no alternatives
-the initial value of the standard deviation can be customized here.
-- prior (`Prior`): defines the assumptions on the weight distribution and acts as
-regularizer (more details [here](#the-prior)). The default `MeanFieldNormalPrior`
-assumes normal distributed, uncorrelated weights with mean 0 and standard deviation 1
-  (also known as an uninformative or standard normal prior). Mean and standard deviation
-can be adapted here. Particularly reducing the standard deviation may help convergence
-at the risk of an overconfident model. Other available priors:
+- variational_distribution (`Distribution`): defines the weight distribution and
+variational parameters (more details [here](#the-variational-distribution)). The default
+`MeanFieldNormal` assumes normal distributed, uncorrelated weights described by a mean
+and a standard deviation. While there are currently no alternatives the initial value of
+the standard deviation can be customized here.
+- prior (`Distribution`): defines the assumptions on the weight distribution and acts as
+regularizer (more details [here](#the-prior)). The default `MeanFieldNormal` assumes
+normal distributed, uncorrelated weights with mean 0 and standard deviation 1 (also
+known as a standard normal prior). Mean and standard deviation can be adapted here.
+Particularly reducing the standard deviation may help convergence at the risk of an
+overconfident model. Other available priors:
   - `BasicQuietPrior`: an experimental prior that correlates mean and standard deviation
   to disincentivize noisy weights
 - rescale_prior (`bool`): Experimental. Scales the prior similar to Kaiming-initialization.
@@ -215,7 +215,7 @@ returned for that variable.
 
 The insertion order of this dictionary matters, as it becomes the order of the names
 in the module attribute `random_variables`. `random_variables`, the shapes, and a similar
-attribute of the variational distribution call `variational_parameters` are used to
+attribute of the variational distribution call `distribution_parameters` are used to
 dynamically create the weight matrices. The weight matrices can be accesses as
 attributes of the module, which will cause a sample to be drawn and its log prob to be
 stored if needed.
