@@ -67,3 +67,19 @@ class TestVIReturn:
         else:
             assert torch.all(new.log_probs == ref_log_probs)
             assert cast(Tensor, new.log_probs).dtype is dtype
+
+    @pytest.mark.parametrize("lp_is_none", [True, False])
+    def test_from_tensor(self, lp_is_none: bool) -> None:
+        """Test from_tensor."""
+        shape = tuple(torch.randint(1, 10, [3]))
+        vi_return, ref_tensor, ref_log_probs = self._init_instance(shape, lp_is_none)
+        new = VIReturn.from_tensor(ref_tensor, ref_log_probs)
+        assert new is not vi_return
+        assert new is ref_tensor
+        assert torch.all(ref_tensor == new)
+
+        if lp_is_none:
+            assert new.log_probs is None
+        else:
+            assert new.log_probs is vi_return.log_probs
+            assert torch.all(new.log_probs == ref_log_probs)
