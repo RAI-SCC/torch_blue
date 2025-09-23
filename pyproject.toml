@@ -6,10 +6,8 @@ build-backend = "setuptools.build_meta"
 packages = [
     "torch_bayesian",
     "torch_bayesian.vi",
-    "torch_bayesian.vi.predictive_distributions",
-    "torch_bayesian.vi.priors",
+    "torch_bayesian.vi.distributions",
     "torch_bayesian.vi.utils",
-    "torch_bayesian.vi.variational_distributions"
 ]
 
 [project]
