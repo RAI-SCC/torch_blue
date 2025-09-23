@@ -25,7 +25,7 @@ from torch_bayesian.vi.distributions import (
     NonBayesian,
     UniformPrior,
 )
-from torch_bayesian.vi.utils import use_norm_constants
+from torch_bayesian.vi.utils import UnsupportedDistributionError, use_norm_constants
 
 
 def test_klmodule(device: torch.device) -> None:
@@ -277,10 +277,12 @@ def test_prior_matching(
 
 
 @pytest.mark.parametrize(
-    "prior,var_dist,alt_prior,alt_var_dist,target_kl_module,heat,dataset_size,divergence_type,track,expected_error",
+    "prior,var_dist,predictive_distribution,alt_prior,alt_var_dist,target_kl_module,"
+    "heat,dataset_size,divergence_type,track,expected_error",
     [
         # Test base parameters
         (
+            MeanFieldNormal(),
             MeanFieldNormal(),
             MeanFieldNormal(),
             None,
@@ -293,6 +295,7 @@ def test_prior_matching(
             None,
         ),
         (
+            MeanFieldNormal(),
             MeanFieldNormal(),
             MeanFieldNormal(),
             None,
@@ -307,6 +310,7 @@ def test_prior_matching(
         (
             MeanFieldNormal(),
             MeanFieldNormal(),
+            MeanFieldNormal(),
             None,
             None,
             NormalNormalDivergence,
@@ -317,6 +321,7 @@ def test_prior_matching(
             None,
         ),
         (
+            MeanFieldNormal(),
             MeanFieldNormal(),
             MeanFieldNormal(),
             None,
@@ -332,6 +337,7 @@ def test_prior_matching(
         (
             UniformPrior(),
             MeanFieldNormal(),
+            MeanFieldNormal(),
             None,
             None,
             UniformNormalDivergence,
@@ -344,6 +350,7 @@ def test_prior_matching(
         (
             MeanFieldNormal(),
             NonBayesian(),
+            MeanFieldNormal(),
             None,
             None,
             NonBayesianDivergence,
@@ -356,6 +363,7 @@ def test_prior_matching(
         (
             UniformPrior(),
             NonBayesian(),
+            MeanFieldNormal(),
             None,
             None,
             NonBayesianDivergence,
@@ -369,6 +377,7 @@ def test_prior_matching(
         (
             MeanFieldNormal(),
             MeanFieldNormal(),
+            MeanFieldNormal(),
             UniformPrior(),
             None,
             NormalNormalDivergence,
@@ -379,6 +388,7 @@ def test_prior_matching(
             0,
         ),
         (
+            MeanFieldNormal(),
             MeanFieldNormal(),
             MeanFieldNormal(),
             None,
@@ -393,6 +403,7 @@ def test_prior_matching(
         (
             MeanFieldNormal(),
             MeanFieldNormal(),
+            MeanFieldNormal(),
             UniformPrior(),
             NonBayesian(),
             NormalNormalDivergence,
@@ -405,6 +416,7 @@ def test_prior_matching(
         (
             DummyPrior(),
             MeanFieldNormal(),
+            MeanFieldNormal(),
             None,
             None,
             NormalNormalDivergence,
@@ -417,6 +429,7 @@ def test_prior_matching(
         (
             MeanFieldNormal(),
             DummyVarDist(),
+            MeanFieldNormal(),
             None,
             None,
             NormalNormalDivergence,
@@ -429,6 +442,7 @@ def test_prior_matching(
         (
             DummyPrior(),
             DummyVarDist(),
+            MeanFieldNormal(),
             None,
             None,
             NormalNormalDivergence,
@@ -438,11 +452,24 @@ def test_prior_matching(
             False,
             1,
         ),
-        (None, None, None, None, NormalNormalDivergence, None, None, None, False, 2),
+        (
+            None,
+            None,
+            MeanFieldNormal(),
+            None,
+            None,
+            NormalNormalDivergence,
+            None,
+            None,
+            None,
+            False,
+            2,
+        ),
         # Test error overwriting by manual KL-Module specification
         (
             MeanFieldNormal(),
             MeanFieldNormal(),
+            MeanFieldNormal(),
             UniformPrior(),
             None,
             NormalNormalDivergence,
@@ -453,6 +480,7 @@ def test_prior_matching(
             None,
         ),
         (
+            MeanFieldNormal(),
             MeanFieldNormal(),
             MeanFieldNormal(),
             None,
@@ -467,6 +495,7 @@ def test_prior_matching(
         (
             MeanFieldNormal(),
             MeanFieldNormal(),
+            MeanFieldNormal(),
             UniformPrior(),
             NonBayesian(),
             NonBayesianDivergence,
@@ -478,6 +507,7 @@ def test_prior_matching(
         ),
         (
             DummyPrior(),
+            MeanFieldNormal(),
             MeanFieldNormal(),
             None,
             None,
@@ -491,6 +521,7 @@ def test_prior_matching(
         (
             MeanFieldNormal(),
             DummyVarDist(),
+            MeanFieldNormal(),
             None,
             None,
             UniformNormalDivergence,
@@ -503,6 +534,7 @@ def test_prior_matching(
         (
             DummyPrior(),
             DummyVarDist(),
+            MeanFieldNormal(),
             None,
             None,
             NonBayesianDivergence,
@@ -511,12 +543,26 @@ def test_prior_matching(
             NonBayesianDivergence(),
             False,
             None,
+        ),
+        (
+            MeanFieldNormal(),
+            MeanFieldNormal(),
+            UniformPrior(),
+            None,
+            None,
+            NormalNormalDivergence,
+            None,
+            None,
+            None,
+            False,
+            3,
         ),
     ],
 )
 def test_init(
     prior: Distribution,
     var_dist: Distribution,
+    predictive_distribution: Distribution,
     alt_prior: Optional[Distribution],
     alt_var_dist: Optional[Distribution],
     target_kl_module: Type[KullbackLeiblerModule],
@@ -532,7 +578,6 @@ def test_init(
     f_hidden = 16
     f_out = 10
 
-    predictive_distribution = MeanFieldNormal()
     alt_prior = alt_prior or prior
     alt_var_dist = alt_var_dist or var_dist
     target_heat = heat or 1.0
@@ -570,9 +615,11 @@ def test_init(
             ),
             (
                 NotImplementedError,
-                f"Analytical loss is not implemented for {prior.__class__.__name__} and {var_dist.__class__.__name__}.",
+                f"Analytical loss is not implemented for {prior.__class__.__name__} and"
+                f" {var_dist.__class__.__name__}.",
             ),
             (ValueError, "Provided model is not bayesian."),
+            (UnsupportedDistributionError, ""),
         ]
         error, message = error_list[expected_error]
         with pytest.raises(error, match=message):

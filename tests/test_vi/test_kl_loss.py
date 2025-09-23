@@ -1,10 +1,11 @@
 from warnings import filterwarnings
 
 import torch
-from pytest import warns
+from pytest import raises, warns
 
 from torch_bayesian.vi import KullbackLeiblerLoss, VIReturn
-from torch_bayesian.vi.distributions import MeanFieldNormal
+from torch_bayesian.vi.distributions import MeanFieldNormal, UniformPrior
+from torch_bayesian.vi.utils import UnsupportedDistributionError
 
 
 def test_kl_loss(device: torch.device) -> None:
@@ -19,6 +20,12 @@ def test_kl_loss(device: torch.device) -> None:
     model_return = VIReturn(samples, log_probs)
     double_return = VIReturn(torch.cat([samples] * 2, dim=1), log_probs)
     double_target = VIReturn(torch.cat([target] * 2, dim=0), None)
+
+    with raises(
+        UnsupportedDistributionError,
+        match="UniformPrior does not support use as predictive distribution",
+    ):
+        _ = KullbackLeiblerLoss(UniformPrior())
 
     loss1 = KullbackLeiblerLoss(MeanFieldNormal())
     with warns(

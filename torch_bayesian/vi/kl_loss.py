@@ -55,7 +55,7 @@ class KullbackLeiblerLoss(Module):
 
         if not predictive_distribution.is_predictive_distribution:
             raise UnsupportedDistributionError(
-                f"{predictive_distribution.__class__.__name__} does not support use as"
+                f"{predictive_distribution.__class__.__name__} does not support use as "
                 f"predictive distribution"
             )
 

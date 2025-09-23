@@ -153,7 +153,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
             return
         random_variables = tuple(variable_shapes.keys())
 
-        if isinstance(variational_distribution, List):
+        if isinstance(variational_distribution, (tuple, list)):
             assert (
                 len(variational_distribution) == len(random_variables)
             ), "Provide either exactly one variational distribution or exactly one for each random variable"
@@ -174,7 +174,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
             zip(random_variables, variational_distribution)
         )
 
-        if isinstance(prior, List):
+        if isinstance(prior, (tuple, list)):
             assert (
                 len(prior) == len(random_variables)
             ), "Provide either exactly one prior distribution or exactly one for each random variable"

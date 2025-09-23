@@ -10,7 +10,7 @@ from torch.nn import Module
 
 from torch_bayesian.vi import VIModule, VIReturn
 from torch_bayesian.vi.distributions import Distribution
-from torch_bayesian.vi.utils import NoVariablesError
+from torch_bayesian.vi.utils import NoVariablesError, UnsupportedDistributionError
 
 
 def test_expand_to_samples(device: torch.device) -> None:
@@ -215,6 +215,34 @@ def test_vimodule(device: torch.device) -> None:
             rescale_prior=True,
             device=device,
         )
+
+    # Test Distribution type checking
+    invalid_vardist = TestDistribution()
+    invalid_vardist.is_variational_distribution = False
+    invalid_prior = TestPrior()
+    invalid_prior.is_prior = False
+
+    with pytest.raises(
+        UnsupportedDistributionError,
+        match="TestDistribution does not support use as variational distribution.",
+    ):
+        _ = VIModule(var_dict1, [invalid_vardist] * 2, TestPrior(), device=device)
+
+    with pytest.raises(
+        UnsupportedDistributionError,
+        match="TestDistribution does not support use as variational distribution.",
+    ):
+        _ = VIModule(var_dict1, invalid_vardist, TestPrior(), device=device)
+
+    with pytest.raises(
+        UnsupportedDistributionError, match="TestPrior does not support use as prior."
+    ):
+        _ = VIModule(var_dict1, TestDistribution(), invalid_prior, device=device)
+
+    with pytest.raises(
+        UnsupportedDistributionError, match="TestPrior does not support use as prior."
+    ):
+        _ = VIModule(var_dict1, TestDistribution(), [invalid_prior] * 2, device=device)
 
 
 def test_get_variational_parameters(device: torch.device) -> None:
