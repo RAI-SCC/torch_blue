@@ -19,6 +19,7 @@
 master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
 export MASTER_ADDR=$master_addr
 export MASTER_PORT=12355
+export GPUS_PER_NODE=$SLURM_GPUS_ON_NODE
 echo "MASTER_ADDR="$MASTER_ADDR
 echo "MCD RESNET10 CIFAR10 4 GPUs 32 Samples"
 echo $CUDA_VISIBLE_DEVICES
@@ -36,6 +37,8 @@ python --version
 #source $PYDIR/newvenv/bin/activate
 
 
+start=$(date +%s)
+
 srun --ntasks=8 bash -c '
   export CUDA_VISIBLE_DEVICES=$SLURM_LOCALID
   export RANK=$SLURM_PROCID
@@ -44,3 +47,6 @@ srun --ntasks=8 bash -c '
   /p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/venv/bin/python \
     -u /p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/scripts/new_par_sample/Hybrid-Parallelism/hybrid_CNN_CIFAR10.py
 '
+
+end=$(date +%s)
+echo "Runtime = $((end-start)) seconds"

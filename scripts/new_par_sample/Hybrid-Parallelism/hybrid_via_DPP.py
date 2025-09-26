@@ -119,13 +119,13 @@ def DDP_test(dataloader: DataLoader,
     return
    
 
-def DDP_pipeline(seed, training_data, test_data, model, epochs, batch_size, sample_num, optimizer, loss_fn):
+def DDP_pipeline(seed, training_data, test_data, model, epochs, batch_size, global_sample_num, optimizer, loss_fn):
     seed_all(seed, 0)
 
     # Distributed Stuff
     rank = int(os.environ["SLURM_PROCID"])       # global rank
     world_size = int(os.environ["SLURM_NTASKS"])
-    gpus_per_node = torch.cuda.device_count()
+    gpus_per_node = int(os.environ.get("GPUS_PER_NODE"))
     node_rank = rank // gpus_per_node
     num_nodes = world_size // gpus_per_node
 
@@ -145,6 +145,8 @@ def DDP_pipeline(seed, training_data, test_data, model, epochs, batch_size, samp
     ddp_model = DDP(model)
 
     seed_all(seed, rank)
+
+    sample_num = int(global_sample_num / gpus_per_node)
 
     mddp_model = DDP_train(train_dataloader, test_dataloader, sampler, ddp_model, loss_fn, optimizer, epochs, sample_num, rank, world_size, device)
 
