@@ -13,7 +13,7 @@ from torchvision.transforms import ToTensor
 from torchvision import datasets
 import numpy as np
 import random
-from hybrid_via_DPP import seed_all, DDP_pipeline
+from DDP import seed_all, DDP_pipeline
 
 
 class CIFAR10CNN(vi.VIModule):
