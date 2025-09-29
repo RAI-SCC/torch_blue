@@ -62,9 +62,9 @@ class CIFAR10CNN(vi.VIModule):
 
 if __name__ == "__main__":
     batch_size = 64
-    epochs = 20
+    epochs = 50
     random_seed = 42
-    global_sample_num = 32
+    global_sample_num = 128
 
     seed = 42
     seed_all(seed, 0)

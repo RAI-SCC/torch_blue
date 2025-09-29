@@ -51,8 +51,7 @@ def DDP_train(train_dataloader, test_dataloader, sampler, model, loss_fn, optimi
         sampler.set_epoch(t) 
         if rank == 0:
             print(f"Epoch {t + 1}\n-------------------------------")
-
-        sampler.set_epoch(t)    
+ 
         model.train()
 
         for batch, (x, y) in enumerate(train_dataloader):

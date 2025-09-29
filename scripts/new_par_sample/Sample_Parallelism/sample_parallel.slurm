@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=Hybrid_Cifar10_CNN
+#SBATCH --job-name=Sample_Parallel_Cifar10_CNN
 #SBATCH --partition=booster
 #SBATCH --gres=gpu:4
 #SBATCH --time=00:15:00
@@ -21,7 +21,7 @@ export MASTER_ADDR=$master_addr
 export MASTER_PORT=12355
 export GPUS_PER_NODE=$SLURM_GPUS_ON_NODE
 echo "MASTER_ADDR="$MASTER_ADDR
-echo "HYBRID CNN CIFAR10 8 GPUs 128 Samples"
+echo "Sample parallel CNN CIFAR10 8 GPUs 128 Samples"
 echo $CUDA_VISIBLE_DEVICES
 
 
@@ -45,7 +45,7 @@ srun --ntasks=8 bash -c '
   export WORLD_SIZE=$SLURM_NTASKS
   echo "Rank $SLURM_PROCID using GPU $CUDA_VISIBLE_DEVICES on node $SLURM_NODEID"
   /p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/venv/bin/python \
-    -u /p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/scripts/new_par_sample/Hybrid-Parallelism/hybrid_CNN_CIFAR10.py
+    -u /p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/scripts/new_par_sample/Sample_Parallelism/Sample_Parallel_CNN_CIFAR10.py
 '
 
 end=$(date +%s)

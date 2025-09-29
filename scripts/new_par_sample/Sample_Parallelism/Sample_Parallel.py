@@ -1,5 +1,4 @@
 import torch.optim as optim
-from custom_sampler import NodeDistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, DistributedSampler
 from torchvision import datasets, transforms, models
@@ -47,12 +46,13 @@ def seed_all(seed, rank):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-def DDP_train(train_dataloader, test_dataloader, sampler, model, loss_fn, optimizer, epochs, sample_num, rank, world_size, device):
+def DDP_train(train_dataloader, test_dataloader, g, dataloader_seed, model, loss_fn, optimizer, epochs, sample_num, rank, world_size, device):
     for t in range(epochs):
-        sampler.set_epoch(t) 
+        g.manual_seed(dataloader_seed + t)
+        
         if rank == 0:
             print(f"Epoch {t + 1}\n-------------------------------")
-
+ 
         model.train()
 
         for batch, (x, y) in enumerate(train_dataloader):
@@ -74,7 +74,7 @@ def DDP_train(train_dataloader, test_dataloader, sampler, model, loss_fn, optimi
 
             # Update Model
             optimizer.step()
-        
+
     DDP_test(test_dataloader, model, loss_fn, sample_num,rank, world_size, device)
 
 
@@ -132,10 +132,7 @@ def DDP_pipeline(seed, training_data, test_data, model, epochs, batch_size, glob
 
     setup(rank, world_size)
     
-    # Create data loaders.
-    sampler = NodeDistributedSampler(training_data, num_nodes=num_nodes, node_rank=node_rank, shuffle=True)
-    train_dataloader = torch.utils.data.DataLoader(training_data, batch_size=batch_size, sampler=sampler)
-    test_dataloader = DataLoader(dataset=test_data, batch_size=batch_size, shuffle=True)
+    dataloader_seed = 1998
 
     print(f"Using {device} device")
 
@@ -145,9 +142,16 @@ def DDP_pipeline(seed, training_data, test_data, model, epochs, batch_size, glob
 
     seed_all(seed, rank)
 
-    sample_num = int(global_sample_num / gpus_per_node)
+    sample_num = int(global_sample_num / world_size)
 
-    mddp_model = DDP_train(train_dataloader, test_dataloader, sampler, ddp_model, loss_fn, optimizer, epochs, sample_num, rank, world_size, device)
+    # Create data loaders.
+    g = torch.Generator()
+    g.manual_seed(dataloader_seed)
+
+    train_dataloader = torch.utils.data.DataLoader(training_data, batch_size=batch_size, shuffle=True, generator=g)
+    test_dataloader = DataLoader(dataset=test_data, batch_size=batch_size, shuffle=True) 
+
+    mddp_model = DDP_train(train_dataloader, test_dataloader, g, dataloader_seed, ddp_model, loss_fn, optimizer, epochs, sample_num, rank, world_size, device)
 
     cleanup()
 
