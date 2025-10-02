@@ -14,6 +14,7 @@ from torchvision import datasets
 import numpy as np
 import random
 from hybrid_via_DPP import seed_all, DDP_pipeline
+import sys
 
 
 class CIFAR10CNN(vi.VIModule):
@@ -62,9 +63,11 @@ class CIFAR10CNN(vi.VIModule):
 
 if __name__ == "__main__":
     batch_size = 64
-    epochs = 50
+    epochs = 10
     random_seed = 42
-    global_sample_num = 128
+    global_sample_num = int(sys.argv[1])
+    print(f"Global Sample Num: {global_sample_num}")
+    print("Hyprid Parallel MCD on CIFAR10")
 
     seed = 42
     seed_all(seed, 0)

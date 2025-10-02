@@ -17,7 +17,8 @@ from torchvision import datasets
 import numpy as np
 import random
 sampling_state = None
-
+import time
+import csv
 
 
 def setup(rank, world_size):
@@ -47,12 +48,14 @@ def seed_all(seed, rank):
     torch.backends.cudnn.benchmark = False
 
 def DDP_train(train_dataloader, test_dataloader, g, dataloader_seed, model, loss_fn, optimizer, epochs, sample_num, rank, world_size, device):
+    times = []
     for t in range(epochs):
-        g.manual_seed(dataloader_seed + t)
-        
         if rank == 0:
+            
+            start = time.time()
             print(f"Epoch {t + 1}\n-------------------------------")
  
+        g.manual_seed(dataloader_seed + t)
         model.train()
 
         for batch, (x, y) in enumerate(train_dataloader):
@@ -74,11 +77,21 @@ def DDP_train(train_dataloader, test_dataloader, g, dataloader_seed, model, loss
 
             # Update Model
             optimizer.step()
+        
+        if rank==0:
+            now = time.time()
+            print("Elapsed Time for Epoch:")
+            print(now-start)
+            times.append(now-start)
+            
+    if rank==0:
+        print("Times Averaged:")
+        print(sum(times[2:])/(len(times)-2))
 
-    DDP_test(test_dataloader, model, loss_fn, sample_num,rank, world_size, device)
+    test_loss = DDP_test(test_dataloader, model, loss_fn, sample_num,rank, world_size, device)
 
 
-    return model
+    return model, sum(times[2:])/(len(times)-2), test_loss
 
 
 def DDP_test(dataloader: DataLoader,
@@ -115,7 +128,7 @@ def DDP_test(dataloader: DataLoader,
             f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n"
         )
 
-    return
+    return test_loss
    
 
 def DDP_pipeline(seed, training_data, test_data, model, epochs, batch_size, global_sample_num, optimizer, loss_fn):
@@ -127,6 +140,8 @@ def DDP_pipeline(seed, training_data, test_data, model, epochs, batch_size, glob
     gpus_per_node = int(os.environ.get("GPUS_PER_NODE"))
     node_rank = rank // gpus_per_node
     num_nodes = world_size // gpus_per_node
+
+    print(f"Number of GPUs: {world_size}")
 
     device = torch.device("cuda")
 
@@ -151,7 +166,13 @@ def DDP_pipeline(seed, training_data, test_data, model, epochs, batch_size, glob
     train_dataloader = torch.utils.data.DataLoader(training_data, batch_size=batch_size, shuffle=True, generator=g)
     test_dataloader = DataLoader(dataset=test_data, batch_size=batch_size, shuffle=True) 
 
-    mddp_model = DDP_train(train_dataloader, test_dataloader, g, dataloader_seed, ddp_model, loss_fn, optimizer, epochs, sample_num, rank, world_size, device)
+    mddp_model, time_taken, test_loss = DDP_train(train_dataloader, test_dataloader, g, dataloader_seed, ddp_model, loss_fn, optimizer, epochs, sample_num, rank, world_size, device)
+
+    summary = ['CIFAR10', 'CNN', 'DDP', global_sample_num, world_size, time_taken, test_loss]
+    with open('/p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/experiments/outputs/scaling.csv', 'a', newline='') as fd:
+        writer = csv.writer(fd)
+        writer.writerow(summary)
+
 
     cleanup()
 

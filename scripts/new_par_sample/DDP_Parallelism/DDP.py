@@ -16,6 +16,8 @@ from torchvision.transforms import ToTensor
 from torchvision import datasets
 import numpy as np
 import random
+import time
+import csv
 sampling_state = None
 
 
@@ -47,10 +49,13 @@ def seed_all(seed, rank):
     torch.backends.cudnn.benchmark = False
 
 def DDP_train(train_dataloader, test_dataloader, sampler, model, loss_fn, optimizer, epochs, sample_num, rank, world_size, device):
+    times = []
     for t in range(epochs):
-        sampler.set_epoch(t) 
         if rank == 0:
+            start = time.time()
             print(f"Epoch {t + 1}\n-------------------------------")
+
+        sampler.set_epoch(t)
  
         model.train()
 
@@ -74,10 +79,20 @@ def DDP_train(train_dataloader, test_dataloader, sampler, model, loss_fn, optimi
             # Update Model
             optimizer.step()
         
-    DDP_test(test_dataloader, model, loss_fn, sample_num,rank, world_size, device)
+        if rank==0:
+            now = time.time()
+            print("Elapsed Time for Epoch:")
+            print(now-start)
+            times.append(now-start)
+
+    if rank==0:
+        print("Times Averaged:")
+        print(sum(times[2:])/(len(times)-2))
+        
+    test_loss = DDP_test(test_dataloader, model, loss_fn, sample_num,rank, world_size, device)
 
 
-    return model
+    return model, sum(times[2:])/(len(times)-2), test_loss,
 
 
 def DDP_test(dataloader: DataLoader,
@@ -114,7 +129,7 @@ def DDP_test(dataloader: DataLoader,
             f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n"
         )
 
-    return
+    return test_loss
    
 
 def DDP_pipeline(seed, training_data, test_data, model, epochs, batch_size, global_sample_num, optimizer, loss_fn):
@@ -131,6 +146,10 @@ def DDP_pipeline(seed, training_data, test_data, model, epochs, batch_size, glob
 
     setup(rank, world_size)
     
+    print(f"Number of GPUs: {world_size}")
+
+    #batch_size = int(batch_size/world_size)
+
     # Create data loaders.
     sampler = DistributedSampler(training_data, num_replicas=world_size, rank=rank, shuffle=True)
     train_dataloader = torch.utils.data.DataLoader(training_data, batch_size=batch_size, sampler=sampler)
@@ -146,7 +165,12 @@ def DDP_pipeline(seed, training_data, test_data, model, epochs, batch_size, glob
 
     sample_num = global_sample_num
 
-    mddp_model = DDP_train(train_dataloader, test_dataloader, sampler, ddp_model, loss_fn, optimizer, epochs, sample_num, rank, world_size, device)
+    mddp_model, time_taken, test_loss = DDP_train(train_dataloader, test_dataloader, sampler, ddp_model, loss_fn, optimizer, epochs, sample_num, rank, world_size, device)
+
+    summary = ['CIFAR10', 'CNN', 'DDP', global_sample_num, world_size, time_taken, test_loss]
+    with open('/p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/experiments/outputs/scaling.csv', 'a', newline='') as fd:
+        writer = csv.writer(fd)
+        writer.writerow(summary)
 
     cleanup()
 

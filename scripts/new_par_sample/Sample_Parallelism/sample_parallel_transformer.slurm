@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --job-name=DDP_Cifar10_CNN
+#SBATCH --job-name=Sample_Parallel_Cifar10_CNN
 #SBATCH --partition=booster
-#SBATCH --gres=gpu:4
-#SBATCH --time=0030:00
+#SBATCH --gres=gpu:2
+#SBATCH --time=00:30:00
 #SBATCH --mem=16G 
-#SBATCH --nodes=2
-#SBATCH --ntasks=8
+#SBATCH --nodes=1
+#SBATCH --ntasks=2
 #SBATCH --cpus-per-task=4
 #SBATCH --account=hai_1044
 #SBATCH --output=/p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/results/slurm-%j.out # Change to your output directory
@@ -21,7 +21,7 @@ export MASTER_ADDR=$master_addr
 export MASTER_PORT=12355
 export GPUS_PER_NODE=$SLURM_GPUS_ON_NODE
 echo "MASTER_ADDR="$MASTER_ADDR
-#echo "DDP CNN CIFAR10 8 GPUs 512 Samples"
+echo "Sample parallel CNN CIFAR10 8 GPUs 512 Samples"
 echo $CUDA_VISIBLE_DEVICES
 
 
@@ -39,13 +39,13 @@ python --version
 
 start=$(date +%s)
 
-srun --ntasks=8 bash -c '
+srun --ntasks=2 bash -c '
   export CUDA_VISIBLE_DEVICES=$SLURM_LOCALID
   export RANK=$SLURM_PROCID
   export WORLD_SIZE=$SLURM_NTASKS
   echo "Rank $SLURM_PROCID using GPU $CUDA_VISIBLE_DEVICES on node $SLURM_NODEID"
   /p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/venv/bin/python \
-    -u /p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/scripts/new_par_sample/DDP_Parallelism/DDP_CNN_CIFAR10.py
+    -u /p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/scripts/new_par_sample/Sample_Parallelism/Sample_Parallel_Transformer_ENTSOE.py
 '
 
 end=$(date +%s)
