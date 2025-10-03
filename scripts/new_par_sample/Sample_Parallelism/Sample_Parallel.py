@@ -168,10 +168,11 @@ def DDP_pipeline(seed, training_data, test_data, model, epochs, batch_size, glob
 
     mddp_model, time_taken, test_loss = DDP_train(train_dataloader, test_dataloader, g, dataloader_seed, ddp_model, loss_fn, optimizer, epochs, sample_num, rank, world_size, device)
 
-    summary = ['CIFAR10', 'CNN', 'DDP', global_sample_num, world_size, time_taken, test_loss]
-    with open('/p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/experiments/outputs/scaling.csv', 'a', newline='') as fd:
-        writer = csv.writer(fd)
-        writer.writerow(summary)
+    if rank==0:
+        summary = ['CIFAR10', 'CNN', 'SAMPLE-PARALLEL', global_sample_num, world_size, time_taken, test_loss]
+        with open('/p/project1/hai_1044/oezdemir/sample_parallel/torch_bayesian/experiments/outputs/scaling.csv', 'a', newline='') as fd:
+            writer = csv.writer(fd)
+            writer.writerow(summary)
 
 
     cleanup()

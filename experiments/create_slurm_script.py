@@ -58,7 +58,7 @@ def write_slurm_script_juwels(filename:str, script_path: str, job_name: str, out
         "module load Python/3.12.3",
 
 
-        f"srun --ntasks={gpus_per_node} bash -c '",
+        f"srun --ntasks={gpus} bash -c '",
         "  export CUDA_VISIBLE_DEVICES=$SLURM_LOCALID",
         "  export RANK=$SLURM_PROCID",
         "  export WORLD_SIZE=$SLURM_NTASKS",
