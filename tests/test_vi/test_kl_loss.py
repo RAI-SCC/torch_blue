@@ -1,12 +1,11 @@
 from warnings import filterwarnings
 
 import torch
-from pytest import warns
+from pytest import raises, warns
 
 from torch_bayesian.vi import KullbackLeiblerLoss, VIReturn
-from torch_bayesian.vi.predictive_distributions import (
-    MeanFieldNormalPredictiveDistribution,
-)
+from torch_bayesian.vi.distributions import MeanFieldNormal, UniformPrior
+from torch_bayesian.vi.utils import UnsupportedDistributionError
 
 
 def test_kl_loss(device: torch.device) -> None:
@@ -22,7 +21,13 @@ def test_kl_loss(device: torch.device) -> None:
     double_return = VIReturn(torch.cat([samples] * 2, dim=1), log_probs)
     double_target = VIReturn(torch.cat([target] * 2, dim=0), None)
 
-    loss1 = KullbackLeiblerLoss(MeanFieldNormalPredictiveDistribution())
+    with raises(
+        UnsupportedDistributionError,
+        match="UniformPrior does not support use as predictive distribution",
+    ):
+        _ = KullbackLeiblerLoss(UniformPrior())
+
+    loss1 = KullbackLeiblerLoss(MeanFieldNormal())
     with warns(
         UserWarning,
         match=f"No dataset_size is provided. Batch size \({batch_size}\) is used instead.",
@@ -43,9 +48,7 @@ def test_kl_loss(device: torch.device) -> None:
     assert loss1.log is None
     assert not loss1._track
 
-    loss2 = KullbackLeiblerLoss(
-        MeanFieldNormalPredictiveDistribution(), dataset_size=batch_size
-    )
+    loss2 = KullbackLeiblerLoss(MeanFieldNormal(), dataset_size=batch_size)
     out2 = loss2(model_return, target)
     assert out1 == out2
     assert out2.device == device
@@ -53,17 +56,13 @@ def test_kl_loss(device: torch.device) -> None:
     assert out1 != out3
     assert out3.device == device
 
-    loss3 = KullbackLeiblerLoss(
-        MeanFieldNormalPredictiveDistribution(), dataset_size=2 * batch_size
-    )
+    loss3 = KullbackLeiblerLoss(MeanFieldNormal(), dataset_size=2 * batch_size)
     out4 = loss3(model_return, target)
     assert out1 != out4
     assert out3 == out4
     assert out4.device == device
 
-    loss4 = KullbackLeiblerLoss(
-        MeanFieldNormalPredictiveDistribution(), dataset_size=batch_size, heat=0.5
-    )
+    loss4 = KullbackLeiblerLoss(MeanFieldNormal(), dataset_size=batch_size, heat=0.5)
     out5 = loss4(model_return, target)
     assert out1 != out5
     assert out5.device == device
@@ -73,9 +72,7 @@ def test_kl_loss(device: torch.device) -> None:
     assert out1 == out6
     assert out6.device == device
 
-    loss5 = KullbackLeiblerLoss(
-        MeanFieldNormalPredictiveDistribution(), dataset_size=batch_size, track=True
-    )
+    loss5 = KullbackLeiblerLoss(MeanFieldNormal(), dataset_size=batch_size, track=True)
 
     assert loss5.log is not None
     assert loss5._track

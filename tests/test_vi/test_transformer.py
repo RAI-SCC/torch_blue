@@ -16,11 +16,7 @@ from torch_bayesian.vi import (
     VITransformerEncoder,
     VITransformerEncoderLayer,
 )
-from torch_bayesian.vi.priors import MeanFieldNormalPrior, Prior
-from torch_bayesian.vi.variational_distributions import (
-    MeanFieldNormalVarDist,
-    VariationalDistribution,
-)
+from torch_bayesian.vi.distributions import Distribution, MeanFieldNormal
 
 
 class Filter(VIModule):
@@ -45,7 +41,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -62,7 +58,7 @@ class Filter(VIModule):
         (
             32,
             3,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -79,7 +75,7 @@ class Filter(VIModule):
         (
             32,
             4,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -96,7 +92,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -113,7 +109,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -130,7 +126,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -147,7 +143,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -164,7 +160,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -181,7 +177,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -198,7 +194,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -215,7 +211,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -232,7 +228,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -249,7 +245,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -266,7 +262,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -283,7 +279,7 @@ class Filter(VIModule):
         (
             32,
             2,
-            MeanFieldNormalVarDist(1e-20),
+            MeanFieldNormal(std=1e-20),
             3,
             5,
             7,
@@ -302,7 +298,7 @@ class Filter(VIModule):
 def test_multihead_attention(
     embed_dim: int,
     num_heads: int,
-    variational_distribution: VariationalDistribution,
+    variational_distribution: Distribution,
     batch_size: Optional[int],
     src_len: int,
     tgt_len: int,
@@ -319,7 +315,7 @@ def test_multihead_attention(
 ) -> None:
     """Test VIMultiheadAttention."""
     samples = 100
-    primary_param = variational_distribution.variational_parameters[0]
+    primary_param = variational_distribution.primary_parameter
 
     if error == 1:
         with raises(AssertionError, match="embed_dim must be divisible by num_heads"):
@@ -393,7 +389,7 @@ def test_multihead_attention(
     for var, shape in random_variable_shapes.items():
         if module.module.variational_distribution[var] is None:
             continue
-        for param in variational_distribution.variational_parameters:
+        for param in variational_distribution.distribution_parameters:
             name = module.module.variational_parameter_name(var, param)
             assert name in param_dict
             assert param_dict[name].shape == shape
@@ -532,7 +528,7 @@ def test_decoder_layer(device: torch.device) -> None:
         d_model,
         nhead,
         dim_feedforward=128,
-        variational_distribution=MeanFieldNormalVarDist(initial_std=1e-20),
+        variational_distribution=MeanFieldNormal(std=1e-20),
         activation=nn.GELU(),
         layer_norm_eps=1e-3,
         norm_first=True,
@@ -564,7 +560,7 @@ def test_decoder_layer(device: torch.device) -> None:
     module3 = VITransformerDecoderLayer(
         d_model,
         nhead,
-        variational_distribution=MeanFieldNormalVarDist(initial_std=1e-20),
+        variational_distribution=MeanFieldNormal(std=1e-20),
         norm_first=False,
         bias=False,
         device=device,
@@ -647,7 +643,7 @@ def test_encoder_layer(device: torch.device) -> None:
         d_model,
         nhead,
         dim_feedforward=128,
-        variational_distribution=MeanFieldNormalVarDist(initial_std=1e-20),
+        variational_distribution=MeanFieldNormal(std=1e-20),
         activation=nn.GELU(),
         layer_norm_eps=1e-3,
         norm_first=True,
@@ -673,7 +669,7 @@ def test_encoder_layer(device: torch.device) -> None:
     module3 = VITransformerEncoderLayer(
         d_model,
         nhead,
-        variational_distribution=MeanFieldNormalVarDist(initial_std=1e-20),
+        variational_distribution=MeanFieldNormal(std=1e-20),
         norm_first=False,
         bias=False,
         device=device,
@@ -727,7 +723,7 @@ def test_decoder(device: torch.device) -> None:
     layer = VITransformerDecoderLayer(
         d_model,
         nhead,
-        variational_distribution=MeanFieldNormalVarDist(initial_std=1e-20),
+        variational_distribution=MeanFieldNormal(std=1e-20),
         device=device,
     )
     module1 = VITransformerDecoder(layer, num_layers)
@@ -800,7 +796,7 @@ def test_encoder(device: torch.device) -> None:
     layer = VITransformerEncoderLayer(
         d_model,
         nhead,
-        variational_distribution=MeanFieldNormalVarDist(initial_std=1e-20),
+        variational_distribution=MeanFieldNormal(std=1e-20),
         device=device,
     )
     module1 = VITransformerEncoder(layer, num_layers)
@@ -880,8 +876,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             True,
@@ -899,8 +895,8 @@ def test_encoder(device: torch.device) -> None:
             True,
             True,
             False,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             True,
             False,
             False,
@@ -918,8 +914,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             True,
@@ -937,8 +933,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             True,
@@ -956,8 +952,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             True,
@@ -975,8 +971,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             True,
@@ -994,8 +990,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             True,
@@ -1013,8 +1009,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             True,
@@ -1032,8 +1028,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             True,
@@ -1051,8 +1047,8 @@ def test_encoder(device: torch.device) -> None:
             True,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             True,
@@ -1070,8 +1066,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             True,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             True,
@@ -1089,8 +1085,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             False,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             True,
@@ -1108,8 +1104,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             True,
             True,
             True,
@@ -1127,8 +1123,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             False,
             True,
@@ -1146,8 +1142,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             False,
@@ -1165,8 +1161,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             True,
@@ -1184,8 +1180,8 @@ def test_encoder(device: torch.device) -> None:
             False,
             False,
             True,
-            MeanFieldNormalVarDist(initial_std=1e-20),
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(std=1e-20),
+            MeanFieldNormal(),
             False,
             True,
             False,
@@ -1205,8 +1201,8 @@ def test_transformer(
     batch_first: bool,
     norm_first: bool,
     bias: bool,
-    variational_distribution: VariationalDistribution,
-    prior: Prior,
+    variational_distribution: Distribution,
+    prior: Distribution,
     prior_initialization: bool,
     rescale_prior: bool,
     return_log_probs: bool,

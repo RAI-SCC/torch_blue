@@ -7,9 +7,8 @@ from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
 
 from .base import VIModule
-from .priors import MeanFieldNormalPrior
-from .utils.common_types import VIkwargs, _prior_any_t, _vardist_any_t
-from .variational_distributions import MeanFieldNormalVarDist
+from .distributions import MeanFieldNormal
+from .utils.common_types import VIkwargs, _dist_any_t
 
 
 class _VIConvNd(VIModule):
@@ -58,8 +57,8 @@ class _VIConvNd(VIModule):
         groups: int,
         bias: bool,
         padding_mode: str,
-        variational_distribution: _vardist_any_t,
-        prior: _prior_any_t,
+        variational_distribution: _dist_any_t,
+        prior: _dist_any_t,
         rescale_prior: bool = False,
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,
@@ -188,8 +187,8 @@ class VIConv1d(_VIConvNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: str = "zeros",
-        variational_distribution: _vardist_any_t = MeanFieldNormalVarDist(),
-        prior: _prior_any_t = MeanFieldNormalPrior(),
+        variational_distribution: _dist_any_t = MeanFieldNormal(),
+        prior: _dist_any_t = MeanFieldNormal(),
         rescale_prior: bool = False,
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,
@@ -306,8 +305,8 @@ class VIConv2d(_VIConvNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: str = "zeros",
-        variational_distribution: _vardist_any_t = MeanFieldNormalVarDist(),
-        prior: _prior_any_t = MeanFieldNormalPrior(),
+        variational_distribution: _dist_any_t = MeanFieldNormal(),
+        prior: _dist_any_t = MeanFieldNormal(),
         rescale_prior: bool = False,
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,
@@ -422,8 +421,8 @@ class VIConv3d(_VIConvNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: str = "zeros",
-        variational_distribution: _vardist_any_t = MeanFieldNormalVarDist(),
-        prior: _prior_any_t = MeanFieldNormalPrior(),
+        variational_distribution: _dist_any_t = MeanFieldNormal(),
+        prior: _dist_any_t = MeanFieldNormal(),
         rescale_prior: bool = False,
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,

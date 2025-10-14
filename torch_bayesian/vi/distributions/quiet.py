@@ -8,24 +8,25 @@ from torch.nn import init
 from torch_bayesian.vi import _globals
 
 from ..utils import init as vi_init
-from .base import Prior
+from .base import Distribution
 
 if TYPE_CHECKING:
     from ..base import VIModule  # pragma: no cover
 
 
-class BasicQuietPrior(Prior):
+class BasicQuietPrior(Distribution):
     """
     Prior assuming normal distributed mean and std proportional to it.
 
-    This is an experimental prior that assumes independent normal distributed weights.
-    However, instead of each having the same mean and standard deviation it assumes
-    the means to be normal distributed amd each standard deviation to be proportional to
-    the respective mean by a fixed factor.
+    This is an experimental, hierarchical prior that assumes uncorrelated,
+    normal-distributed weights. However, instead of each having the same mean and
+    standard deviation it assumes the means to be normal distributed amd each standard
+    deviation to be proportional to the respective mean by a fixed factor.
 
     The distribution parameters are "mean" and "log_std".
 
-    This prior requires the parameter mean to calculate :meth:`~log_prob`.
+    This distribution is implemented only as a prior and  requires the parameter mean to
+    calculate :meth:`~log_prob`.
 
     Parameters
     ----------
@@ -38,6 +39,10 @@ class BasicQuietPrior(Prior):
     eps: float, default: 1e-10
         Epsilon for numerical stability.
     """
+
+    is_prior = True
+    is_variational_distribution = False
+    is_predictive_distribution = False
 
     def __init__(
         self,
@@ -55,7 +60,7 @@ class BasicQuietPrior(Prior):
         self.mean_std = mean_std
         self.eps = eps
 
-    def log_prob(self, sample: Tensor, mean: Tensor) -> Tensor:
+    def prior_log_prob(self, sample: Tensor, mean: Tensor) -> Tensor:
         """
         Compute the log probability of the sample based on the prior.
 
@@ -89,7 +94,7 @@ class BasicQuietPrior(Prior):
             normalization = normalization + 2 * log(2 * torch.pi)
         return -0.5 * (data_fitting + mean_decay + normalization)
 
-    def reset_variational_parameters(self, module: "VIModule", variable: str) -> None:
+    def reset_parameters_to_prior(self, module: "VIModule", variable: str) -> None:
         """
         Reset the parameters of the module to prior mean and standard deviation.
 

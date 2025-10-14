@@ -2,8 +2,7 @@ import torch
 
 from torch_bayesian.vi import VIConv1d, VIConv2d, VIConv3d
 from torch_bayesian.vi.conv import _VIConvNd
-from torch_bayesian.vi.priors import MeanFieldNormalPrior
-from torch_bayesian.vi.variational_distributions import MeanFieldNormalVarDist
+from torch_bayesian.vi.distributions import MeanFieldNormal
 
 
 # Since these are basically copied from torch 2.4 testing is limited
@@ -21,8 +20,8 @@ def test_viconvnd(device: torch.device) -> None:
         groups=0,
         bias=True,
         padding_mode="blub",
-        variational_distribution=MeanFieldNormalVarDist(),
-        prior=MeanFieldNormalPrior(),
+        variational_distribution=MeanFieldNormal(),
+        prior=MeanFieldNormal(),
         device=device,
     )
 
@@ -127,8 +126,8 @@ def test_viconv1d(device: torch.device) -> None:
         groups=2,
         bias=False,
         padding_mode="reflect",
-        variational_distribution=MeanFieldNormalVarDist(),
-        prior=MeanFieldNormalPrior(),
+        variational_distribution=MeanFieldNormal(),
+        prior=MeanFieldNormal(),
         device=device,
     )
 
@@ -190,8 +189,8 @@ def test_viconv2d(device: torch.device) -> None:
         groups=2,
         bias=False,
         padding_mode="reflect",
-        variational_distribution=MeanFieldNormalVarDist(),
-        prior=MeanFieldNormalPrior(),
+        variational_distribution=MeanFieldNormal(),
+        prior=MeanFieldNormal(),
         device=device,
     )
 
@@ -257,8 +256,8 @@ def test_viconv3d(device: torch.device) -> None:
         groups=2,
         bias=False,
         padding_mode="reflect",
-        variational_distribution=MeanFieldNormalVarDist(),
-        prior=MeanFieldNormalPrior(),
+        variational_distribution=MeanFieldNormal(),
+        prior=MeanFieldNormal(),
         device=device,
     )
 

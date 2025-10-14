@@ -3,9 +3,7 @@ from matplotlib import pyplot as plt
 from torch.optim import Adam
 
 from torch_bayesian.vi import KullbackLeiblerLoss, VILinear
-from torch_bayesian.vi.predictive_distributions import (
-    MeanFieldNormalPredictiveDistribution,
-)
+from torch_bayesian.vi.distributions import MeanFieldNormal
 
 
 def test_overfitting() -> None:
@@ -28,7 +26,7 @@ def test_overfitting() -> None:
         prior_initialization=True,
         return_log_probs=True,
     )
-    predictive_distribution = MeanFieldNormalPredictiveDistribution()
+    predictive_distribution = MeanFieldNormal()
     criterion = KullbackLeiblerLoss(predictive_distribution, dataset_size=dataset_size)
     optimizer = Adam(model.parameters(), lr=1e-2)
 
