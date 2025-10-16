@@ -1,9 +1,10 @@
-torch-bayesian -- Flexible Bayesian Neural Networks with pytorch
+torch_bayesian -- Flexible Bayesian Neural Networks with PyTorch
 ================================================================
 
 Release: |release|
 
-torch-bayesian is a python package for implementing Bayesian Neural Networks oriented closely along pytorch.
+torch_bayesian is a Python package for implementing Bayesian neural networks that
+closely mimics the interface of `PyTorch <https://pytorch.org/>`_.
 
 .. toctree::
    :caption: Table of Contents
@@ -13,4 +14,4 @@ torch-bayesian is a python package for implementing Bayesian Neural Networks ori
    getting_started
    autoapi/index
 
-Also visit us on `[add the public GitHub link here]`.
+Also visit us on `GitHub <https://github.com/RAI-SCC/torch_bayesian>`_.

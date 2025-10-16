@@ -1,4 +1,4 @@
-"""This module provides basic layers and loss functions for BNN-training with Variational Inference."""
+"""This module provides basic layers and loss functions for BNN-training with variational inference."""
 
 from .analytical_kl_loss import (
     AnalyticalKullbackLeiblerLoss,
