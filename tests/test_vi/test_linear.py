@@ -1,11 +1,11 @@
 from math import exp
+from typing import cast
 
 import torch
 from torch import Tensor
 
-from torch_bayesian.vi import VILinear
-from torch_bayesian.vi.priors import MeanFieldNormalPrior
-from torch_bayesian.vi.variational_distributions import NonBayesian
+from torch_bayesian.vi import VILinear, VIReturn
+from torch_bayesian.vi.distributions import MeanFieldNormal, NonBayesian
 
 
 def test_vilinear(device: torch.device) -> None:
@@ -45,7 +45,7 @@ def test_vilinear(device: torch.device) -> None:
     module2 = VILinear(
         in_features, out_features, bias=False, return_log_probs=False, device=device
     )
-    assert module2.random_variables == ("weight",)
+    assert module2.random_variables == ("weight", "bias")
     assert not hasattr(module2, "_bias_mean")
 
     sample2 = torch.randn(6, in_features, device=device)
@@ -58,20 +58,16 @@ def test_vilinear(device: torch.device) -> None:
     module3 = VILinear(in_features, out_features, return_log_probs=True, device=device)
 
     sample3 = torch.randn(4, 7, in_features, device=device)
-    out, lps = module3(sample3, samples=5)
+    out = module3(sample3, samples=5)
+    lps = out.log_probs
     assert out.shape == (5, 4, 7, out_features)
     assert lps.shape == (5, 2)
 
-    module3._has_sampling_responsibility = False
-    out, lps = module3(sample3)
-    assert out.shape == (4, 7, out_features)
-    assert lps.shape == (2,)
-    out.sum().backward()
-
-    multisample2 = module3.sampled_forward(sample3, samples=10)
-    assert multisample2[0].shape == (10, 4, 7, out_features)
-    assert multisample2[1].shape == (10, 2)
-    multisample2[0].sum().backward()
+    multisample2 = cast(VIReturn, module3.sampled_forward(sample3, samples=10))
+    multilps = cast(Tensor, multisample2.log_probs)
+    assert multisample2.shape == (10, 4, 7, out_features)
+    assert multilps.shape == (10, 2)
+    multisample2.sum().backward()
 
     # test prior_init
     in_features = 7
@@ -94,7 +90,7 @@ def test_vilinear(device: torch.device) -> None:
     assert (bias_mean == torch.zeros_like(bias_mean)).all()
     assert (bias_log_std == torch.zeros_like(bias_log_std)).all()
 
-    module4.reset_parameters()
+    module4.reset_variational_parameters()
     assert (weight_mean == module4._weight_mean).all()
     assert (weight_log_std == module4._weight_log_std).all()
     assert (bias_mean == module4._bias_mean).all()
@@ -102,7 +98,7 @@ def test_vilinear(device: torch.device) -> None:
 
     in_features = 6
     out_features = 5
-    prior = MeanFieldNormalPrior(mean=1.0, std=exp(5.0))
+    prior = MeanFieldNormal(mean=1.0, std=exp(5.0))
     module5 = VILinear(
         in_features,
         out_features,

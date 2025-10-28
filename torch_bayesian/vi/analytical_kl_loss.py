@@ -8,14 +8,9 @@ from torch import Tensor
 from torch.nn import Module
 
 from . import _globals
-from .base import VIBaseModule, VIModule
-from .predictive_distributions import PredictiveDistribution
-from .priors import MeanFieldNormalPrior, Prior, UniformPrior
-from .variational_distributions import (
-    MeanFieldNormalVarDist,
-    NonBayesian,
-    VariationalDistribution,
-)
+from .base import VIModule
+from .distributions import Distribution, MeanFieldNormal, NonBayesian
+from .utils import UnsupportedDistributionError
 
 
 def _forward_unimplemented(
@@ -151,7 +146,9 @@ class UniformNormalDivergence(KullbackLeiblerModule):
     """
 
     @staticmethod
-    def forward(variational_mean: Tensor, variational_log_std: Tensor) -> Tensor:
+    def forward(
+        prior_mean: None, variational_mean: Tensor, variational_log_std: Tensor
+    ) -> Tensor:
         """
         Calculate the Kullback-Leibler divergence.
 
@@ -162,6 +159,8 @@ class UniformNormalDivergence(KullbackLeiblerModule):
 
         Parameters
         ----------
+        prior_mean: None
+            Always None, exists for technical reasons.
         variational_mean: Tensor
             Means of the variational distribution.
         variational_log_std: Tensor
@@ -216,12 +215,10 @@ class AnalyticalKullbackLeiblerLoss(Module):
     ----------
     model: :class:`~.VIModule`
         The model to be trained.
-    predictive_distribution: :class:`~.predictive_distributions.PredictiveDistribution`
+    predictive_distribution: :class:`~.distributions.Distribution`
         The kind of distribution to assume for the forecasts. This is closely related to
-        the non-Bayesian losses, e.g.
-        :class:`~.predictive_distributions.MeanFieldNormalPredictiveDistribution`
-        corresponds to MSE loss, while
-        :class:`~.predictive_distributions.CategoricalPredictiveDistribution`
+        the non-Bayesian losses, e.g. :class:`~.distributions.MeanFieldNormal`
+        corresponds to MSE loss, while :class:`~.distributions.Categorical`
         corresponds to cross-entropy loss.
     dataset_size: Optional[int], default: None
         Number of samples in the training dataset. If not provided here it must be
@@ -260,12 +257,15 @@ class AnalyticalKullbackLeiblerLoss(Module):
     :exc:`ValueError`:
         If ``divergence_type`` is ``None`` and the model does not contain any
         :class:`~.VIBaseModule`, i.e. is non-Bayesian.
+    :exc:`UnsupportedDistributionError`:
+        If ``predictive_distribution`` does not support being use as predictive
+        distribution.
     """
 
     def __init__(
         self,
         model: VIModule,
-        predictive_distribution: PredictiveDistribution,
+        predictive_distribution: Distribution,
         dataset_size: Optional[int] = None,
         divergence_type: Optional["KullbackLeiblerModule"] = None,
         heat: float = 1.0,
@@ -277,12 +277,20 @@ class AnalyticalKullbackLeiblerLoss(Module):
         self.heat = heat
         self._track = track
 
+        if not predictive_distribution.is_predictive_distribution:
+            raise UnsupportedDistributionError(
+                f"{predictive_distribution.__class__.__name__} does not support use as"
+                f" predictive distribution"
+            )
+
         if divergence_type is None:
             for module in model.modules():
-                if not isinstance(module, VIBaseModule):
+                if (
+                    not hasattr(module, "random_variables")
+                ) or module.random_variables is None:
                     continue
                 for prior, var_dist in zip(
-                    module.prior, module.variational_distribution
+                    module.prior.values(), module.variational_distribution.values()
                 ):
                     kl_type = self._detect_divergence(prior, var_dist)
                     if divergence_type is None:
@@ -292,13 +300,14 @@ class AnalyticalKullbackLeiblerLoss(Module):
                             assert isinstance(kl_type, type(divergence_type))
                         except AssertionError:
                             raise NotImplementedError(
-                                "Handling of inconsistent distributions types is not implemented yet."
+                                "Handling of inconsistent distributions types is not "
+                                "implemented yet."
                             )
         if divergence_type is None:
             raise ValueError("Provided model is not bayesian.")
 
         self.kl_module: KullbackLeiblerModule = divergence_type
-        model.return_log_probs(False)
+        model.return_log_probs = False
         self.model = model
 
         self.log: Optional[Dict[str, List[Tensor]]] = None
@@ -329,24 +338,25 @@ class AnalyticalKullbackLeiblerLoss(Module):
 
     @staticmethod
     def _detect_divergence(
-        prior: Prior, var_dist: VariationalDistribution
+        prior: Distribution, var_dist: Distribution
     ) -> KullbackLeiblerModule:
-        if isinstance(prior, MeanFieldNormalPrior):
+        if isinstance(prior, MeanFieldNormal):
             prior_name = "Normal"
-        elif isinstance(prior, UniformPrior):
+        elif isinstance(prior, NonBayesian):
             prior_name = "Uniform"
         else:
             prior_name = None
         if isinstance(var_dist, NonBayesian):
             return NonBayesianDivergence()
-        elif isinstance(var_dist, MeanFieldNormalVarDist):
+        elif isinstance(var_dist, MeanFieldNormal):
             vardist_name = "Normal"
         else:
             vardist_name = None
 
         if (prior_name is None) or (vardist_name is None):
             raise NotImplementedError(
-                f"Analytical loss is not implemented for {prior.__class__.__name__} and {var_dist.__class__.__name__}."
+                f"Analytical loss is not implemented for {prior.__class__.__name__} and"
+                f" {var_dist.__class__.__name__}."
             )
 
         return _kl_div_dict[prior_name + vardist_name + "Divergence"]()
@@ -362,10 +372,12 @@ class AnalyticalKullbackLeiblerLoss(Module):
         """
         total_kl = None
         for module in self.model.modules():
-            if not isinstance(module, VIBaseModule):
+            if (
+                not hasattr(module, "random_variables")
+            ) or module.random_variables is None:
                 continue
 
-            for var, prior in zip(module.random_variables, module.prior):
+            for var, prior in zip(module.random_variables, module.prior.values()):
                 prior_params = []
                 for param in prior.distribution_parameters:
                     prior_params.append(getattr(prior, param))
@@ -408,7 +420,8 @@ class AnalyticalKullbackLeiblerLoss(Module):
 
         if (dataset_size is None) and (self.dataset_size is None):
             warn(
-                f"No dataset_size is provided. Batch size ({samples.shape[1]}) is used instead."
+                f"No dataset_size is provided. Batch size ({samples.shape[1]}) is used"
+                f" instead."
             )
             n_data = samples.shape[1]
         else:

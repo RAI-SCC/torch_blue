@@ -19,18 +19,13 @@ from torch_bayesian.vi.analytical_kl_loss import (
     NormalNormalDivergence,
     UniformNormalDivergence,
 )
-from torch_bayesian.vi.predictive_distributions import (
-    MeanFieldNormalPredictiveDistribution,
-    NonBayesianPredictiveDistribution,
-    PredictiveDistribution,
-)
-from torch_bayesian.vi.priors import MeanFieldNormalPrior, Prior, UniformPrior
-from torch_bayesian.vi.utils import use_norm_constants
-from torch_bayesian.vi.variational_distributions import (
-    MeanFieldNormalVarDist,
+from torch_bayesian.vi.distributions import (
+    Distribution,
+    MeanFieldNormal,
     NonBayesian,
-    VariationalDistribution,
+    UniformPrior,
 )
+from torch_bayesian.vi.utils import UnsupportedDistributionError, use_norm_constants
 
 
 def test_klmodule(device: torch.device) -> None:
@@ -73,10 +68,9 @@ def test_nonbayesian_klmodule(device: torch.device) -> None:
 def test_uniformnormal_klmodule(norm_constants: bool, device: torch.device) -> None:
     """Test UniformNormalDivergence."""
     sample_shape = [7, 10]
-    prior_param_number = 0
     var_param_number = 2
 
-    prior_params = [*torch.randn([prior_param_number, *sample_shape], device=device)]
+    prior_params = [None]
     var_params = [*torch.randn([var_param_number, *sample_shape], device=device)]
 
     use_norm_constants(norm_constants)
@@ -118,31 +112,35 @@ def test_normalnormal_klmodule(norm_constants: bool, device: torch.device) -> No
     assert torch.allclose(out, reference.sum())
 
 
-class DummyPrior(Prior):
+class DummyPrior(Distribution):
     """Dummy prior for testing."""
+
+    is_prior = True
 
     def __init__(self) -> None:
         super().__init__()
         self.distribution_parameters = ()
 
-    def log_prob(self, *args: Tensor) -> Tensor:
+    def prior_log_prob(self, *args: Tensor) -> Tensor:
         """Return dummy log probability."""
         return torch.zeros(1, device=args[0].device)
 
 
-class DummyVarDist(VariationalDistribution):
+class DummyVarDist(Distribution):
     """Dummy variational distribution for testing."""
+
+    is_variational_distribution = True
 
     def __init__(self) -> None:
         super().__init__()
-        self.variational_parameters = ("mean",)
+        self.distribution_parameters = ("mean",)
         self._default_variational_parameters = (0.0,)
 
     def sample(self, mean: Tensor) -> Tensor:
         """Return dummy sample."""
         return torch.zeros(1, device=mean.device)
 
-    def log_prob(self, sample: Tensor, mean: Tensor) -> Tensor:
+    def variational_log_prob(self, sample: Tensor, mean: Tensor) -> Tensor:
         """Return dummy log probability."""
         return torch.zeros(1, device=mean.device)
 
@@ -150,17 +148,17 @@ class DummyVarDist(VariationalDistribution):
 @pytest.mark.parametrize(
     "prior,var_dist,target",
     [
-        (MeanFieldNormalPrior, MeanFieldNormalVarDist, NormalNormalDivergence),
-        (UniformPrior, MeanFieldNormalVarDist, UniformNormalDivergence),
-        (MeanFieldNormalPrior, NonBayesian, NonBayesianDivergence),
+        (MeanFieldNormal, MeanFieldNormal, NormalNormalDivergence),
+        (UniformPrior, MeanFieldNormal, UniformNormalDivergence),
+        (MeanFieldNormal, NonBayesian, NonBayesianDivergence),
         (UniformPrior, NonBayesian, NonBayesianDivergence),
-        (DummyPrior, MeanFieldNormalVarDist, "fail"),
-        (MeanFieldNormalPrior, DummyVarDist, "fail"),
+        (DummyPrior, MeanFieldNormal, "fail"),
+        (MeanFieldNormal, DummyVarDist, "fail"),
     ],
 )
 def test_detect_divergence(
-    prior: Type[Prior],
-    var_dist: Type[VariationalDistribution],
+    prior: Type[Distribution],
+    var_dist: Type[Distribution],
     target: Union[str, Type[KullbackLeiblerModule]],
 ) -> None:
     """Test AnalyticalKullbackLeiblerLoss._detect_divergence()."""
@@ -187,10 +185,10 @@ class DummyMLP(VIModule):
         in_features: int,
         hidden_features: int,
         out_features: int,
-        prior: Prior = MeanFieldNormalPrior(),
-        var_dist: VariationalDistribution = MeanFieldNormalVarDist(),
-        alt_prior: Optional[Prior] = None,
-        alt_vardist: Optional[VariationalDistribution] = None,
+        prior: Distribution = MeanFieldNormal(),
+        var_dist: Distribution = MeanFieldNormal(),
+        alt_prior: Optional[Distribution] = None,
+        alt_vardist: Optional[Distribution] = None,
         return_log_probs: bool = True,
         device: Optional[torch.device] = None,
     ) -> None:
@@ -225,21 +223,21 @@ class DummyMLP(VIModule):
 @pytest.mark.parametrize(
     "prior,var_dist,norm_constants",
     [
-        (MeanFieldNormalPrior(), MeanFieldNormalVarDist(), True),
-        (MeanFieldNormalPrior(), MeanFieldNormalVarDist(), False),
-        (MeanFieldNormalPrior(1.0, 1.5), MeanFieldNormalVarDist(0.5), True),
-        (MeanFieldNormalPrior(1.0, 1.5), MeanFieldNormalVarDist(0.5), False),
+        (MeanFieldNormal(), MeanFieldNormal(), True),
+        (MeanFieldNormal(), MeanFieldNormal(), False),
+        (MeanFieldNormal(1.0, 1.5), MeanFieldNormal(0.5), True),
+        (MeanFieldNormal(1.0, 1.5), MeanFieldNormal(0.5), False),
         (UniformPrior(), NonBayesian(), False),
         (UniformPrior(), NonBayesian(), True),
-        (UniformPrior(), MeanFieldNormalVarDist(), False),
-        (UniformPrior(), MeanFieldNormalVarDist(), True),
-        (UniformPrior(), MeanFieldNormalVarDist(0.7), False),
-        (UniformPrior(), MeanFieldNormalVarDist(0.7), True),
+        (UniformPrior(), MeanFieldNormal(), False),
+        (UniformPrior(), MeanFieldNormal(), True),
+        (UniformPrior(), MeanFieldNormal(0.7), False),
+        (UniformPrior(), MeanFieldNormal(0.7), True),
     ],
 )
 def test_prior_matching(
-    prior: Prior,
-    var_dist: VariationalDistribution,
+    prior: Distribution,
+    var_dist: Distribution,
     norm_constants: bool,
     device: torch.device,
 ) -> None:
@@ -256,24 +254,19 @@ def test_prior_matching(
     model = DummyMLP(
         f_in, f_hidden, f_out, prior=prior, var_dist=var_dist, device=device
     )
-    criterion = AnalyticalKullbackLeiblerLoss(
-        model, MeanFieldNormalPredictiveDistribution(), samples
-    )
-    ref_criterion = KullbackLeiblerLoss(
-        MeanFieldNormalPredictiveDistribution(), samples, track=True
-    )
+    criterion = AnalyticalKullbackLeiblerLoss(model, MeanFieldNormal(), samples)
+    ref_criterion = KullbackLeiblerLoss(MeanFieldNormal(), samples, track=True)
 
     sample = torch.rand([batch_size, f_in], device=device)
     target = torch.rand([batch_size, f_out], device=device)
 
-    model.return_log_probs()
+    model.return_log_probs = True
 
     out = model(sample, samples=samples)
 
     analytical_prior_matching = criterion.prior_matching()
     ref_criterion(out, target)
     ref_prior_matching = ref_criterion.log["prior_matching"]  # type: ignore [index]
-    print(ref_prior_matching[0], analytical_prior_matching)
     assert analytical_prior_matching.device == device
     assert torch.allclose(
         torch.tensor(ref_prior_matching[0]),
@@ -284,12 +277,14 @@ def test_prior_matching(
 
 
 @pytest.mark.parametrize(
-    "prior,var_dist,alt_prior,alt_var_dist,target_kl_module,heat,dataset_size,divergence_type,track,expected_error",
+    "prior,var_dist,predictive_distribution,alt_prior,alt_var_dist,target_kl_module,"
+    "heat,dataset_size,divergence_type,track,expected_error",
     [
         # Test base parameters
         (
-            MeanFieldNormalPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             None,
             None,
             NormalNormalDivergence,
@@ -300,8 +295,9 @@ def test_prior_matching(
             None,
         ),
         (
-            MeanFieldNormalPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             None,
             None,
             NormalNormalDivergence,
@@ -312,8 +308,9 @@ def test_prior_matching(
             None,
         ),
         (
-            MeanFieldNormalPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             None,
             None,
             NormalNormalDivergence,
@@ -324,8 +321,9 @@ def test_prior_matching(
             None,
         ),
         (
-            MeanFieldNormalPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             None,
             None,
             NormalNormalDivergence,
@@ -338,7 +336,8 @@ def test_prior_matching(
         # Test autodetection for each Prior-Vardist combination
         (
             UniformPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             None,
             None,
             UniformNormalDivergence,
@@ -349,8 +348,9 @@ def test_prior_matching(
             None,
         ),
         (
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(),
             NonBayesian(),
+            MeanFieldNormal(),
             None,
             None,
             NonBayesianDivergence,
@@ -363,6 +363,7 @@ def test_prior_matching(
         (
             UniformPrior(),
             NonBayesian(),
+            MeanFieldNormal(),
             None,
             None,
             NonBayesianDivergence,
@@ -374,8 +375,9 @@ def test_prior_matching(
         ),
         # Test error raising
         (
-            MeanFieldNormalPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             UniformPrior(),
             None,
             NormalNormalDivergence,
@@ -386,8 +388,9 @@ def test_prior_matching(
             0,
         ),
         (
-            MeanFieldNormalPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             None,
             NonBayesian(),
             NormalNormalDivergence,
@@ -398,8 +401,9 @@ def test_prior_matching(
             0,
         ),
         (
-            MeanFieldNormalPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             UniformPrior(),
             NonBayesian(),
             NormalNormalDivergence,
@@ -411,7 +415,8 @@ def test_prior_matching(
         ),
         (
             DummyPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             None,
             None,
             NormalNormalDivergence,
@@ -422,8 +427,9 @@ def test_prior_matching(
             1,
         ),
         (
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(),
             DummyVarDist(),
+            MeanFieldNormal(),
             None,
             None,
             NormalNormalDivergence,
@@ -436,6 +442,7 @@ def test_prior_matching(
         (
             DummyPrior(),
             DummyVarDist(),
+            MeanFieldNormal(),
             None,
             None,
             NormalNormalDivergence,
@@ -445,11 +452,24 @@ def test_prior_matching(
             False,
             1,
         ),
-        (None, None, None, None, NormalNormalDivergence, None, None, None, False, 2),
+        (
+            None,
+            None,
+            MeanFieldNormal(),
+            None,
+            None,
+            NormalNormalDivergence,
+            None,
+            None,
+            None,
+            False,
+            2,
+        ),
         # Test error overwriting by manual KL-Module specification
         (
-            MeanFieldNormalPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             UniformPrior(),
             None,
             NormalNormalDivergence,
@@ -460,8 +480,9 @@ def test_prior_matching(
             None,
         ),
         (
-            MeanFieldNormalPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             None,
             NonBayesian(),
             UniformNormalDivergence,
@@ -472,8 +493,9 @@ def test_prior_matching(
             None,
         ),
         (
-            MeanFieldNormalPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             UniformPrior(),
             NonBayesian(),
             NonBayesianDivergence,
@@ -485,7 +507,8 @@ def test_prior_matching(
         ),
         (
             DummyPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             None,
             None,
             NormalNormalDivergence,
@@ -496,8 +519,9 @@ def test_prior_matching(
             None,
         ),
         (
-            MeanFieldNormalPrior(),
+            MeanFieldNormal(),
             DummyVarDist(),
+            MeanFieldNormal(),
             None,
             None,
             UniformNormalDivergence,
@@ -510,6 +534,7 @@ def test_prior_matching(
         (
             DummyPrior(),
             DummyVarDist(),
+            MeanFieldNormal(),
             None,
             None,
             NonBayesianDivergence,
@@ -518,14 +543,28 @@ def test_prior_matching(
             NonBayesianDivergence(),
             False,
             None,
+        ),
+        (
+            MeanFieldNormal(),
+            MeanFieldNormal(),
+            UniformPrior(),
+            None,
+            None,
+            NormalNormalDivergence,
+            None,
+            None,
+            None,
+            False,
+            3,
         ),
     ],
 )
 def test_init(
-    prior: Prior,
-    var_dist: VariationalDistribution,
-    alt_prior: Optional[Prior],
-    alt_var_dist: Optional[VariationalDistribution],
+    prior: Distribution,
+    var_dist: Distribution,
+    predictive_distribution: Distribution,
+    alt_prior: Optional[Distribution],
+    alt_var_dist: Optional[Distribution],
     target_kl_module: Type[KullbackLeiblerModule],
     heat: Optional[float],
     dataset_size: Optional[int],
@@ -539,7 +578,6 @@ def test_init(
     f_hidden = 16
     f_out = 10
 
-    predictive_distribution = MeanFieldNormalPredictiveDistribution()
     alt_prior = alt_prior or prior
     alt_var_dist = alt_var_dist or var_dist
     target_heat = heat or 1.0
@@ -577,9 +615,11 @@ def test_init(
             ),
             (
                 NotImplementedError,
-                f"Analytical loss is not implemented for {prior.__class__.__name__} and {var_dist.__class__.__name__}.",
+                f"Analytical loss is not implemented for {prior.__class__.__name__} and"
+                f" {var_dist.__class__.__name__}.",
             ),
             (ValueError, "Provided model is not bayesian."),
+            (UnsupportedDistributionError, ""),
         ]
         error, message = error_list[expected_error]
         with pytest.raises(error, match=message):
@@ -615,30 +655,30 @@ def test_init(
 @pytest.mark.parametrize(
     "prior,var_dist,heat,init_dataset_size,fwrd_dataset_size,track,norm_constants",
     [
-        (MeanFieldNormalPrior(), MeanFieldNormalVarDist(), 1.0, 50, None, False, False),
-        (MeanFieldNormalPrior(), MeanFieldNormalVarDist(), 1.0, 50, None, True, False),
-        (MeanFieldNormalPrior(), MeanFieldNormalVarDist(), 0.5, 50, None, False, False),
-        (MeanFieldNormalPrior(), MeanFieldNormalVarDist(), 1.0, 50, 25, False, False),
-        (MeanFieldNormalPrior(), MeanFieldNormalVarDist(), 1.0, None, 25, False, False),
+        (MeanFieldNormal(), MeanFieldNormal(), 1.0, 50, None, False, False),
+        (MeanFieldNormal(), MeanFieldNormal(), 1.0, 50, None, True, False),
+        (MeanFieldNormal(), MeanFieldNormal(), 0.5, 50, None, False, False),
+        (MeanFieldNormal(), MeanFieldNormal(), 1.0, 50, 25, False, False),
+        (MeanFieldNormal(), MeanFieldNormal(), 1.0, None, 25, False, False),
         (
-            MeanFieldNormalPrior(),
-            MeanFieldNormalVarDist(),
+            MeanFieldNormal(),
+            MeanFieldNormal(),
             1.0,
             None,
             None,
             False,
             False,
         ),
-        (MeanFieldNormalPrior(), MeanFieldNormalVarDist(), 1.0, 50, None, False, True),
-        (UniformPrior(), MeanFieldNormalVarDist(), 1.0, 50, None, False, False),
-        (UniformPrior(), MeanFieldNormalVarDist(), 1.0, 50, None, False, True),
+        (MeanFieldNormal(), MeanFieldNormal(), 1.0, 50, None, False, True),
+        (UniformPrior(), MeanFieldNormal(), 1.0, 50, None, False, False),
+        (UniformPrior(), MeanFieldNormal(), 1.0, 50, None, False, True),
         (UniformPrior(), NonBayesian(), 1.0, 50, None, False, False),
         (UniformPrior(), NonBayesian(), 1.0, 50, None, False, True),
     ],
 )
 def test_forward(
-    prior: Prior,
-    var_dist: VariationalDistribution,
+    prior: Distribution,
+    var_dist: Distribution,
     heat: float,
     init_dataset_size: Optional[int],
     fwrd_dataset_size: Optional[int],
@@ -661,21 +701,19 @@ def test_forward(
         f_in, f_hidden, f_out, prior=prior, var_dist=var_dist, device=device
     )
     if isinstance(var_dist, NonBayesian):
-        predictive_distribution: Type[PredictiveDistribution] = (
-            NonBayesianPredictiveDistribution
-        )
+        predictive_distribution: Distribution = NonBayesian("MSE")
     else:
-        predictive_distribution = MeanFieldNormalPredictiveDistribution
+        predictive_distribution = MeanFieldNormal()
 
     criterion = AnalyticalKullbackLeiblerLoss(
         model,
-        predictive_distribution(),
+        predictive_distribution,
         init_dataset_size,
         heat=heat,
         track=track,
     )
     ref_criterion = KullbackLeiblerLoss(
-        predictive_distribution(),
+        predictive_distribution,
         init_dataset_size,
         heat=heat,
         track=True,
@@ -685,7 +723,7 @@ def test_forward(
     target = torch.rand([batch_size, f_out], device=device)
     optimizer = torch.optim.Adam(model.parameters())
 
-    model.return_log_probs()
+    model.return_log_probs = True
 
     for _ in range(test_epochs):
         output = model(sample, samples=samples)
@@ -693,14 +731,13 @@ def test_forward(
         if init_dataset_size is None and fwrd_dataset_size is None:
             message = f"No dataset_size is provided. Batch size \\({batch_size}\\) is used instead."
             with pytest.warns(UserWarning, match=message):
-                analytical_loss = criterion(output[0], target, fwrd_dataset_size)
+                analytical_loss = criterion(output, target, fwrd_dataset_size)
             ref_loss = ref_criterion(output, target, batch_size)
         else:
-            analytical_loss = criterion(output[0], target, fwrd_dataset_size)
+            analytical_loss = criterion(output, target, fwrd_dataset_size)
             ref_loss = ref_criterion(output, target, fwrd_dataset_size)
 
         assert analytical_loss.device == device
-        print(analytical_loss, ref_loss)
         assert torch.allclose(analytical_loss, ref_loss, atol=2e-1, rtol=1e-3)
 
         model.zero_grad()

@@ -2,17 +2,18 @@ import torch
 from torch import Tensor
 from torch.nn import functional as F  # noqa: N812
 
-from .base import PredictiveDistribution
+from .base import Distribution
 
 
-class CategoricalPredictiveDistribution(PredictiveDistribution):
+class Categorical(Distribution):
     """
-    Categorical predictive distribution used for classification tasks.
+    Categorical distribution used as predictive distribution for classification tasks.
 
-    This predictive distribution interprets the model output either as logits (default)
-    or as probabilities. In both cases, the predictive parameters are class
-    probabilities with their sum normalized to one across classes. The last dimension of
-    the model output is interpreted as the number of classes.
+    This distribution is implemented only as a predictive distribution.
+    It interprets the model output either as logits (default) or as probabilities. In
+    both cases, the distribution parameters are class probabilities with their sum
+    normalized to one across classes. The last dimension of the model output is
+    interpreted as the number of classes.
 
     When used with :class:`~torch_bayesian.vi.KullbackLeiblerLoss` or
     :class:`~torch_bayesian.vi.AnalyticalKullbackLeiblerLoss` this distribution
@@ -30,9 +31,12 @@ class CategoricalPredictiveDistribution(PredictiveDistribution):
         If ``input_type`` is neither "logits" nor "probs".
     """
 
-    predictive_parameters = ("probs",)
+    is_prior = False
+    is_variational_distribution = False
+    is_predictive_distribution = True
 
     def __init__(self, input_type: str = "logits"):
+        self.distribution_parameters = ("probs",)
         assert input_type in ["logits", "probs"], "input_type must be logits or probs"
         self._in_logits = input_type == "logits"
 
@@ -70,7 +74,7 @@ class CategoricalPredictiveDistribution(PredictiveDistribution):
         reference: Tensor, parameters: Tensor, eps: float = 1e-5
     ) -> Tensor:
         """
-        Calculate the log likelihood of the label based on the class probabilities.
+        Calculate the log probability of the label based on the class probabilities.
 
         This is not affected by :data:`_globals._USE_NORM_CONSTANTS`.
 
@@ -88,7 +92,7 @@ class CategoricalPredictiveDistribution(PredictiveDistribution):
         Returns
         -------
         Tensor
-            The log likelihood of the label under the predicted class probabilities.
+            The log probability of the label under the predicted class probabilities.
             Shape: (1,).
         """
         parameters = torch.log(parameters + eps)

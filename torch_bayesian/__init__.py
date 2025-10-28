@@ -1,1 +1,1 @@
-"""Provides layers and distributions for Bayesian Neural Networks."""
+"""Provides layers and distributions for Bayesian neural networks."""

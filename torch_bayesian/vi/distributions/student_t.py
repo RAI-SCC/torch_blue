@@ -3,16 +3,17 @@ from typing import Optional
 
 import torch
 from torch import Tensor
-from torch.distributions import StudentT
 
 from torch_bayesian.vi import _globals
 
-from .base import VariationalDistribution
+from .base import Distribution
 
 
-class StudentTVarDist(VariationalDistribution):
+class MeanFieldStudentT(Distribution):
     """
-    Variational distribution of independent Student's t-distributions.
+    Distribution assuming uncorrelated Student's t-distributions.
+
+    This distribution is implemented only as variational distribution.
 
     Defines a variational Student's t-distribution with initial mean zero. Learnable
     parameters are mean and log_scale; degrees_of_freedom can be provided but is fixed.
@@ -25,6 +26,10 @@ class StudentTVarDist(VariationalDistribution):
         degrees of freedom each independent distribution.
     """
 
+    is_prior = False
+    is_variational_distribution = True
+    is_predictive_distribution = False
+
     def __init__(
         self,
         initial_scale: float = 1.0,
@@ -33,7 +38,7 @@ class StudentTVarDist(VariationalDistribution):
     ) -> None:
         super().__init__()
         self.degrees_of_freedom = torch.tensor(degrees_of_freedom, device=device)
-        self.variational_parameters = ("mean", "log_scale")
+        self.distribution_parameters = ("mean", "log_scale")
         self._default_variational_parameters = (0.0, log(initial_scale))
 
     def sample(self, mean: Tensor, log_scale: Tensor) -> Tensor:
@@ -53,12 +58,15 @@ class StudentTVarDist(VariationalDistribution):
         Returns
         -------
         sample: Tensor
-            Sample tensor of the same shape as ``mean`` drawn from Student's t-distribution.
+            Sample tensor of the same shape as ``mean`` drawn from
+            Student's t-distribution.
         """
         scale = torch.exp(log_scale)
         return self._student_t_sample(mean, scale)
 
-    def log_prob(self, sample: Tensor, mean: Tensor, log_scale: Tensor) -> Tensor:
+    def variational_log_prob(
+        self, sample: Tensor, mean: Tensor, log_scale: Tensor
+    ) -> Tensor:
         """
         Compute the log probability of a sample.
 
@@ -77,7 +85,8 @@ class StudentTVarDist(VariationalDistribution):
         Returns
         -------
         log_prob: Tensor
-            Tensor with the same shape as ``sample`` containing the log probability of the sample given ``mean`` and ``log_scale``.
+            Tensor with the same shape as ``sample`` containing the log probability of
+            the sample given ``mean`` and ``log_scale``.
         """
         self.degrees_of_freedom = self.degrees_of_freedom.to(device=sample.device)
         scale = torch.exp(log_scale)
@@ -113,9 +122,12 @@ class StudentTVarDist(VariationalDistribution):
         Returns
         -------
         sample: Tensor
-            Sample tensor of the same shape as ``mean`` drawn from Student's t-distribution.
+            Sample tensor of the same shape as ``mean`` drawn from
+            Student's t-distribution.
         """
         self.degrees_of_freedom = self.degrees_of_freedom.to(device=mean.device)
-        base_sample = StudentT(self.degrees_of_freedom).sample(sample_shape=mean.shape)
+        base_sample = torch.distributions.StudentT(self.degrees_of_freedom).sample(
+            sample_shape=mean.shape
+        )
         sample = scale * base_sample + mean
         return sample
