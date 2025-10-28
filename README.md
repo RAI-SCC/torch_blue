@@ -2,7 +2,7 @@
 
 This package provides a simple way for non-expert users to implement and train Bayesian
 Neural Networks (BNNs) with Variational Inference (VI). To make this as easy as possible
-most components mirror components from [pytorch](https://pytorch.org/docs/stable/index.html).
+most components mirror components from [PyTorch](https://pytorch.org/docs/stable/index.html).
 
 - [Installation](#installation)
 - [Documentation](#documentation)
@@ -71,9 +71,9 @@ You can then open ``torch_bayesian/docs/build/index.html`` to start browsing.
 
 ## Quickstart
 
-This Quickstart guide assumes basic familiarity with [pytorch](https://pytorch.org/docs/stable/index.html)
+This Quickstart guide assumes basic familiarity with [PyTorch](https://pytorch.org/docs/stable/index.html)
 and knowledge of how to implement the intended model in it. For a (potentially familiar)
-example see `scripts/pytorch_tutorial.py`, which contains a copy of the pytorch
+example see `scripts/pytorch_tutorial.py`, which contains a copy of the PyTorch
 [Quickstart tutorial](https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html)
 modified to train a BNN with variational inference.
 Three levels are introduced:
@@ -86,13 +86,13 @@ Three levels are introduced:
 
 Many parts of a neural network remain completely unchanged when turning it into a BNN.
 Indeed, only `Module`s containing `nn.Parameter`s, need to be changed. Therefore, if a
-pytorch model fulfills two requirements it can be transferred almost unchanged:
+PyTorch model fulfills two requirements it can be transferred almost unchanged:
 
-1. All pytorch `Module`s containing parameters have equivalents in this package (table below).
+1. All PyTorch `Module`s containing parameters have equivalents in this package (table below).
 2. The model can be expressed purely as a sequential application of a list of layers,
 i.e. with `nn.Sequential`.
 
-| pytorch          | vi replacement  |
+| PyTorch          | vi replacement  |
 |------------------|-----------------|
 | `nn.Linear`      | `VILinear`      |
 | `nn.Conv1d`      | `VIConv1d`      |
@@ -103,7 +103,7 @@ i.e. with `nn.Sequential`.
 Given these two conditions, inherit the module from `vi.VIModule` instead of `nn.Module`
 and use `vi.VISequential` instead of `nn.Sequential`. Then replace all layers
 containing parameters as shown in the table above. For basic usage initialize these
-modules with the same arguments as their pytorch equivalent. For advanced usage see
+modules with the same arguments as their PyTorch equivalent. For advanced usage see
 [Quickstart: Level 2](#level-2). Many other layers can be included as-is. In particular
 activation functions, pooling, and padding (even dropout, though they
 should not be necessary since the prior acts as regularization). Currently not supported
@@ -111,20 +111,18 @@ are recurrent and transposed convolution layers. Normalization layers may
 have parameters depending on their setting, but can likely be left non-Bayesian.
 
 Additionally, the loss must be replaced. To start out use `vi.KullbackLeiblerLoss`,
-which requires a `PredictiveDistribution` and the size of the training dataset (this is
-important for balancing of assumptions and data, more details
-[here](#variational-inference)). Choose your `PredictiveDistribution`
-from the table below based on the loss you would use in pytorch (more details
-[here](#the-predictive-distribution)).
+which requires a `Distribution` with `self.is_predictive_distribution=True` and the size
+of the training dataset (this is important for balancing of assumptions and data. Choose
+your `Distribution` from the table below based on the loss you would use in PyTorch.
 
 > [!IMPORTANT]
 > `KullbackLeiblerLoss` requires the length of the dataset, not the dataloader, which is
 > just the number of batches.
 
-| pytorch               | vi replacement (import from `vi.predictive_distributions`) |
-|-----------------------|------------------------------------------------------------|
-| `nn.MSELoss`          | `MeanFieldNormalPredictiveDistribution`                    |
-| `nn.CrossEntropyLoss` | `CategoricalPredictiveDistribution`                        |
+| PyTorch               | vi replacement <br/> from `vi.distributions` |
+|-----------------------|----------------------------------------------|
+| `nn.MSELoss`          | `MeanFieldNormal`                            |
+| `nn.CrossEntropyLoss` | `Categorical`                                |
 
 > [!NOTE]
 > Reasons for the requirement to use `VISequential` (and how to overcome it)
@@ -135,20 +133,20 @@ from the table below based on the loss you would use in pytorch (more details
 
 ### Level 2
 
-While the interface of `VIModule`s is kept intentionally similar to pytorch, there are
+While the interface of `VIModule`s is kept intentionally similar to PyTorch, there are
 additional arguments that customize the Bayesian assumptions that all provided layers
 accept and custom modules should generally accept and pass on to submodules:
 - variational_distribution (`Distribution`): defines the weight distribution and
-variational parameters (more details [here](#the-variational-distribution)). The default
-`MeanFieldNormal` assumes normal distributed, uncorrelated weights described by a mean
-and a standard deviation. While there are currently no alternatives the initial value of
-the standard deviation can be customized here.
+variational parameters. The default `MeanFieldNormal` assumes normal distributed,
+uncorrelated weights described by a mean and a standard deviation. While there are
+currently no alternatives the initial value of the standard deviation can be customized
+here.
 - prior (`Distribution`): defines the assumptions on the weight distribution and acts as
-regularizer (more details [here](#the-prior)). The default `MeanFieldNormal` assumes
-normal distributed, uncorrelated weights with mean 0 and standard deviation 1 (also
-known as a standard normal prior). Mean and standard deviation can be adapted here.
-Particularly reducing the standard deviation may help convergence at the risk of an
-overconfident model. Other available priors:
+regularizer. The default `MeanFieldNormal` assumes normal distributed, uncorrelated
+weights with mean 0 and standard deviation 1 (also known as a standard normal prior).
+Mean and standard deviation can be adapted here. Particularly reducing the standard
+deviation may help convergence at the risk of an overconfident model. Other available
+priors:
   - `BasicQuietPrior`: an experimental prior that correlates mean and standard deviation
   to disincentivize noisy weights
 - rescale_prior (`bool`): Experimental. Scales the prior similar to Kaiming-initialization.
@@ -161,22 +159,22 @@ rescale_prior is also set to True. Current research.
 
 ### Level 3
 
-For more advanced models one feature of [Variational Inference](#variational-inference)
-(VI) needs to be taken into account. Generally, a loss for VI will require the log
-probability of the actually used weights (which are sampled on each forward pass) in the
-variational and prior distribution. Since it is quite inefficient to save the samples
-these log probabilities are evaluated during the forward pass and returned by the model.
-Since this is only necessary for training it can be controlled with the argument
-`return_log_probs`. Once the model is initialized this flag can be changed by setting
-`VIModule.return_log_probs`, which either enables (`True`) or disables (`False`) the
-returning of the log probabilities for all submodules.
+For more advanced models one feature of Variational Inference (VI) needs to be taken
+into account. Generally, a loss for VI will require the log probability of the actually
+used weights (which are sampled on each forward pass) in the variational and prior
+distribution. Since it is quite inefficient to save the samples these log probabilities
+are evaluated during the forward pass and returned by the model. Since this is only
+necessary for training it can be controlled with the argument `return_log_probs`. Once
+the model is initialized this flag can be changed by setting `VIModule.return_log_probs`,
+which either enables (`True`) or disables (`False`) the returning of the log
+probabilities for all submodules.
 
 While `torch_bayesian` calculates and aggregates log probs internally, this is handled
 by the outermost `VIModule`. This module will not have the expected output signature
-when returning log probs, but instead return a `VIReturn` object. This class is pytorch
+when returning log probs, but instead return a `VIReturn` object. This class is PyTorch
 `Tensor` that also contains log prob information in its additional `log_probs`
 attribute. This is the format `torch_bayesian` losses expect. Therefore, if you feed the
-output directly into a loss there should be no issues. While all pytorch tensor
+output directly into a loss there should be no issues. While all PyTorch tensor
 operations can be performed on `VIReturns` many will delete the log prob information and
 transform the object back into a `Tensor`. This needs to be considered when performing
 further operations on the model output. The simplest way to avoid issues is to wrap all
@@ -202,7 +200,7 @@ performed by the outermost module. For deployment `return_log_probs` should be s
 ### Level 4
 
 Arguably, creating `VIModule`s with Bayesian weights - which are typically called random
-variables in documentation and code - is arguably simpler than in pytorch. Since a
+variables in documentation and code - is arguably simpler than in PyTorch. Since a
 different number of weight matrices needs to be created based on the variational
 distribution, the process is completely automated. For `VIModules` without weights
 `super().__init__` is called without arguments. Modules with random variables

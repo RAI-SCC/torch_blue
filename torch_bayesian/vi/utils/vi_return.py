@@ -29,6 +29,8 @@ class VIReturn(Tensor):
         super().__init__()
         self.log_probs = log_probs
 
+    # The doc strings of this and the next method throw warnings. This is inherited
+    # from pytorch, but seems to compile correctly.
     def clone(self, *args: Any, **kwargs: Any) -> "VIReturn":  # noqa: D102
         if self.log_probs is None:
             return VIReturn(super().clone(*args, **kwargs), None)
@@ -48,17 +50,17 @@ class VIReturn(Tensor):
 
     @staticmethod
     def from_tensor(input_: Tensor, log_probs: Optional[Tensor]) -> "VIReturn":
-        """
+        r"""
         Turn a torch.Tensor into a VIReturn.
 
         This is an inplace operation and does not copy data.
 
         Parameters
         ----------
-        input_: Tensor
+        input\_: Tensor
             The Tensor to convert.
         log_probs: Optional[Tensor]
-            The log probabilities to attach to input_.
+            The log probabilities to attach to input\_.
 
         Returns
         -------
