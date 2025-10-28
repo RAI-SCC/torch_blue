@@ -16,10 +16,10 @@ most components mirror components from [PyTorch](https://pytorch.org/docs/stable
 
 We heavily recommend installing ``torch_bayesian`` in a dedicated `Python3.9+`
 [virtual environment](https://docs.python.org/3/library/venv.html). You can install
-``torch_bayesian`` directly from the GitHub repository via:
+``torch_bayesian`` from PyPI:
 
 ```console
-$ pip install git+https://github.com/RAI-SCC/torch_bayesian
+$ pip install torch-bayesian
 ```
 
 Alternatively, you can install ``torch_bayesian`` locally. To achieve this, there
@@ -53,21 +53,7 @@ $ pip install -e .[scripts]
 
 ## Documentation
 
-Documentation is not yet hosted online, but can easily be build locally with sphinx.
-Run
-
-```console
-$ pip install -e .[docs]
-```
-
-Then navigate to ``torch_bayesian/docs/`` and run:
-
-```console
-$ sphinx-build -T -E -b html ./source ./build
-```
-
-You can then open ``torch_bayesian/docs/build/index.html`` to start browsing.
-
+Documentation is available online at [readthedocs](https://torch-bayesian.readthedocs.io).
 
 ## Quickstart
 
