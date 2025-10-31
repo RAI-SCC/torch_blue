@@ -265,7 +265,7 @@ class Distribution(metaclass=PostInitCallMeta):
         variable: str
             The name of the random variable to reset as given by
             :attr:`variational_parameters` of the associated
-            :class:`~torch_blue.vi.variational_distributions.VariationalDistribution`.
+            :class:`~torch_blue.vi.distributions.Distribution`.
 
         Returns
         -------
@@ -368,8 +368,8 @@ class Distribution(metaclass=PostInitCallMeta):
         """
         Compare distribution parameters to another set of parameters.
 
-        Typically, this is used to compare to the distribution parameters of a
-        :class:`~torch_blue.vi.priors.Prior`.
+        Typically, this is used to compare to the distribution parameters of another
+        :class:`~torch_blue.vi.distributions.Distributions`.
 
         Parameters
         ----------
