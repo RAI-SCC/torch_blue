@@ -1,6 +1,6 @@
 # TorchBuq - Bayesian uncertainty quantification with a PyTorch-like interface
 
-TorchBuq provides a simple way for non-expert users to implement and train Bayesian
+`TorchBuq` provides a simple way for non-expert users to implement and train Bayesian
 Neural Networks (BNNs). Currently, it only supports Variational Inference (VI), but will
 hopefully grow and expand in the future. To make the user experience as easy as possible
 most components mirror components from [PyTorch](https://pytorch.org/docs/stable/index.html).
@@ -15,15 +15,15 @@ most components mirror components from [PyTorch](https://pytorch.org/docs/stable
 
 ## Installation
 
-We heavily recommend installing TorchBuq in a dedicated `Python3.9+`
+We heavily recommend installing `TorchBuq` in a dedicated `Python3.9+`
 [virtual environment](https://docs.python.org/3/library/venv.html). You can install
-TorchBuq from PyPI:
+`TorchBuq` from PyPI:
 
 ```console
 $ pip install torchbuq
 ```
 
-Alternatively, you can install TorchBuq locally. To achieve this, there
+Alternatively, you can install `TorchBuq` locally. To achieve this, there
 are two steps you need to follow:
 
 1. Clone the repository
@@ -156,7 +156,7 @@ the model is initialized this flag can be changed by setting `VIModule.return_lo
 which either enables (`True`) or disables (`False`) the returning of the log
 probabilities for all submodules.
 
-While TorchBuq calculates and aggregates log probs internally, this is handled
+While `TorchBuq` calculates and aggregates log probs internally, this is handled
 by the outermost `VIModule`. This module will not have the expected output signature
 when returning log probs, but instead return a `VIReturn` object. This class is PyTorch
 `Tensor` that also contains log prob information in its additional `log_probs`
@@ -186,7 +186,7 @@ performed by the outermost module. For deployment `return_log_probs` should be s
 
 ### Level 4
 
-Arguably, creating `VIModule`s with Bayesian weights - which are typically called random
+Creating `VIModule`s with Bayesian weights - which are typically called random
 variables in documentation and code - is arguably simpler than in PyTorch. Since a
 different number of weight matrices needs to be created based on the variational
 distribution, the process is completely automated. For `VIModules` without weights
