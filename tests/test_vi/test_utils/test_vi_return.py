@@ -4,7 +4,7 @@ import pytest
 import torch
 from torch import Tensor
 
-from torch_bayesian.vi import VIReturn
+from torch_blue.vi import VIReturn
 
 
 class TestVIReturn:

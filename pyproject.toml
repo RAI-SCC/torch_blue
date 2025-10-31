@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = [
-    "torch_bayesian",
-    "torch_bayesian.vi",
-    "torch_bayesian.vi.distributions",
-    "torch_bayesian.vi.utils",
+    "torch_blue",
+    "torch_blue.vi",
+    "torch_blue.vi.distributions",
+    "torch_blue.vi.utils",
 ]
 
 [project]
-name = "torch_bayesian"
+name = "torch_blue"
 version = "0.9.0"
 authors = [
   { name="RAI", email="rai@kit.edu"},
@@ -50,7 +50,7 @@ scripts = [
 
 [tool.mypy]
 python_version = "3.9"
-modules = ["torch_bayesian"]
+modules = ["torch_blue"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 files = [
@@ -151,5 +151,5 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["torch_bayesian"]
+source = ["torch_blue"]
 command_line = "-m pytest"

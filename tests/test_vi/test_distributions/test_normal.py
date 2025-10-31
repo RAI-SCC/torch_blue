@@ -7,8 +7,8 @@ import torch
 from torch import distributions as dist
 from torch import nn
 
-from torch_bayesian.vi.distributions import MeanFieldNormal, Normal
-from torch_bayesian.vi.utils import use_norm_constants
+from torch_blue.vi.distributions import MeanFieldNormal, Normal
+from torch_blue.vi.utils import use_norm_constants
 
 
 class TestNormal:

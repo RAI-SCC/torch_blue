@@ -1,4 +1,4 @@
-from torch_bayesian.vi import _globals
+from torch_blue.vi import _globals
 
 
 def use_norm_constants(mode: bool = True) -> None:

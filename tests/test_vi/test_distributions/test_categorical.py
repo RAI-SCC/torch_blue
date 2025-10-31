@@ -1,6 +1,6 @@
 import torch
 
-from torch_bayesian.vi.distributions import Categorical
+from torch_blue.vi.distributions import Categorical
 
 
 def test_categorical(device: torch.device) -> None:

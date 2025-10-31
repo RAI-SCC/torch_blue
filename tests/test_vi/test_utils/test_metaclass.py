@@ -1,4 +1,4 @@
-from torch_bayesian.vi.utils import PostInitCallMeta
+from torch_blue.vi.utils import PostInitCallMeta
 
 
 def test_post_init_meta() -> None:
