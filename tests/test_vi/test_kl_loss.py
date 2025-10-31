@@ -3,9 +3,9 @@ from warnings import filterwarnings
 import torch
 from pytest import raises, warns
 
-from torch_bayesian.vi import KullbackLeiblerLoss, VIReturn
-from torch_bayesian.vi.distributions import MeanFieldNormal, UniformPrior
-from torch_bayesian.vi.utils import UnsupportedDistributionError
+from torchbuq.vi import KullbackLeiblerLoss, VIReturn
+from torchbuq.vi.distributions import MeanFieldNormal, UniformPrior
+from torchbuq.vi.utils import UnsupportedDistributionError
 
 
 def test_kl_loss(device: torch.device) -> None:

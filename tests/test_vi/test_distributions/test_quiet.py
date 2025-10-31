@@ -4,8 +4,8 @@ import torch
 from pytest import mark
 from torch.nn import Module, Parameter
 
-from torch_bayesian.vi.distributions import BasicQuietPrior
-from torch_bayesian.vi.utils import use_norm_constants
+from torchbuq.vi.distributions import BasicQuietPrior
+from torchbuq.vi.utils import use_norm_constants
 
 
 @mark.parametrize("norm_constants", [True, False])

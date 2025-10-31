@@ -15,8 +15,8 @@ class Categorical(Distribution):
     normalized to one across classes. The last dimension of the model output is
     interpreted as the number of classes.
 
-    When used with :class:`~torch_bayesian.vi.KullbackLeiblerLoss` or
-    :class:`~torch_bayesian.vi.AnalyticalKullbackLeiblerLoss` this distribution
+    When used with :class:`~torchbuq.vi.KullbackLeiblerLoss` or
+    :class:`~torchbuq.vi.AnalyticalKullbackLeiblerLoss` this distribution
     produces a loss related to cross-entropy loss.
 
     Parameters

@@ -1,7 +1,8 @@
-# torch_bayesian - Easy Variational Inference
+# TorchBuq - Bayesian uncertainty quantification with a PyTorch-like interface
 
-This package provides a simple way for non-expert users to implement and train Bayesian
-Neural Networks (BNNs) with Variational Inference (VI). To make this as easy as possible
+TorchBuq provides a simple way for non-expert users to implement and train Bayesian
+Neural Networks (BNNs). Currently, it only supports Variational Inference (VI), but will
+hopefully grow and expand in the future. To make the user experience as easy as possible
 most components mirror components from [PyTorch](https://pytorch.org/docs/stable/index.html).
 
 - [Installation](#installation)
@@ -14,21 +15,21 @@ most components mirror components from [PyTorch](https://pytorch.org/docs/stable
 
 ## Installation
 
-We heavily recommend installing ``torch_bayesian`` in a dedicated `Python3.9+`
+We heavily recommend installing TorchBuq in a dedicated `Python3.9+`
 [virtual environment](https://docs.python.org/3/library/venv.html). You can install
-``torch_bayesian`` from PyPI:
+TorchBuq from PyPI:
 
 ```console
-$ pip install torch-bayesian
+$ pip install torchbuq
 ```
 
-Alternatively, you can install ``torch_bayesian`` locally. To achieve this, there
+Alternatively, you can install TorchBuq locally. To achieve this, there
 are two steps you need to follow:
 
 1. Clone the repository
 
 ```console
-$ git clone https://github.com/RAI-SCC/torch_bayesian
+$ git clone https://github.com/RAI-SCC/torchbuq
 ```
 
 2. Install the code locally
@@ -53,7 +54,7 @@ $ pip install -e .[scripts]
 
 ## Documentation
 
-Documentation is available online at [readthedocs](https://torch-bayesian.readthedocs.io).
+Documentation is available online at [readthedocs](https://torchbuq.readthedocs.io).
 
 ## Quickstart
 
@@ -155,11 +156,11 @@ the model is initialized this flag can be changed by setting `VIModule.return_lo
 which either enables (`True`) or disables (`False`) the returning of the log
 probabilities for all submodules.
 
-While `torch_bayesian` calculates and aggregates log probs internally, this is handled
+While TorchBuq calculates and aggregates log probs internally, this is handled
 by the outermost `VIModule`. This module will not have the expected output signature
 when returning log probs, but instead return a `VIReturn` object. This class is PyTorch
 `Tensor` that also contains log prob information in its additional `log_probs`
-attribute. This is the format `torch_bayesian` losses expect. Therefore, if you feed the
+attribute. This is the format TorchBuq losses expect. Therefore, if you feed the
 output directly into a loss there should be no issues. While all PyTorch tensor
 operations can be performed on `VIReturns` many will delete the log prob information and
 transform the object back into a `Tensor`. This needs to be considered when performing

@@ -4,7 +4,7 @@ from typing import Optional
 import torch
 from torch import Tensor
 
-from torch_bayesian.vi import _globals
+from torchbuq.vi import _globals
 
 from .base import Distribution
 

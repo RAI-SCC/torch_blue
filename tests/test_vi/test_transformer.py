@@ -6,7 +6,7 @@ from pytest import mark, raises
 from torch import Tensor, nn
 from torch.nn import functional as F  # noqa: N812
 
-from torch_bayesian.vi import (
+from torchbuq.vi import (
     VILinear,
     VIModule,
     VIMultiheadAttention,
@@ -16,7 +16,7 @@ from torch_bayesian.vi import (
     VITransformerEncoder,
     VITransformerEncoderLayer,
 )
-from torch_bayesian.vi.distributions import Distribution, MeanFieldNormal
+from torchbuq.vi.distributions import Distribution, MeanFieldNormal
 
 
 class Filter(VIModule):

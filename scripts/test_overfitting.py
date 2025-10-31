@@ -2,8 +2,8 @@ import torch
 from matplotlib import pyplot as plt
 from torch.optim import Adam
 
-from torch_bayesian.vi import KullbackLeiblerLoss, VILinear
-from torch_bayesian.vi.distributions import MeanFieldNormal
+from torchbuq.vi import KullbackLeiblerLoss, VILinear
+from torchbuq.vi.distributions import MeanFieldNormal
 
 
 def test_overfitting() -> None:

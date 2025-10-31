@@ -14,19 +14,19 @@ class VIkwargs(TypedDict):
     """
     Common keyword arguments for most VIModules.
 
-    Most :class:`~torch_bayesian.vi.VIModule` accept these as keyword arguments. Unless
+    Most :class:`~torchbuq.vi.VIModule` accept these as keyword arguments. Unless
     specified otherwise, they use the defaults below.
 
     This class is only used for documentation and type hinting.
 
     Parameters
     ----------
-    variational_distribution: Union[Distribution, List[Distribution]], default: :class:`MeanFieldNormal()<torch_bayesian.vi.distributions.MeanFieldNormal>`
-        Either one :class:`torch_bayesian.vi.distributions.Distribution` ,
+    variational_distribution: Union[Distribution, List[Distribution]], default: :class:`MeanFieldNormal()<torchbuq.vi.distributions.MeanFieldNormal>`
+        Either one :class:`torchbuq.vi.distributions.Distribution` ,
         which is used for all random variables, or a list of them, one for each random
         variable. This specifies the assumed parametrization of the weight distribution.
-    prior: Union[Distribution, List[Distribution]], default: :class:`MeanFieldNormal()<torch_bayesian.vi.distributions.MeanFieldNormal>`
-        Either one :class:`~torch_bayesian.vi.distributions.Distribution` , which is
+    prior: Union[Distribution, List[Distribution]], default: :class:`MeanFieldNormal()<torchbuq.vi.distributions.MeanFieldNormal>`
+        Either one :class:`~torchbuq.vi.distributions.Distribution` , which is
         used for all random variables, or a list of them, one for each random variable.
         This specifies the previous knowledge about the weight distribution.
     rescale_prior: bool, default: False
@@ -39,7 +39,7 @@ class VIkwargs(TypedDict):
     return_log_probs: bool, default: True
         If ``True`` the model forward pass returns the log probability of the sampled
         weights. This is required for use of
-        :class:`~torch_bayesian.vi.KullbackLeiblerLoss`.
+        :class:`~torchbuq.vi.KullbackLeiblerLoss`.
     device: Optional[torch.device], default: None
         The torch.device on which the module should be stored.
     dtype: Optional[torch.dtype], default: None

@@ -1,7 +1,7 @@
 import torch
 from torch.nn import Module, Parameter
 
-from torch_bayesian.vi.utils import init
+from torchbuq.vi.utils import init
 
 
 def test_fixed(device: torch.device) -> None:

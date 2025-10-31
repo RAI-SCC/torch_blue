@@ -1,8 +1,8 @@
 import torch
 
-from torch_bayesian.vi import VIConv1d, VIConv2d, VIConv3d
-from torch_bayesian.vi.conv import _VIConvNd
-from torch_bayesian.vi.distributions import MeanFieldNormal
+from torchbuq.vi import VIConv1d, VIConv2d, VIConv3d
+from torchbuq.vi.conv import _VIConvNd
+from torchbuq.vi.distributions import MeanFieldNormal
 
 
 # Since these are basically copied from torch 2.4 testing is limited

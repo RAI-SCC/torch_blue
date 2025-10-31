@@ -246,7 +246,7 @@ class Distribution(metaclass=PostInitCallMeta):
 
         To enable the ``prior_initialization`` functionality, the class must implement
         this method. It initializes the parameters for one random variable of a
-        :class:`~torch_bayesian.vi.VIModule`, whose variational parameters are
+        :class:`~torchbuq.vi.VIModule`, whose variational parameters are
         supported by the prior, to the prior values. To that end the name of the random
         variable to initialize is passed to the method.
 
@@ -265,7 +265,7 @@ class Distribution(metaclass=PostInitCallMeta):
         variable: str
             The name of the random variable to reset as given by
             :attr:`variational_parameters` of the associated
-            :class:`~torch_bayesian.vi.variational_distributions.VariationalDistribution`.
+            :class:`~torchbuq.vi.variational_distributions.VariationalDistribution`.
 
         Returns
         -------
@@ -369,7 +369,7 @@ class Distribution(metaclass=PostInitCallMeta):
         Compare distribution parameters to another set of parameters.
 
         Typically, this is used to compare to the distribution parameters of a
-        :class:`~torch_bayesian.vi.priors.Prior`.
+        :class:`~torchbuq.vi.priors.Prior`.
 
         Parameters
         ----------
