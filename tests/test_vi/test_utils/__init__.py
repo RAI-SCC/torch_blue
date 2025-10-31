@@ -1,1 +1,1 @@
-"""Test torch-bayesian.vi.utils."""
+"""Test torch_blue.vi.utils."""

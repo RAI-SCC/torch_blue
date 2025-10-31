@@ -62,7 +62,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     However, it has the added attribute :attr:`log_probs` where the log probs are
     stored. This is used by losses, therefore it is easiest to wrap all operations into
     a :class:`~.VIModule` and feed the output directly into a loss function. Classical
-    losses will treat it like a Tensor and `torchbuq` losses can use the log prob
+    losses will treat it like a Tensor and `torch_blue` losses can use the log prob
     information. If the model has multiple output Tensors, each will contain the full
     log prob information.
 
@@ -85,7 +85,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     is called without arguments. In this setting the methods :meth:`get_log_probs`,
     :meth:`get_variational_parameters`, :meth:`reset_variational_parameters`, and
     :meth:`sample_variable` cannot be used and raise
-    :exc:`~torchbuq.vi.utils.NoVariablesError`.
+    :exc:`~torch_blue.vi.utils.NoVariablesError`.
 
     Any weight matrix in a BNN may require multiple parameters (e.g. mean and std).
     These are stored in separate attributes and therefore cannot be created without

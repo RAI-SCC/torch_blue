@@ -7,13 +7,13 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../../torchbuq"))
+sys.path.insert(0, os.path.abspath("../../torch_blue"))
 
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "torchbuq"
+project = "torch_blue"
 copyright = "2025, RAI-SCC"
 author = "RAI-SCC"
 release = "0.9.0"
@@ -30,14 +30,14 @@ autodoc_type_aliases = {
     "torch.nn.common_types._size_1_t": "int | Tuple[int,]",
     "torch.nn.common_types._size_2_t": "int | Tuple[int, int]",
     "torch.nn.common_types._size_3_t": "int | Tuple[int, int, int]",
-    "torchbuq.vi.utils.common_types.VIReturn[torch.Tensor]": "torch.Tensor | Tuple[torch.Tensor, torch.Tensor]",
-    "torchbuq.vi.utils.common_types.VIReturn[Tuple[torch.Tensor, Optional[torch.Tensor]]]": "Tuple[torch.Tensor, Optional[torch.Tensor]] | Tuple[Tuple[torch.Tensor, torch.Tensor | None], torch.Tensor]",
-    "torchbuq.vi.utils.common_types.VIReturn[torch.nn.common_types._tensor_list_t]": "Union[torch.Tensor, List[torch.Tensor]] | Tuple[Union[torch.Tensor, List[torch.Tensor]], torch.Tensor]",
-    "torchbuq.vi.utils.common_types._vardist_any_t": "VariationalDistribution | List[VariationalDistribution]",
-    "torchbuq.vi.utils.common_types._prior_any_t": "Prior | List[Prior]",
-    "torchbuq.vi.utils.common_types._log_prob_return_format[torch.Tensor]": "Tuple[torch.Tensor, torch.Tensor]",
+    "torch_blue.vi.utils.common_types.VIReturn[torch.Tensor]": "torch.Tensor | Tuple[torch.Tensor, torch.Tensor]",
+    "torch_blue.vi.utils.common_types.VIReturn[Tuple[torch.Tensor, Optional[torch.Tensor]]]": "Tuple[torch.Tensor, Optional[torch.Tensor]] | Tuple[Tuple[torch.Tensor, torch.Tensor | None], torch.Tensor]",
+    "torch_blue.vi.utils.common_types.VIReturn[torch.nn.common_types._tensor_list_t]": "Union[torch.Tensor, List[torch.Tensor]] | Tuple[Union[torch.Tensor, List[torch.Tensor]], torch.Tensor]",
+    "torch_blue.vi.utils.common_types._vardist_any_t": "VariationalDistribution | List[VariationalDistribution]",
+    "torch_blue.vi.utils.common_types._prior_any_t": "Prior | List[Prior]",
+    "torch_blue.vi.utils.common_types._log_prob_return_format[torch.Tensor]": "Tuple[torch.Tensor, torch.Tensor]",
     "Ellipsis": "...",
-    "torchbuq.vi.base.": "torchbuq.vi.",
+    "torch_blue.vi.base.": "torch_blue.vi.",
     #    "torch.Tensor": "Tensor",
 }
 
@@ -57,7 +57,7 @@ extensions = [
 ]
 
 autoapi_type = "python"
-autoapi_dirs = ["../../torchbuq/"]
+autoapi_dirs = ["../../torch_blue/"]
 autoapi_ignore = ["*/tests/*"]  # , "*[!_].py"]
 autoapi_template_dir = "_templates/"
 autoapi_own_page_level = "class"
@@ -125,7 +125,7 @@ def setup(sphinx):
 
 # apidoc_modules = [
 #    {
-#        "path": "../../torchbuq/",
+#        "path": "../../torch_blue/",
 #        "destination": "../source",
 #        "module_first": False,
 #        "implicit_namespaces": False,

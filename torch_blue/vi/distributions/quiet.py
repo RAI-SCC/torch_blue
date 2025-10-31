@@ -5,7 +5,7 @@ import torch
 from torch import Tensor
 from torch.nn import init
 
-from torchbuq.vi import _globals
+from torch_blue.vi import _globals
 
 from ..utils import init as vi_init
 from .base import Distribution
@@ -71,7 +71,7 @@ class BasicQuietPrior(Distribution):
         All Tensors have the same shape.
 
         This calculation is affected by :data:`_globals._USE_NORM_CONSTANTS`, which can
-        be set with :func:`~torchbuq.vi.utils.use_norm_constants`.
+        be set with :func:`~torch_blue.vi.utils.use_norm_constants`.
 
         Parameters
         ----------
@@ -109,7 +109,7 @@ class BasicQuietPrior(Distribution):
         variable: str
             The name of the random variable to reset as given by
             :attr:`variational_parameters` of the associated
-            :class:`~torchbuq.vi.variational_distributions.VariationalDistribution`.
+            :class:`~torch_blue.vi.variational_distributions.VariationalDistribution`.
 
         Returns
         -------

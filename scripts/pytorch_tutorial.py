@@ -6,9 +6,9 @@ from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision.transforms import ToTensor
 
-from torchbuq import vi
-from torchbuq.vi import VIModule
-from torchbuq.vi.distributions import Categorical
+from torch_blue import vi
+from torch_blue.vi import VIModule
+from torch_blue.vi.distributions import Categorical
 
 
 def torch_tutorial() -> None:

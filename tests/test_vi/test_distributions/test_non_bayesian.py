@@ -4,7 +4,7 @@ import pytest
 import torch
 from torch import nn
 
-from torchbuq.vi.distributions import NonBayesian, UniformPrior
+from torch_blue.vi.distributions import NonBayesian, UniformPrior
 
 shapes = [5, [3, 6], [5, 3, 4]]
 

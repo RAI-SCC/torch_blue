@@ -3,8 +3,8 @@ from math import log
 import torch
 from pytest import mark
 
-from torchbuq.vi.distributions import MeanFieldStudentT, StudentT
-from torchbuq.vi.utils import use_norm_constants
+from torch_blue.vi.distributions import MeanFieldStudentT, StudentT
+from torch_blue.vi.utils import use_norm_constants
 
 
 class TestMeanFieldStudentT:

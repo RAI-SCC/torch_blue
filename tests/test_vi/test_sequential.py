@@ -6,7 +6,7 @@ import torch
 from torch import Tensor
 from torch.nn import ReLU
 
-from torchbuq.vi import VILinear, VIModule, VIResidualConnection, VISequential
+from torch_blue.vi import VILinear, VIModule, VIResidualConnection, VISequential
 
 
 def test_sequential(device: torch.device) -> None:

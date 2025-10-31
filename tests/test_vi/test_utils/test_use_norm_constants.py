@@ -1,5 +1,5 @@
-from torchbuq.vi import _globals
-from torchbuq.vi.utils import use_norm_constants
+from torch_blue.vi import _globals
+from torch_blue.vi.utils import use_norm_constants
 
 
 def test_use_norm_constants() -> None:

@@ -4,10 +4,10 @@
 #### **Did you find a bug?**
 
 * **Ensure the bug was not already reported** by searching on GitHub under
-[Issues](https://github.com/RAI-SCC/torchbuq/issues).
+[Issues](https://github.com/RAI-SCC/torch_blue/issues).
 
 * If you're unable to find an open issue addressing the problem,
-[open a new one](https://github.com/RAI-SCC/torchbuq/issues/new). Be sure to include a
+[open a new one](https://github.com/RAI-SCC/torch_blue/issues/new). Be sure to include a
 **title and clear description**, as much relevant information as possible. Ideally a
 **code sample** or a **pytest test** demonstrating the expected behavior that is not
 occurring.
@@ -44,7 +44,7 @@ the code style for you.
 
 * We are currently maintaining 100% test coverage. Try and do your part to keep this up :smile:
 
-* Check  the [tests README](https://github.com/RAI-SCC/torchbuq/blob/main/tests/test_vi/README.md).
+* Check  the [tests README](https://github.com/RAI-SCC/torch_blue/blob/main/tests/test_vi/README.md).
 Every file has an associated test which is supposed to reach full coverage on that
 specific file. The README also tracks the loop free dependency tree of the tests. Please
 do not add loops.

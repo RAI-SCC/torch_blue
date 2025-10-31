@@ -4,8 +4,8 @@ from typing import cast
 import torch
 from torch import Tensor
 
-from torchbuq.vi import VILinear, VIReturn
-from torchbuq.vi.distributions import MeanFieldNormal, NonBayesian
+from torch_blue.vi import VILinear, VIReturn
+from torch_blue.vi.distributions import MeanFieldNormal, NonBayesian
 
 
 def test_vilinear(device: torch.device) -> None:

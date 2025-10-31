@@ -1,1 +1,1 @@
-"""Test torch-bayesian.vi.distributions."""
+"""Test torch_blue.vi.distributions."""
