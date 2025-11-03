@@ -152,7 +152,7 @@ class MeanFieldNormal(Distribution):
         variable: str
             The name of the random variable to reset as given by
             :attr:`variational_parameters` of the associated
-            :class:`~torch_blue.vi.variational_distributions.VariationalDistribution`.
+            :class:`~torch_blue.vi.distributions.Distribution`.
 
         Returns
         -------
