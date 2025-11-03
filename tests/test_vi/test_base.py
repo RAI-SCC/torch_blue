@@ -8,9 +8,9 @@ from torch import Tensor
 from torch._C._functorch import get_unwrapped
 from torch.nn import Module
 
-from torch_bayesian.vi import VIModule, VIReturn
-from torch_bayesian.vi.distributions import Distribution
-from torch_bayesian.vi.utils import NoVariablesError, UnsupportedDistributionError
+from torch_blue.vi import VIModule, VIReturn
+from torch_blue.vi.distributions import Distribution
+from torch_blue.vi.utils import NoVariablesError, UnsupportedDistributionError
 
 
 def test_expand_to_samples(device: torch.device) -> None:
@@ -333,7 +333,7 @@ def test_get_log_probs(device: torch.device) -> None:
 
 def test_log_prob_setting(device: torch.device) -> None:
     """Test setting of _return_log_probs with VIModule.return_log_probs."""
-    from torch_bayesian.vi import VILinear
+    from torch_blue.vi import VILinear
 
     in_features = 3
     out_features = 5

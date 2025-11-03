@@ -6,7 +6,7 @@ import pytest
 import torch
 from torch import Tensor
 
-from torch_bayesian.vi import (
+from torch_blue.vi import (
     AnalyticalKullbackLeiblerLoss,
     KullbackLeiblerLoss,
     KullbackLeiblerModule,
@@ -14,18 +14,18 @@ from torch_bayesian.vi import (
     VIModule,
     VISequential,
 )
-from torch_bayesian.vi.analytical_kl_loss import (
+from torch_blue.vi.analytical_kl_loss import (
     NonBayesianDivergence,
     NormalNormalDivergence,
     UniformNormalDivergence,
 )
-from torch_bayesian.vi.distributions import (
+from torch_blue.vi.distributions import (
     Distribution,
     MeanFieldNormal,
     NonBayesian,
     UniformPrior,
 )
-from torch_bayesian.vi.utils import UnsupportedDistributionError, use_norm_constants
+from torch_blue.vi.utils import UnsupportedDistributionError, use_norm_constants
 
 
 def test_klmodule(device: torch.device) -> None:

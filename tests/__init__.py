@@ -1,1 +1,1 @@
-"""Test torch-bayesian."""
+"""Test torch_blue."""

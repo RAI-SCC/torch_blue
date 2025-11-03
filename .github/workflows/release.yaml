@@ -35,14 +35,14 @@ jobs:
       - name: Build package
         run: |
           python -m build
-      #- name: Publish package distributions to PyPI
-      #  # Only run if the tag is a release
-      #  uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # release/v1
-      - name: Publish package to Test PyPI
-        # Only run if the tag is a release candidate
+      - name: Publish package distributions to PyPI
+        # Only run if the tag is a release
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
+      #- name: Publish package to Test PyPI
+      #  # Only run if the tag is a release candidate
+      #  uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # release/v1
+      #  with:
+      #    repository-url: https://test.pypi.org/legacy/
       #- name: Create draft release
       #  env:
       #    GITHUB_TOKEN: ${{ github.token }}

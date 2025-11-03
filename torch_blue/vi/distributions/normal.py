@@ -5,7 +5,7 @@ import torch
 from torch import Tensor
 from torch.nn import init
 
-from torch_bayesian.vi import _globals
+from torch_blue.vi import _globals
 
 from .base import Distribution
 
@@ -86,7 +86,7 @@ class MeanFieldNormal(Distribution):
         standard deviation. All Tensors must have the same shape as `sample`.
 
         This calculation is affected by :data:`_globals._USE_NORM_CONSTANTS`, which can
-        be set with :func:`~torch_bayesian.vi.utils.use_norm_constants`.
+        be set with :func:`~torch_blue.vi.utils.use_norm_constants`.
 
         Parameters
         ----------
@@ -122,7 +122,7 @@ class MeanFieldNormal(Distribution):
         All Tensors have the same shape.
 
         This calculation is affected by :data:`_globals._USE_NORM_CONSTANTS`, which can
-        be set with :func:`~torch_bayesian.vi.utils.use_norm_constants`.
+        be set with :func:`~torch_blue.vi.utils.use_norm_constants`.
 
         Parameters
         ----------
@@ -152,7 +152,7 @@ class MeanFieldNormal(Distribution):
         variable: str
             The name of the random variable to reset as given by
             :attr:`variational_parameters` of the associated
-            :class:`~torch_bayesian.vi.variational_distributions.VariationalDistribution`.
+            :class:`~torch_blue.vi.distributions.Distribution`.
 
         Returns
         -------
@@ -195,7 +195,7 @@ class MeanFieldNormal(Distribution):
         Calculate the log probability of reference given the predictive mean and standard deviation.
 
         This calculation is affected by :data:`_globals._USE_NORM_CONSTANTS`, which can
-        be set with :func:`~torch_bayesian.vi.utils.use_norm_constants`.
+        be set with :func:`~torch_blue.vi.utils.use_norm_constants`.
 
         Parameters
         ----------
