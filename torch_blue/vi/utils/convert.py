@@ -6,6 +6,7 @@ from torch import nn
 from ..base import VIModule
 from ..distributions import MeanFieldNormal
 from .common_types import VIkwargs, _dist_any_t
+from .init import fixed_
 
 _blacklist = [nn.ReLU, nn.LayerNorm]
 
@@ -20,6 +21,7 @@ def _convert_module(
     return_log_probs: bool = True,
     device: Optional[torch.device] = None,
     dtype: Optional[torch.dtype] = None,
+    keep_weights: bool = False,
 ) -> None:
     if module.__class__ in _blacklist:
         return
@@ -44,8 +46,6 @@ def _convert_module(
         VIModule.__post_init__(module)
         return
 
-    # TODO: Add weight copying option
-    # primary_parameter = variational_distribution.primary_parameter
     parameters = module._parameters
     module._parameters = dict()
 
@@ -59,6 +59,12 @@ def _convert_module(
     VIModule.__init__(module, variable_shapes, convert_overwrite=True, **vikwargs)
     VIModule.__post_init__(module)
 
+    if keep_weights:
+        primary_parameter = variational_distribution.primary_parameter
+        for name, parameter in parameters.items():
+            param_name = module.variational_parameter_name(name, primary_parameter)
+            fixed_(getattr(module, param_name), parameter)
+
 
 def convert_to_vimodule(
     module: nn.Module,
@@ -70,6 +76,7 @@ def convert_to_vimodule(
     return_log_probs: bool = True,
     device: Optional[torch.device] = None,
     dtype: Optional[torch.dtype] = None,
+    keep_weights: bool = False,
 ) -> None:
     """Convert a PyTorch module to a VIModule."""
     vikwargs: VIkwargs = dict(
@@ -83,7 +90,7 @@ def convert_to_vimodule(
         dtype=dtype,
     )
     for m in module.modules():
-        _convert_module(m, **vikwargs)
+        _convert_module(m, **vikwargs, keep_weights=keep_weights)
 
     # __post_init__ needs to be called here again since the loop above goes outside in
     # and __post_init__ relies on being called the last time by the outermost module
