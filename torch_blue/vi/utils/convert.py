@@ -62,6 +62,8 @@ def _convert_module(
     if keep_weights:
         primary_parameter = variational_distribution.primary_parameter
         for name, parameter in parameters.items():
+            if parameter is None:
+                continue
             param_name = module.variational_parameter_name(name, primary_parameter)
             fixed_(getattr(module, param_name), parameter)
 
