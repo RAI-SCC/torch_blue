@@ -21,9 +21,11 @@ from .transformer import (
     VITransformerEncoderLayer,
 )
 from .utils.common_types import VIkwargs
+from .utils.convert import convert_to_vimodule
 from .utils.vi_return import VIReturn
 
 __all__ = [
+    "convert_to_vimodule",
     "AnalyticalKullbackLeiblerLoss",
     "KullbackLeiblerLoss",
     "VIConv1d",
