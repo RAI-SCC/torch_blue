@@ -372,12 +372,11 @@ def test_log_prob_setting(device: torch.device) -> None:
 
 
 @pytest.mark.filterwarnings("ignore")
-def test_slow_forward(device: torch.device) -> None:
+def test_basic_jit(device: torch.device) -> None:
     """
-    Test VIModule._slow_forward.
+    Test jit.
 
-    I'm not familiar with the intricacies of what this method is supposed to do.
-    I basically just copied it from torch to maintain all features.
+    Very incomplete test, but better than nothing.
     """
     # Let's just test it by jitifying something
 
@@ -389,12 +388,12 @@ def test_slow_forward(device: torch.device) -> None:
             return x
 
     module1 = Test()
-    inputs = torch.randn(4, 3, device=device)
+    inputs = dict(forward=torch.randn(4, 3, device=device))
     filterwarnings(
         "ignore",
         "Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!",
     )
-    _ = torch.jit.trace(module1.forward, inputs)
+    _ = torch.jit.trace_module(module1, inputs)
 
 
 def test_hooks(device: torch.device) -> None:
