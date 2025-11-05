@@ -54,7 +54,7 @@ class MeanFieldNormal(Distribution):
 
     @property
     def std(self) -> float:
-        """Prior standard deviation."""
+        """Standard deviation of the distribution."""
         return exp(self.log_std)
 
     def sample(self, mean: Tensor, log_std: Tensor) -> Tensor:

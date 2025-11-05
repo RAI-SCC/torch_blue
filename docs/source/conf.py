@@ -30,12 +30,7 @@ autodoc_type_aliases = {
     "torch.nn.common_types._size_1_t": "int | Tuple[int,]",
     "torch.nn.common_types._size_2_t": "int | Tuple[int, int]",
     "torch.nn.common_types._size_3_t": "int | Tuple[int, int, int]",
-    "torch_blue.vi.utils.common_types.VIReturn[torch.Tensor]": "torch.Tensor | Tuple[torch.Tensor, torch.Tensor]",
-    "torch_blue.vi.utils.common_types.VIReturn[Tuple[torch.Tensor, Optional[torch.Tensor]]]": "Tuple[torch.Tensor, Optional[torch.Tensor]] | Tuple[Tuple[torch.Tensor, torch.Tensor | None], torch.Tensor]",
-    "torch_blue.vi.utils.common_types.VIReturn[torch.nn.common_types._tensor_list_t]": "Union[torch.Tensor, List[torch.Tensor]] | Tuple[Union[torch.Tensor, List[torch.Tensor]], torch.Tensor]",
-    "torch_blue.vi.utils.common_types._vardist_any_t": "VariationalDistribution | List[VariationalDistribution]",
-    "torch_blue.vi.utils.common_types._prior_any_t": "Prior | List[Prior]",
-    "torch_blue.vi.utils.common_types._log_prob_return_format[torch.Tensor]": "Tuple[torch.Tensor, torch.Tensor]",
+    "torch_blue.vi.utils.common_types._dist_any_t": "Distribution | List[Distribution]",
     "Ellipsis": "...",
     "torch_blue.vi.base.": "torch_blue.vi.",
     #    "torch.Tensor": "Tensor",
@@ -143,6 +138,8 @@ autoapi_options = [
     #'special-members',
     "imported-members",
 ]
+
+# autoapi_keep_files = True
 
 
 # add_module_names = False
