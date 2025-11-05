@@ -378,6 +378,9 @@ class AnalyticalKullbackLeiblerLoss(Module):
                 continue
 
             for var, prior in zip(module.random_variables, module.prior.values()):
+                if prior is None:
+                    continue
+
                 prior_params = []
                 for param in prior.distribution_parameters:
                     prior_params.append(getattr(prior, param))
