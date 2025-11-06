@@ -292,6 +292,8 @@ class AnalyticalKullbackLeiblerLoss(Module):
                 for prior, var_dist in zip(
                     module.prior.values(), module.variational_distribution.values()
                 ):
+                    if prior is None or var_dist is None:
+                        continue
                     kl_type = self._detect_divergence(prior, var_dist)
                     if divergence_type is None:
                         divergence_type = kl_type

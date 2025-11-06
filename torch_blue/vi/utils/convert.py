@@ -19,8 +19,6 @@ def _convert_module(
     kaiming_initialization: bool = True,
     prior_initialization: bool = False,
     return_log_probs: bool = True,
-    device: Optional[torch.device] = None,
-    dtype: Optional[torch.dtype] = None,
     keep_weights: bool = False,
 ) -> None:
     if module.__class__ in _blacklist:
@@ -33,8 +31,8 @@ def _convert_module(
         kaiming_initialization=kaiming_initialization,
         prior_initialization=prior_initialization,
         return_log_probs=return_log_probs,
-        device=device,
-        dtype=dtype,
+        device=None,
+        dtype=None,
     )
     new_class_name = "AVI" + module.__class__.__name__
     new_class = type(new_class_name, (VIModule, module.__class__), dict())
@@ -50,14 +48,33 @@ def _convert_module(
     module._parameters = dict()
 
     variable_shapes: Dict[str, Optional[Tuple[int, ...]]] = dict()
+    variable_types: Dict[str, Tuple[torch.device, torch.dtype]] = dict()
     for name, parameter in parameters.items():
         if parameter is None:
             variable_shapes[name] = None
         else:
             variable_shapes[name] = tuple(parameter.shape)
+            variable_types[name] = (parameter.device, parameter.dtype)
+
+    devices = {spec[0] for spec in variable_types.values()}
+    dtypes = {spec[1] for spec in variable_types.values()}
+
+    types_set = False
+    if len(devices) == 1 and len(dtypes) == 1:
+        vikwargs["device"] = devices.pop()
+        vikwargs["dtype"] = dtypes.pop()
+        types_set = True
 
     VIModule.__init__(module, variable_shapes, convert_overwrite=True, **vikwargs)
     VIModule.__post_init__(module)
+
+    if not types_set:
+        for (var, (device, dtype)), var_dist in zip(
+            variable_types.items(), module.variational_distribution
+        ):
+            for param in var_dist.distribution_parameters():
+                param_name = module.variational_parameter_name(var, param)
+                getattr(module, param_name).to(device=device, dtype=dtype)
 
     if keep_weights:
         primary_parameter = variational_distribution.primary_parameter
@@ -76,20 +93,18 @@ def convert_to_vimodule(
     kaiming_initialization: bool = True,
     prior_initialization: bool = False,
     return_log_probs: bool = True,
-    device: Optional[torch.device] = None,
-    dtype: Optional[torch.dtype] = None,
     keep_weights: bool = False,
 ) -> None:
     """Convert a PyTorch module to a VIModule."""
-    vikwargs: VIkwargs = dict(
+    # device and dtype are not present because they are copied on a per-parameter basis
+    # from the original modules
+    vikwargs = dict(
         variational_distribution=variational_distribution,
         prior=prior,
         rescale_prior=rescale_prior,
         kaiming_initialization=kaiming_initialization,
         prior_initialization=prior_initialization,
         return_log_probs=return_log_probs,
-        device=device,
-        dtype=dtype,
     )
     for m in module.modules():
         _convert_module(m, **vikwargs, keep_weights=keep_weights)
