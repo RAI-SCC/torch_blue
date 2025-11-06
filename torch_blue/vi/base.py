@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union, cast
 
 import torch
 from torch import Tensor
@@ -101,7 +101,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
 
     Parameters
     ----------
-    variable_shapes: Optional[Dict[str, Optional[Tuple[int, ...]]]], default = None
+    variable_shapes: Optional[Mapping[str, Optional[Tuple[int, ...]]]], default = None
         Shape specifications for all random variables. Keys are turned into
         :attr:`self.random_variables` in insertion order.
     VIkwargs
@@ -125,7 +125,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
 
     def __init__(
         self,
-        variable_shapes: Optional[Dict[str, Optional[Tuple[int, ...]]]] = None,
+        variable_shapes: Optional[Mapping[str, Optional[Tuple[int, ...]]]] = None,
         variational_distribution: _dist_any_t = MeanFieldNormal(),
         prior: _dist_any_t = MeanFieldNormal(),
         rescale_prior: bool = False,
@@ -215,7 +215,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         return tuple(self.variational_distribution.keys())
 
     def _rescale_prior(
-        self, variable_shapes: Dict[str, Optional[Tuple[int, ...]]]
+        self, variable_shapes: Mapping[str, Optional[Tuple[int, ...]]]
     ) -> None:
         """
         Rescale the prior parameters based on the layer width.
@@ -224,7 +224,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
 
         Parameters
         ----------
-        variable_shapes: Dict[str, Optional[Tuple[int, ...]]]
+        variable_shapes: Mapping[str, Optional[Tuple[int, ...]]]
             The dictionary of random variable names and shapes as passed to __init__.
 
         Returns
@@ -547,7 +547,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         return super().__getattr__(name)
 
     def _calculate_fan_in(
-        self, variable_shapes: Optional[Dict[str, Optional[Tuple[int, ...]]]] = None
+        self, variable_shapes: Optional[Mapping[str, Optional[Tuple[int, ...]]]] = None
     ) -> int:
         if variable_shapes is None:
             loop = self.random_variables
