@@ -432,6 +432,9 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         Union[VIReturn, Tuple[VIReturn, ...]]
             One or multiple Tensors with log prob annotation
         """
+        # reset log_probs in case users (or IDEs) have touched attributes
+        self.reset_log_probs()
+
         expanded = [self._expand_to_samples(x, samples=samples) for x in input_]
         out: _tensor_list_t = torch.vmap(self.forward, randomness="different")(
             *expanded, **kwargs
@@ -448,6 +451,14 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         for t in out:
             VIReturn.from_tensor(t, log_probs)
         return out
+
+    def reset_log_probs(self) -> None:
+        """Reset all tracked log probabilities."""
+        for module in self.modules():
+            if not hasattr(module, "_log_probs"):
+                continue
+            for var, lps in module._log_probs.items():
+                module._log_probs[var] = []
 
     def gather_log_probs(self) -> Tensor:
         """
