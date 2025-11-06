@@ -220,6 +220,36 @@ class DummyMLP(VIModule):
         return self.layers(input_)
 
 
+class NoneParamMLP(VIModule):
+    """Dummy MLP for testing models with parameters that are None."""
+
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        prior: Distribution = MeanFieldNormal(),
+        var_dist: Distribution = MeanFieldNormal(),
+        return_log_probs: bool = True,
+        device: Optional[torch.device] = None,
+    ) -> None:
+        variable_shapes = dict(
+            weight=(out_features, in_features),
+            bias=None,
+        )
+        super().__init__(
+            variable_shapes=variable_shapes,
+            variational_distribution=var_dist,
+            prior=prior,
+            return_log_probs=return_log_probs,
+            device=device,
+        )
+
+    def forward(self, input_: Tensor) -> Tensor:
+        """Make forward pass."""
+        print(self.weight.shape, input_.shape)
+        return torch.nn.functional.linear(input_, self.weight)
+
+
 @pytest.mark.parametrize(
     "prior,var_dist,norm_constants",
     [
@@ -251,29 +281,32 @@ def test_prior_matching(
     batch_size = 100
     samples = 10000
 
-    model = DummyMLP(
+    model1 = DummyMLP(
         f_in, f_hidden, f_out, prior=prior, var_dist=var_dist, device=device
     )
-    criterion = AnalyticalKullbackLeiblerLoss(model, MeanFieldNormal(), samples)
-    ref_criterion = KullbackLeiblerLoss(MeanFieldNormal(), samples, track=True)
+    model2 = NoneParamMLP(f_in, f_out, prior=prior, var_dist=var_dist, device=device)
 
-    sample = torch.rand([batch_size, f_in], device=device)
-    target = torch.rand([batch_size, f_out], device=device)
+    for model in [model1, model2]:
+        criterion = AnalyticalKullbackLeiblerLoss(model, MeanFieldNormal(), samples)
+        ref_criterion = KullbackLeiblerLoss(MeanFieldNormal(), samples, track=True)
 
-    model.return_log_probs = True
+        sample = torch.rand([batch_size, f_in], device=device)
+        target = torch.rand([batch_size, f_out], device=device)
 
-    out = model(sample, samples=samples)
+        model.return_log_probs = True
 
-    analytical_prior_matching = criterion.prior_matching()
-    ref_criterion(out, target)
-    ref_prior_matching = ref_criterion.log["prior_matching"]  # type: ignore [index]
-    assert analytical_prior_matching.device == device
-    assert torch.allclose(
-        torch.tensor(ref_prior_matching[0]),
-        analytical_prior_matching,
-        atol=5e-1,
-        rtol=1e-3,
-    )
+        out = model(sample, samples=samples)
+
+        analytical_prior_matching = criterion.prior_matching()
+        ref_criterion(out, target)
+        ref_prior_matching = ref_criterion.log["prior_matching"]  # type: ignore [index]
+        assert analytical_prior_matching.device == device
+        assert torch.allclose(
+            torch.tensor(ref_prior_matching[0]),
+            analytical_prior_matching,
+            atol=5e-1,
+            rtol=1e-3,
+        )
 
 
 @pytest.mark.parametrize(
