@@ -121,6 +121,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     # and the outermost module calls sampled_forward instead
     _has_sampling_responsibility: bool
     _log_probs: Dict[str, List[Tensor]]
+    _forward_rerouted: bool = False
 
     def __init__(
         self,
@@ -502,8 +503,11 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     def _reroute_forward(
         self, new_forward: Callable, new_name: str = "_module_forward"
     ) -> None:
+        if self._forward_rerouted:
+            return
         setattr(self, new_name, self.forward)
         self.forward = new_forward
+        self._forward_rerouted = True
 
     def __post_init__(self) -> None:
         """
@@ -512,6 +516,13 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         Since higher level modules overwrite _has_sampling_responsibility for lower ones
         only the top level class will have it set to True, making it use sampled_forward
         by default.
+        Additionally, the module defined forward method is reassigned to the name
+        _module_forward and self._pre_forward takes its place. This creates a wrapper
+        and hook just around the forward method to allow handling of automatic sampling
+        and log probability tracking.
+        If you wish to modify this behavior try using PyTorch's forward hooks first. If
+        those prove insufficient, you can modify the _pre_forward method, but be aware
+        this might break autosampling and log prob tracking if done incorrectly.
         """
         self._set_sampling_responsibility()
         self._reroute_forward(self._pre_forward)
