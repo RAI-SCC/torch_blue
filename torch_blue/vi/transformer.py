@@ -10,7 +10,6 @@ from torch.nn.modules.transformer import _detect_is_causal_mask, _get_seq_len
 from .base import VIModule
 from .distributions import Distribution, MeanFieldNormal
 from .linear import VILinear
-from .sequential import VIResidualConnection
 from .utils.common_types import VIkwargs, _dist_any_t
 
 
@@ -111,10 +110,8 @@ class VIMultiheadAttention(VIModule):
             variables["v_proj_weight"] = (embed_dim, self.vdim)
         else:
             variables["in_proj_weight"] = (3 * embed_dim, embed_dim)
-        variables["out_proj_weight"] = (embed_dim, embed_dim)
         if bias:
             variables["in_proj_bias"] = (3 * embed_dim,)
-            variables["out_proj_bias"] = (embed_dim,)
 
         if add_bias_kv:
             variables["bias_k"] = (1, 1, embed_dim)
@@ -125,6 +122,7 @@ class VIMultiheadAttention(VIModule):
         self.bias = bias
 
         super().__init__(variables, **vikwargs)
+        self.out_proj = VILinear(embed_dim, embed_dim, bias=bias, **vikwargs)
 
     def forward(
         self,
@@ -191,8 +189,8 @@ class VIMultiheadAttention(VIModule):
                 self.bias_v,
                 self.add_zero_attn,
                 0.0,
-                self.out_proj_weight,
-                self.out_proj_bias,
+                self.out_proj.weight,
+                self.out_proj.bias,
                 training=self.training,
                 key_padding_mask=key_padding_mask,
                 need_weights=True,
@@ -217,8 +215,8 @@ class VIMultiheadAttention(VIModule):
                 self.bias_v,
                 self.add_zero_attn,
                 0.0,
-                self.out_proj_weight,
-                self.out_proj_bias,
+                self.out_proj.weight,
+                self.out_proj.bias,
                 training=self.training,
                 key_padding_mask=key_padding_mask,
                 need_weights=True,
@@ -290,11 +288,9 @@ class VITransformerEncoderLayer(VIModule):
             d_model, nhead, batch_first=batch_first, bias=bias, **vikwargs
         )
         # Feedforward model
-        self._ff_block = VIResidualConnection(
-            VILinear(d_model, dim_feedforward, bias=bias, **vikwargs),
-            activation,
-            VILinear(dim_feedforward, d_model, bias=bias, **vikwargs),
-        )
+        self.linear1 = VILinear(d_model, dim_feedforward, bias=bias, **vikwargs)
+        self.activation = activation
+        self.linear2 = VILinear(dim_feedforward, d_model, bias=bias, **vikwargs)
 
         # layer norms are treated non-Bayesian
         self.norm_first = norm_first
@@ -343,7 +339,7 @@ class VITransformerEncoderLayer(VIModule):
                     self.norm1(x), src_mask, src_key_padding_mask, is_causal=is_causal
                 )[0]
             )
-            x = self._ff_block(self.norm2(x))
+            x = x + self._ff_block(self.norm2(x))
             return x
         else:
             x = self.norm1(
@@ -352,7 +348,7 @@ class VITransformerEncoderLayer(VIModule):
                     x, src_mask, src_key_padding_mask, is_causal=is_causal
                 )[0]
             )
-            x = self.norm2(self._ff_block(x))
+            x = self.norm2(x + self._ff_block(x))
             return x
 
     def _sa_block(
@@ -371,6 +367,9 @@ class VITransformerEncoderLayer(VIModule):
             is_causal=is_causal,
         )
         return x
+
+    def _ff_block(self, x: Tensor) -> Tensor:
+        return self.linear2(self.activation(self.linear1(x)))
 
 
 class VITransformerDecoderLayer(VIModule):
@@ -442,11 +441,9 @@ class VITransformerDecoderLayer(VIModule):
             **vikwargs,
         )
         # Feedforward model
-        self._ff_block = VIResidualConnection(
-            VILinear(d_model, dim_feedforward, bias=bias, **vikwargs),
-            activation,
-            VILinear(dim_feedforward, d_model, bias=bias, **vikwargs),
-        )
+        self.linear1 = VILinear(d_model, dim_feedforward, bias=bias, **vikwargs)
+        self.activation = activation
+        self.linear2 = VILinear(dim_feedforward, d_model, bias=bias, **vikwargs)
 
         # layer norms are treated non-Bayesian
         self.norm_first = norm_first
@@ -489,7 +486,7 @@ class VITransformerDecoderLayer(VIModule):
                     tgt_is_causal,
                 )[0]
             )
-            x = self._ff_block(self.norm3(x))
+            x = x + self._ff_block(self.norm3(x))
             return x
         else:
             x = self.norm1(x + self._sa_block(x, tgt_mask, tgt_key_padding_mask)[0])
@@ -499,7 +496,7 @@ class VITransformerDecoderLayer(VIModule):
                     x, memory, memory_mask, memory_key_padding_mask, memory_is_causal
                 )[0]
             )
-            x = self.norm3(self._ff_block(x))
+            x = self.norm3(x + self._ff_block(x))
             return x
 
     def _sa_block(
@@ -536,6 +533,9 @@ class VITransformerDecoderLayer(VIModule):
             is_causal=is_causal,
         )
         return x
+
+    def _ff_block(self, x: Tensor) -> Tensor:
+        return self.linear2(self.activation(self.linear1(x)))
 
 
 class VITransformerDecoder(VIModule):
