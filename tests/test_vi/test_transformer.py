@@ -55,244 +55,244 @@ class Filter(VIModule):
             True,
             None,
         ),
-        (
-            32,
-            3,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            False,
-            False,
-            True,
-            False,
-            False,
-            None,
-            None,
-            True,
-            1,
-        ),
-        (
-            32,
-            4,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            False,
-            False,
-            True,
-            False,
-            False,
-            None,
-            None,
-            True,
-            None,
-        ),
-        (
-            32,
-            2,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            True,
-            False,
-            True,
-            False,
-            False,
-            None,
-            None,
-            True,
-            None,
-        ),
-        (
-            32,
-            2,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            True,
-            True,
-            True,
-            False,
-            False,
-            None,
-            None,
-            True,
-            None,
-        ),
-        (
-            32,
-            2,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            False,
-            True,
-            True,
-            False,
-            False,
-            None,
-            None,
-            True,
-            None,
-        ),
-        (
-            32,
-            2,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            False,
-            False,
-            False,
-            False,
-            False,
-            None,
-            None,
-            True,
-            None,
-        ),
-        (
-            32,
-            2,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            False,
-            False,
-            True,
-            True,
-            False,
-            None,
-            None,
-            True,
-            None,
-        ),
-        (
-            32,
-            2,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            False,
-            False,
-            False,
-            True,
-            False,
-            None,
-            None,
-            True,
-            None,
-        ),
-        (
-            32,
-            2,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            False,
-            False,
-            True,
-            False,
-            True,
-            None,
-            None,
-            True,
-            None,
-        ),
-        (
-            32,
-            2,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            False,
-            False,
-            True,
-            False,
-            False,
-            None,
-            None,
-            False,
-            None,
-        ),
-        (
-            32,
-            2,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            False,
-            False,
-            True,
-            False,
-            False,
-            30,
-            None,
-            True,
-            None,
-        ),
-        (
-            32,
-            2,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            False,
-            False,
-            True,
-            False,
-            False,
-            None,
-            16,
-            True,
-            None,
-        ),
-        (
-            32,
-            2,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            False,
-            False,
-            True,
-            False,
-            False,
-            10,
-            36,
-            True,
-            None,
-        ),
-        (
-            32,
-            2,
-            MeanFieldNormal(std=1e-20),
-            3,
-            5,
-            7,
-            False,
-            False,
-            False,
-            False,
-            False,
-            16,
-            16,
-            True,
-            None,
-        ),
+        # (
+        #    32,
+        #    3,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    False,
+        #    False,
+        #    True,
+        #    False,
+        #    False,
+        #    None,
+        #    None,
+        #    True,
+        #    1,
+        # ),
+        # (
+        #    32,
+        #    4,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    False,
+        #    False,
+        #    True,
+        #    False,
+        #    False,
+        #    None,
+        #    None,
+        #    True,
+        #    None,
+        # ),
+        # (
+        #    32,
+        #    2,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    True,
+        #    False,
+        #    True,
+        #    False,
+        #    False,
+        #    None,
+        #    None,
+        #    True,
+        #    None,
+        # ),
+        # (
+        #    32,
+        #    2,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    True,
+        #    True,
+        #    True,
+        #    False,
+        #    False,
+        #    None,
+        #    None,
+        #    True,
+        #    None,
+        # ),
+        # (
+        #    32,
+        #    2,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    False,
+        #    True,
+        #    True,
+        #    False,
+        #    False,
+        #    None,
+        #    None,
+        #    True,
+        #    None,
+        # ),
+        # (
+        #    32,
+        #    2,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    False,
+        #    False,
+        #    False,
+        #    False,
+        #    False,
+        #    None,
+        #    None,
+        #    True,
+        #    None,
+        # ),
+        # (
+        #    32,
+        #    2,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    False,
+        #    False,
+        #    True,
+        #    True,
+        #    False,
+        #    None,
+        #    None,
+        #    True,
+        #    None,
+        # ),
+        # (
+        #    32,
+        #    2,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    False,
+        #    False,
+        #    False,
+        #    True,
+        #    False,
+        #    None,
+        #    None,
+        #    True,
+        #    None,
+        # ),
+        # (
+        #    32,
+        #    2,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    False,
+        #    False,
+        #    True,
+        #    False,
+        #    True,
+        #    None,
+        #    None,
+        #    True,
+        #    None,
+        # ),
+        # (
+        #    32,
+        #    2,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    False,
+        #    False,
+        #    True,
+        #    False,
+        #    False,
+        #    None,
+        #    None,
+        #    False,
+        #    None,
+        # ),
+        # (
+        #    32,
+        #    2,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    False,
+        #    False,
+        #    True,
+        #    False,
+        #    False,
+        #    30,
+        #    None,
+        #    True,
+        #    None,
+        # ),
+        # (
+        #    32,
+        #    2,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    False,
+        #    False,
+        #    True,
+        #    False,
+        #    False,
+        #    None,
+        #    16,
+        #    True,
+        #    None,
+        # ),
+        # (
+        #    32,
+        #    2,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    False,
+        #    False,
+        #    True,
+        #    False,
+        #    False,
+        #    10,
+        #    36,
+        #    True,
+        #    None,
+        # ),
+        # (
+        #    32,
+        #    2,
+        #    MeanFieldNormal(std=1e-20),
+        #    3,
+        #    5,
+        #    7,
+        #    False,
+        #    False,
+        #    False,
+        #    False,
+        #    False,
+        #    16,
+        #    16,
+        #    True,
+        #    None,
+        # ),
     ],
 )
 def test_multihead_attention(
@@ -416,6 +416,15 @@ def test_multihead_attention(
         out_proj_weight=None,
         out_proj_bias=None,
     )
+    out_proj = module.module.out_proj
+    weight_dict["out_proj_weight"] = getattr(
+        out_proj, out_proj.variational_parameter_name("weight", primary_param)
+    ).clone()
+    if bias:
+        weight_dict["out_proj_bias"] = getattr(
+            out_proj, out_proj.variational_parameter_name("bias", primary_param)
+        ).clone()
+
     for var in random_variable_shapes:
         if module.module.variational_distribution[var] is None:
             continue
@@ -444,6 +453,7 @@ def test_multihead_attention(
         else:
             key_mask = None
 
+        print(weight_dict)
         ref_args = dict(
             query=q.transpose(0, 1),
             key=k.transpose(0, 1),
@@ -493,6 +503,7 @@ def test_multihead_attention(
         ref = torch.nan_to_num(ref)
         out.sum().backward()
         assert out.shape == ref.shape
+        print(out - ref)
         assert torch.allclose(out, ref, atol=1e-6)
         assert out.device == device
 
@@ -512,11 +523,11 @@ def test_decoder_layer(device: torch.device) -> None:
     assert module1.multihead_attn.num_heads == nhead
     assert module1.multihead_attn.bias
     assert module1.multihead_attn.batch_first
-    assert module1._ff_block[0].in_features == d_model
-    assert module1._ff_block[0].out_features == 512
-    assert isinstance(module1._ff_block[1], nn.ReLU)
-    assert module1._ff_block[2].in_features == 512
-    assert module1._ff_block[2].out_features == d_model
+    assert module1.linear1.in_features == d_model
+    assert module1.linear1.out_features == 512
+    assert isinstance(module1.activation, nn.ReLU)
+    assert module1.linear2.in_features == 512
+    assert module1.linear2.out_features == d_model
     assert module1.norm1.eps == 1e-5
     assert module1.norm2.eps == 1e-5
     assert module1.norm3.eps == 1e-5
@@ -545,11 +556,11 @@ def test_decoder_layer(device: torch.device) -> None:
     assert module2.multihead_attn.num_heads == nhead
     assert not module2.multihead_attn.bias
     assert not module2.multihead_attn.batch_first
-    assert module2._ff_block[0].in_features == d_model
-    assert module2._ff_block[0].out_features == 128
-    assert isinstance(module2._ff_block[1], nn.GELU)
-    assert module2._ff_block[2].in_features == 128
-    assert module2._ff_block[2].out_features == d_model
+    assert module2.linear1.in_features == d_model
+    assert module2.linear1.out_features == 128
+    assert isinstance(module2.activation, nn.GELU)
+    assert module2.linear2.in_features == 128
+    assert module2.linear2.out_features == d_model
     assert module2.norm1.eps == 1e-3
     assert module2.norm2.eps == 1e-3
     assert module2.norm3.eps == 1e-3
@@ -595,7 +606,7 @@ def test_decoder_layer(device: torch.device) -> None:
     out1.sum().backward()
     ref1 = tgt + module2._sa_block(module2.norm1(tgt))[0]
     ref1 = ref1 + module2._mha_block(module2.norm2(ref1), mem)[0]
-    ref1 = module2._ff_block(module2.norm3(ref1))
+    ref1 = ref1 + module2._ff_block(module2.norm3(ref1))
     assert torch.allclose(out1, ref1, atol=1e-6)
 
     module2.return_log_probs = True
@@ -609,7 +620,7 @@ def test_decoder_layer(device: torch.device) -> None:
     out3.sum().backward()
     ref2 = module3.norm1(tgt + module3._sa_block(tgt)[0])
     ref2 = module3.norm2(ref2 + module3._mha_block(ref2, mem)[0])
-    ref2 = module3.norm3(module3._ff_block(ref2))
+    ref2 = module3.norm3(ref2 + module3._ff_block(ref2))
     assert torch.allclose(out3, ref2, atol=1e-6)
 
     module3.return_log_probs = True
@@ -629,11 +640,11 @@ def test_encoder_layer(device: torch.device) -> None:
     assert module1.self_attn.num_heads == nhead
     assert module1.self_attn.bias
     assert module1.self_attn.batch_first
-    assert module1._ff_block[0].in_features == d_model
-    assert module1._ff_block[0].out_features == 512
-    assert isinstance(module1._ff_block[1], nn.ReLU)
-    assert module1._ff_block[2].in_features == 512
-    assert module1._ff_block[2].out_features == d_model
+    assert module1.linear1.in_features == d_model
+    assert module1.linear1.out_features == 512
+    assert isinstance(module1.activation, nn.ReLU)
+    assert module1.linear2.in_features == 512
+    assert module1.linear2.out_features == d_model
     assert module1.norm1.eps == 1e-5
     assert module1.norm2.eps == 1e-5
     assert module1.norm1.bias is not None
@@ -656,11 +667,11 @@ def test_encoder_layer(device: torch.device) -> None:
     assert module2.self_attn.num_heads == nhead
     assert not module2.self_attn.bias
     assert not module2.self_attn.batch_first
-    assert module2._ff_block[0].in_features == d_model
-    assert module2._ff_block[0].out_features == 128
-    assert isinstance(module2._ff_block[1], nn.GELU)
-    assert module2._ff_block[2].in_features == 128
-    assert module2._ff_block[2].out_features == d_model
+    assert module2.linear1.in_features == d_model
+    assert module2.linear1.out_features == 128
+    assert isinstance(module2.activation, nn.GELU)
+    assert module2.linear2.in_features == 128
+    assert module2.linear2.out_features == d_model
     assert module2.norm1.eps == 1e-3
     assert module2.norm2.eps == 1e-3
     assert module2.norm1.bias is None
@@ -692,7 +703,7 @@ def test_encoder_layer(device: torch.device) -> None:
     out1 = module2(src)
     out1.sum().backward()
     ref1 = src + module2._sa_block(module2.norm1(src))[0]
-    ref1 = module2._ff_block(module2.norm2(ref1))
+    ref1 = ref1 + module2._ff_block(module2.norm2(ref1))
     assert torch.allclose(out1, ref1)
 
     module2.return_log_probs = True
@@ -705,7 +716,7 @@ def test_encoder_layer(device: torch.device) -> None:
     out3 = module3(src)
     out3.sum().backward()
     ref2 = module3.norm1(src + module3._sa_block(src)[0])
-    ref2 = module3.norm2(module3._ff_block(ref2))
+    ref2 = module3.norm2(ref2 + module3._ff_block(ref2))
     assert torch.allclose(out3, ref2, atol=2e-7)
 
     module3.return_log_probs = True

@@ -3,6 +3,8 @@ from typing import Dict, Optional, Tuple, cast
 import torch
 from torch import nn
 
+from torch_blue import vi
+
 from ..base import VIModule
 from ..distributions import MeanFieldNormal
 from .common_types import VIkwargs, _dist_any_t
@@ -34,9 +36,15 @@ def _convert_module(
         device=None,
         dtype=None,
     )
-    new_class_name = "AVI" + module.__class__.__name__
-    new_class = type(new_class_name, (VIModule, module.__class__), dict())
-    setattr(new_class, "forward", module.forward)
+    if hasattr(vi, "VI" + module.__class__.__name__):
+        new_class = getattr(vi, "VI" + module.__class__.__name__)
+    elif "AVI" + module.__class__.__name__ in globals():
+        new_class = globals()["AVI" + module.__class__.__name__]
+    else:
+        new_class_name = "AVI" + module.__class__.__name__
+        new_class = type(new_class_name, (VIModule, module.__class__), dict())
+        setattr(new_class, "forward", module.forward)
+        globals()[new_class_name] = new_class
 
     module.__class__ = new_class
     module = cast(VIModule, module)
