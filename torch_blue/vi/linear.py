@@ -37,6 +37,7 @@ class VILinear(VIModule):
     __constants__ = ["in_features", "out_features"]
     in_features: int
     out_features: int
+    _fast_path_flag: Optional[bool] = None
 
     def __init__(
         self,
@@ -75,14 +76,21 @@ class VILinear(VIModule):
 
         super().__init__(variable_shapes=variable_shapes, **vikwargs)
 
+    @property
+    def _fast_path(self) -> bool:
         # If the variational distribution is stable we might be able to use the stable fast path
+        if self._fast_path_flag is not None:
+            return self._fast_path_flag
+
         if all(
             (dist is None) or isinstance(dist, MeanFieldNormal)
             for dist in self.variational_distribution.values()
         ):
-            self._fast_path = True
+            self._fast_path_flag = True
+            return True
         else:
-            self._fast_path = False
+            self._fast_path_flag = False
+            return False
 
     def forward(self, input_: Tensor) -> Tensor:
         r"""

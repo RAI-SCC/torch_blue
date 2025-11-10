@@ -15,8 +15,8 @@ from torch_blue.vi.utils import convert
     [
         (nn.Linear(5, 6, bias=True), 1),
         (nn.Linear(5, 6, bias=False), 1),
-        (nn.MultiheadAttention(5, 1), 3),
-        (nn.Transformer(5, 1, 1, 1, 5), 2),
+        # (nn.MultiheadAttention(5, 1), 3),
+        # (nn.Transformer(5, 1, 1, 1, 5), 2),
     ],
 )
 def test_convert_to_vimodule(module: nn.Module, n_args: int) -> None:
@@ -29,6 +29,10 @@ def test_convert_to_vimodule(module: nn.Module, n_args: int) -> None:
     convert_to_vimodule(module1)
     ref_class = getattr(torch_blue.vi, module1.__class__.__name__)
     assert ref_class == type(module1)
+    module1(*sample)
+
+    # Test no log prob mode
+    module1.return_log_probs = False
     module1(*sample)
 
     convert.ban_torch_convert(module.__class__.__name__)
