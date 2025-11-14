@@ -204,12 +204,15 @@ class VIModule(Module, metaclass=PostInitCallMeta):
                 self.variational_distribution[var] = None
                 self.prior[var] = None
                 continue
-            for var_param in self.variational_distribution[var].distribution_parameters:
+            var_dist = self.variational_distribution[var]
+            for var_param in var_dist.distribution_parameters:
                 parameter_name = self.variational_parameter_name(var, var_param)
                 setattr(
                     self,
                     parameter_name,
-                    Parameter(torch.empty(shape, **factory_kwargs)),
+                    Parameter(
+                        var_dist.empty_parameter(var_param, shape, **factory_kwargs)
+                    ),
                 )
         self._log_probs = dict()
         for variable in random_variables:

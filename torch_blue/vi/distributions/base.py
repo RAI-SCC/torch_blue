@@ -1,8 +1,9 @@
 import math
 from inspect import signature
-from typing import TYPE_CHECKING, Callable, Dict, Tuple, Union
+from typing import TYPE_CHECKING, Callable, Dict, Optional, Tuple, Union
 from warnings import warn
 
+import torch
 from torch import Tensor
 from torch.nn import init
 
@@ -275,6 +276,46 @@ class Distribution(metaclass=PostInitCallMeta):
             f'Module [{type(self).__name__}] is missing the "reset_parameters_to_prior" method'
             f" and therefore does not support prior initialization."
         )
+
+    def empty_parameter(
+        self,
+        parameter_name: str,
+        variable_shape: Tuple[int, ...],
+        device: Optional[torch.device],
+        dtype: Optional[torch.dtype],
+    ) -> Tensor:
+        """
+        Initialize an empty parameter based on the variable shape.
+
+        Most parameters, e.g. mean or std, will have the same shape as the weight matrix
+        they parametrize. This is the default behaviour of this method. However, in
+        specific cases, e.g. the correlation matrix of a fully correlated, Gaussian
+        distribution, can diverge from this. This method allows to account for this on
+        a per-parameter basis. To simplify this process this method also checks, whether
+        the distribution has the method `initialize_<parameter_name>` and uses it
+        instead if present by calling it with the arguments shape, device, and dtype.
+
+        Parameters
+        ----------
+        parameter_name: str
+            The name of the parameter to initialize.
+        variable_shape: Tuple[int, ...]
+            The shape of the variable the parameter is supposed to parametrize.
+        device: Optional[torch.device]
+            The device on which the parameter is to be initialized.
+        dtype: Optional[torch.dtype]
+            The dtype of the parameter.
+
+        Returns
+        -------
+        Tensor
+            An empty Tensor initialized to the correct shape.
+        """
+        if hasattr(self, "initialize_" + parameter_name):
+            return getattr(self, "initialize_" + parameter_name)(
+                variable_shape, device, dtype
+            )
+        return torch.empty(variable_shape, device=device, dtype=dtype)
 
     @staticmethod
     def _init_constant(
