@@ -14,9 +14,17 @@ name ``torch-blue``. If you need further instructions, check the
 
 To learn how you can use ``torch_blue`` you can read the
 :ref:`quickstart guide <quickstart>`.
+If you have implemented your model, but struggle to get it running check our
+:ref:`debug guide <debug>` for some basic approaches to debugging a BNN.
 
 If you find any bug, have a feature request, or want to contribute visit us on
 `GitHub <https://github.com/RAI-SCC/torch_blue>`_.
+
+And finally, if you are struggling to understand any part of this documentation let us
+know. ``torch_blue`` is explicitly intended to be accessible for users without
+experience with BNNs. If you are struggling someone else is probably struggling with
+the same thing now or at least in the future. Make an issue, let us know what is
+unclear or confusing so we can try to improve it and make BNNs accessible to everyone.
 
 .. toctree::
    :hidden:
@@ -24,4 +32,5 @@ If you find any bug, have a feature request, or want to contribute visit us on
    Home <self>
    installation
    getting_started
+   debug
    autoapi/index
