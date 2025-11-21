@@ -53,11 +53,11 @@ added here.
 
 3. **Adjusting the heat**
     An important factor in the fitting of BNNs is the balance between the two loss terms
-    (see :ref:`"Loss decomposition" <loss>`). Poor convergence often occurs when the prior
-    matching term is too dominant. While this is quite heavy handed and mathematically
-    at least debatable adjusting (typically lowering) the heat is the fastest way to
-    fix this issue. There are two core reasons for this issue, which you should at least
-    consider before taking the brute force option of adjusting the heat:
+    (see :ref:`"Loss decomposition" <loss>`). Poor convergence often occurs when the
+    prior matching term is too dominant. While this is quite heavy-handed and
+    mathematically at least debatable, adjusting (typically lowering) the heat is the
+    fastest way to fix this issue. There are two core reasons for this issue, which you
+    should at least consider before taking the brute force option of adjusting the heat:
 
     - The model is overparametrized, i.e. either you model ist too big or your dataset
       too small (relative to each other).
@@ -66,9 +66,12 @@ added here.
 
     If you do lower the heat, check the relative magnitude of the terms (via setting
     ``track=True`` in ``torch_blue`` losses) and aim for the prior matching term to be
-    smaller, but not too much smaller. I suggest keeping it within an order of magnitude
-    or two. If you lower the heat too much your training might almost become
-    non-Bayesian and the likelihood of your model becoming overconfident increases.
+    within an order of magnitude or two of the data fitting term. When you make this
+    adjustment the predictive quality tends to be a poor indicator for the right value,
+    since it tends to increase the lower the heat is set. However, the calibration of
+    the uncertainty estimates also tends to deteriorate. Therefore, if you do this
+    evaluate the calibration or make a conscious trade-off between calibration and
+    predictive accuracy.
 
 .. _prior:
 
