@@ -1,13 +1,14 @@
 from itertools import product
-from math import log
+from math import log, prod
 from typing import Optional, Tuple
 
 import pytest
 import torch
+from torch import Tensor, nn
 from torch import distributions as dist
-from torch import nn
 
 from torch_blue.vi.distributions import MeanFieldNormal, Normal
+from torch_blue.vi.distributions.normal import CorrelatedNormal
 from torch_blue.vi.utils import use_norm_constants
 
 
@@ -176,3 +177,104 @@ class TestMeanFieldNormal(TestNormal):
     """Test for Normal distribution alias."""
 
     target = MeanFieldNormal
+
+
+ref_cholesky = torch.tensor([[0.8, 0.0, 0.0], [-0.1, 0.6, 0.0], [0.2, -0.5, 1.0]])
+ref_variance = torch.matmul(ref_cholesky, ref_cholesky.mT)
+
+
+class TestCorrelatedNormal:
+    """Tests for correlated normal distribution."""
+
+    target = CorrelatedNormal
+
+    @pytest.mark.parametrize(
+        "norm_constants,params",
+        list(
+            product(
+                [True, False],
+                [
+                    None,
+                    (0.7, 0.3, 0.1, None, None),
+                    (0.0, 1.0, 0.0, None, ref_cholesky),
+                    (-0.35, 1.0, 0.0, ref_variance, None),
+                ],
+            ),
+        ),
+    )
+    def test_prior_log_prob(
+        self,
+        norm_constants: bool,
+        params: Optional[
+            Tuple[float, float, float, Optional[Tensor], Optional[Tensor]]
+        ],
+        device: torch.device,
+    ) -> None:
+        """Test CorrelatedNormal.prior_log_prob."""
+        use_norm_constants(norm_constants)
+        if params is not None:
+            params = list(params)  # type:ignore[assignment]
+            if params[3] is not None:
+                params[3] = params[3].to(device)  # type:ignore[index]
+            if params[4] is not None:
+                params[4] = params[4].to(device)  # type:ignore[index]
+
+        if params is None:
+            prior = self.target()
+            assert prior.mean == 0.0
+            assert prior.log_std == 0.0
+            assert prior.corr == 0.0
+            assert prior.scale_tril is None
+            assert prior.covariance_matrix is None
+            params = (0.0, 1.0, 0.0, None, None)
+        elif params[3] is None and params[4] is None:
+            prior = self.target(*params)
+            assert prior.mean == params[0]
+            assert prior.log_std == log(params[1])
+            assert prior.corr == params[2]
+            assert prior.scale_tril is None
+            assert prior.covariance_matrix is None
+        elif params[3] is not None:
+            prior = self.target(*params)
+            assert prior.mean == params[0]
+            assert prior.covariance_matrix is params[3]
+            assert torch.allclose(prior.scale_tril, torch.linalg.cholesky(params[3]))
+        else:  # param[4] is not None
+            prior = self.target(*params)
+            assert prior.mean == params[0]
+            assert prior.scale_tril is params[4]
+            assert torch.allclose(
+                prior.covariance_matrix, torch.matmul(params[4], params[4].mT)
+            )
+
+        if params[3] is not None or params[4] is not None:
+            shape: Tuple[int, ...] = (3,)
+        else:
+            shape = (5, 3)
+
+        sample = torch.randn(*shape, device=device)
+
+        vec_len = prod(shape)
+        loc = torch.full([vec_len], params[0], device=device)
+
+        covariance_matrix = params[3]
+        scale_tril = params[4]
+
+        if covariance_matrix is None and scale_tril is None:
+            diag = torch.full([vec_len], params[1], device=device)
+            scale_tril = torch.diagflat(diag)
+            scale_tril[tuple(torch.tril_indices(vec_len, vec_len, -1))] = params[2]
+
+        ref_dist = torch.distributions.MultivariateNormal(
+            loc, covariance_matrix=covariance_matrix, scale_tril=scale_tril
+        )
+
+        # ref_samples = ref_dist.sample((10000,))
+        # ref_mean = ref_samples.mean(dim=0).reshape(shape)
+        # ref_corr = ref_samples.mT.cov()
+
+        print("Ref: ", ref_dist.log_prob(sample.flatten()))
+        print("Prior: ", prior.prior_log_prob(sample))
+        assert torch.allclose(
+            ref_dist.log_prob(sample.flatten()), prior.prior_log_prob(sample)
+        )

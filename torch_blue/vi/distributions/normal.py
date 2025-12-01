@@ -141,7 +141,7 @@ class MeanFieldNormal(Distribution):
         normalization = 2 * self.log_std
         if _globals._USE_NORM_CONSTANTS:
             normalization = normalization + log(2 * torch.pi)
-        return -0.5 * (data_fitting + normalization)
+        return (-0.5 * (data_fitting + normalization)).sum()
 
     def reset_parameters_to_prior(self, module: "VIModule", variable: str) -> None:
         """
@@ -252,13 +252,13 @@ class CorrelatedNormal(Distribution):
         Epsilon for numerical stability. Only relevant if used as prior.
     """
 
-    # is_prior: bool = True
+    is_prior: bool = True
     is_variational_distribution: bool = True
-    # is_predictive_distribution: bool = True
+    is_predictive_distribution: bool = True
 
     def __init__(
         self,
-        mean: float,
+        mean: float = 0.0,
         std: float = 1.0,
         corr: float = 0.0,
         covariance_matrix: Optional[Tensor] = None,
@@ -266,7 +266,7 @@ class CorrelatedNormal(Distribution):
         eps: float = 1e-10,
     ) -> None:
         super().__init__()
-        self.distribution_parameters = ("mean", "log_diag", "cholesky_corr")
+        self.distribution_parameters = ("mean", "log_std", "corr")
         self.mean = mean
         self.log_std = log(std)
         self.corr = corr
@@ -283,11 +283,19 @@ class CorrelatedNormal(Distribution):
                 raise ValueError("scale_tril must have two dimensions.")
             self.scale_tril = scale_tril
             self.covariance_matrix = torch.matmul(self.scale_tril, self.scale_tril.mT)
-        if covariance_matrix is not None:
+        elif covariance_matrix is not None:
             if covariance_matrix.dim() != 2:
                 raise ValueError("covariance_matrix must have two dimensions.")
             self.covariance_matrix = covariance_matrix
             self.scale_tril = torch.linalg.cholesky(covariance_matrix)
+        else:
+            self.scale_tril = None
+            self.covariance_matrix = None
+
+    @property
+    def std(self) -> Tensor:
+        """The standard deviation of the distribution."""
+        return exp(self.log_std)
 
     @staticmethod
     def initialize_log_diag(
@@ -455,7 +463,7 @@ class CorrelatedNormal(Distribution):
         log_diag = torch.full_like(sample, self.log_std).flatten()
         n = len(log_diag)
         corr = torch.full(
-            [2 * (n - 1) // 2], self.corr, dtype=sample.dtype, device=sample.device
+            [n * (n - 1) // 2], self.corr, dtype=sample.dtype, device=sample.device
         )
         return self.variational_log_prob(sample, mean, log_diag, corr)
 
@@ -492,3 +500,71 @@ class CorrelatedNormal(Distribution):
                     tuple(torch.tril_indices(len_diag, len_diag, offset=-1))
                 ],
             )
+
+    @staticmethod
+    def predictive_parameters_from_samples(samples: Tensor) -> Tuple[Tensor, Tensor]:
+        r"""
+        Calculate the predictive mean and covariance of a set of samples.
+
+        Parameters
+        ----------
+        samples: Tensor
+            The model output as Tensor of shape (S, B, \*), where S is the number of
+            samples and B is the batch size. To clearly represent the covariance any
+            further dimensions are flattened into one of size F.
+
+        Returns
+        -------
+        Tensor
+            The predictive mean as Tensor of shape (B, F), i.e., the average along the
+            sample dimension.
+        Tensor
+            The predictive covariance as Tensor of shape (B, F, F), i.e., the
+            correlation coefficient between each pair of samples. For each batch element
+            this is a symmetric, positive semi-definite matrix.
+        """
+        samples_flattened = samples.flatten(2)
+        mean = samples_flattened.mean(0)
+        batch_first = samples_flattened.permute((1, 2, 0))
+        covariances = []
+        for s in batch_first:
+            covariances.append(s.cov())
+        return mean, torch.stack(covariances, dim=0)
+
+    @staticmethod
+    def log_prob_from_parameters(
+        reference: Tensor, parameters: Tuple[Tensor, Tensor]
+    ) -> Tensor:
+        """
+        Calculate the log probability of reference given the predictive mean and standard deviation.
+
+        This calculation is affected by :data:`_globals._USE_NORM_CONSTANTS`, which can
+        be set with :func:`~torch_blue.vi.utils.use_norm_constants`.
+
+        Parameters
+        ----------
+        reference: Tensor
+            The ground truth label as Tensor of the same shape as each Tensor in
+            `parameters`.
+        parameters: Tuple[Tensor, Tensor]
+            A tuple containing the predictive means and standard deviation as two
+            Tensors as returned by :meth:`~predictive_parameters_from_samples`.
+
+        Returns
+        -------
+        Tensor
+            The log probability of the reference under the predicted normal distribution.
+            Shape: (1,).
+        """
+        mean, covariance = parameters
+        shifted_sample = reference - mean
+        inverse_covariance = torch.inverse(covariance)
+        det_covariance = torch.det(covariance)
+
+        data_fitting = torch.matmul(
+            shifted_sample, torch.matmul(inverse_covariance, shifted_sample)
+        )
+        normalization = det_covariance.log()
+        if _globals._USE_NORM_CONSTANTS:
+            normalization = normalization + len(mean) * log(2 * torch.pi)
+        return -0.5 * (data_fitting + normalization)
