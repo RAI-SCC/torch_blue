@@ -111,7 +111,7 @@ class MeanFieldNormal(Distribution):
 
     @staticmethod
     def _normal_sample(mean: Tensor, std: Tensor) -> Tensor:
-        base_sample = torch.normal(torch.zeros_like(mean), torch.ones_like(mean))
+        base_sample = torch.randn_like(mean)
         sample = std * base_sample + mean
         return sample
 

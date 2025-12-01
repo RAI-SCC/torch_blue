@@ -55,7 +55,7 @@ def torch_tutorial() -> None:
         def __init__(self) -> None:
             super().__init__()
             self.flatten = nn.Flatten()
-            self.linear_relu_stack = vi.VISequential(
+            self.linear_relu_stack = nn.Sequential(
                 vi.VILinear(28 * 28, 512),
                 nn.ReLU(),
                 vi.VILinear(512, 512),
@@ -76,7 +76,7 @@ def torch_tutorial() -> None:
     loss_fn = vi.KullbackLeiblerLoss(
         predictive_distribution, dataset_size=len(training_data)
     )
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
     def train(
         dataloader: DataLoader,
@@ -114,7 +114,7 @@ def torch_tutorial() -> None:
                 test_loss += loss_fn(samples, y).item()
 
                 pred = predictive_distribution.predictive_parameters_from_samples(
-                    samples[0]
+                    samples
                 )
                 correct += (pred.argmax(1) == y).type(torch.float).sum().item()
         test_loss /= num_batches
