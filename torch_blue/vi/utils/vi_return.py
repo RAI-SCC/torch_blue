@@ -4,16 +4,16 @@ from torch import Tensor
 
 
 class VIReturn(Tensor):
-    """
+    r"""
     A subclass of :class:`torch.Tensor` that also stores log probabilities.
 
     A :class:`VIReturn` object behaves like a :class:`torch.Tensor` for all practical
-    purposes, but provides the optional attribute :attr:`~log_probs`. However, it should
+    purposes, but provides the optional attribute :attr:`~log\_probs`. However, it should
     not be used as replacement since certain pytorch operation will lose the log prob
     information. It is almost exclusively used as the return formate for
-    :class:`~torch_blue.vi.VIModule`s. This allows the output to be treated like a
+    :class:`~torch\_blue.vi.VIModule`s. This allows the output to be treated like a
     :class:`torch.Tensor`, but still provide the log prob information when needed.
-    `torch_blue` losses may require this format as input.
+    `torch\_blue` losses may require this format as input.
     """
 
     log_probs: Optional[Tensor] = None
