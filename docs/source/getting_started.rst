@@ -3,6 +3,6 @@
 Quickstart
 ==========
 
-.. include:: ../../README.md
+.. include:: ../../README_rtd.md
    :parser: myst
    :start-after: ## Quickstart

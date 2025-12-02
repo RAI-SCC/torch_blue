@@ -160,4 +160,37 @@ html_css_files = [
     "css/custom.css",
 ]
 
+def rebuild_readme():
+    """Rebuild the readme file for ReadTheDocs usage with MyST parser"""
+    local_path = os.path.dirname(os.path.abspath(__file__))
+    readme_path = os.path.join(local_path, "../../README.md")
+    new_readme_path = os.path.join(local_path, "../../README_rtd.md")
+
+    outlines = []
+    in_block = False
+    with open(readme_path, "r") as f:
+        lines = f.readlines()
+        for line in lines:
+            if line.startswith("> [!"):
+                in_block = True
+                if line.startswith("> [!NOTE]"):
+                    outlines.append("```{note}\n")
+                elif line.startswith("> [!IMPORTANT]"):
+                    outlines.append("```{important}\n")
+            elif in_block:
+                if line.startswith("> "):
+                    outlines.append(line[2:])
+                else:
+                    in_block = False
+                    outlines.append("```\n")
+                    outlines.append(line)
+            else:
+                outlines.append(line)
+
+    with open(new_readme_path, "w") as f:
+        f.writelines(outlines)
+
+
+rebuild_readme()
+
 # command line (in venv: sphinx-build -T -E -b html ./source ./build)
