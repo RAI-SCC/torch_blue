@@ -1,6 +1,6 @@
 import math
-from typing import Dict, Optional, Tuple, Union, cast
-from warnings import filterwarnings
+from itertools import product
+from typing import Dict, Optional, Tuple, Type, cast
 
 import pytest
 import torch
@@ -12,412 +12,521 @@ from torch_blue.vi.distributions import Distribution
 from torch_blue.vi.utils import NoVariablesError, UnsupportedDistributionError
 
 
-def test_expand_to_samples(device: torch.device) -> None:
-    """Test _expand_to_samples."""
-    shape1 = (3, 4)
-    sample1 = torch.randn(shape1, device=device)
-    out1 = VIModule._expand_to_samples(sample1, samples=5)
-    assert out1.shape == (5,) + shape1
-    for s in out1:
-        assert (s == sample1).all()
+class TestVIModule:
+    """Test core functionality of VIModule."""
 
-    shape2 = (5,)
-    sample2 = torch.randn(shape2, device=device)
-    out2 = VIModule._expand_to_samples(sample2, samples=1)
-    assert out2.shape == (1,) + shape2
-    for s in out2:
-        assert (s == sample2).all()
-
-    out3 = VIModule._expand_to_samples(None, samples=2)
-    assert (out3 == torch.tensor([False, False])).all()
-
-
-def test_no_forward_error() -> None:
-    """Test that forward throws error if not implemented."""
-    module = VIModule()
-    with pytest.raises(
-        NotImplementedError,
-        match=r'Module \[VIModule\] is missing the required "forward" function',
-    ):
-        module.forward(torch.randn((3, 4)))
-
-
-def test_sampled_forward(device: torch.device) -> None:
-    """Test _sampled_forward."""
-
-    class Test(VIModule):
-        def __init__(self, ref: Tensor) -> None:
-            super().__init__()
-            self.ref = ref
-            self._log_probs = dict(all=[])
-
-        def forward(self, x: Tensor) -> Tensor:
-            assert x.shape == self.ref.shape
-            self._log_probs["all"].append(
-                get_unwrapped(torch.randn(2, device=x.device))
-            )
-            return x - self.ref
-
-    shape1 = (3, 4)
-    sample1 = torch.randn(shape1, device=device)
-    test1 = Test(ref=sample1)
-    out = cast(VIReturn, test1.sampled_forward(sample1, samples=10))
-    lps = cast(Tensor, out.log_probs)
-    assert hasattr(out, "log_probs")
-    assert isinstance(out, VIReturn)
-    assert lps.shape == (10, 2)
-    assert torch.allclose(out, torch.zeros((10,) + shape1, device=device))
-    for r in lps[1:]:
-        assert not torch.allclose(lps[0], r)
-
-    shape2 = (5,)
-    sample2 = torch.randn(shape2, device=device)
-    test2 = Test(ref=sample2)
-    assert torch.allclose(
-        test2.sampled_forward(sample2, samples=1)[0],
-        torch.zeros((1,) + shape2, device=device),
+    @pytest.fixture(
+        params=[(("mean", "std"), (0.0, 1.0)), (("mean", "std"), (1.0, 0.3))]
     )
+    def dummy_prior(self, request: pytest.FixtureRequest) -> Type[Distribution]:
+        """Create dummy prior for testing."""
+        dist_params, default_params = request.param
 
+        class TestPrior(Distribution):
+            is_prior: bool = True
+            distribution_parameters: Tuple[str, ...] = dist_params
+            _scaling_parameters: Tuple[str, ...] = dist_params
+            mean: float = default_params[0]
+            std: float = default_params[1]
 
-def test_name_maker() -> None:
-    """Test VIModule.variational_parameter_name."""
-    assert VIModule.variational_parameter_name("a", "b") == "_a_b"
-    assert VIModule.variational_parameter_name("vw", "xz") == "_vw_xz"
+            def prior_log_prob(self, x: Tensor) -> Tensor:
+                return 2 * x
 
+        return TestPrior
 
-def test_vimodule(device: torch.device) -> None:
-    """Test VIModule."""
-
-    # Test variant without parameters
-    class DummyModule(VIModule):
-        pass
-
-    module1 = DummyModule()
-
-    assert module1.random_variables is None
-    assert module1.return_log_probs
-    assert module1._has_sampling_responsibility
-    assert not hasattr(module1, "variational_distribution")
-    assert not hasattr(module1, "prior")
-    assert not hasattr(module1, "_kaiming_init")
-    assert not hasattr(module1, "_prior_init")
-
-    with pytest.raises(
-        NoVariablesError, match="DummyModule has no random variables to reset"
-    ):
-        module1.reset_variational_parameters()
-    with pytest.raises(
-        NoVariablesError, match="DummyModule has no variational parameters to get"
-    ):
-        module1.get_variational_parameters("weight")
-    with pytest.raises(NoVariablesError, match="DummyModule has no random variables"):
-        module1.get_log_probs(torch.zeros(1), "foo")
-    with pytest.raises(
-        NoVariablesError, match="DummyModule has no random variables to sample"
-    ):
-        module1.sample_variable("foo")
-
-    # Test variant with parameters
-    var_dict1: Dict[str, Optional[Tuple[int, ...]]] = dict(
-        weight=(2, 3),
-        bias=(3,),
+    @pytest.fixture(
+        params=[
+            (("mean", "std"), (0.0, 1.0)),
+            (("mean", "std"), (1.0, 0.3)),
+            (("mean", "log_std"), (0.0, 0.0)),
+        ]
     )
-    var_params = ("mean", "std")
-    default_params = (0.0, 0.3)
+    def dummy_vardist(self, request: pytest.FixtureRequest) -> Type[Distribution]:
+        """Create dummy vardist for testing."""
+        var_params, default_params = request.param
 
-    class TestDistribution(Distribution):
-        is_variational_distribution = True
-        distribution_parameters = var_params
-        _default_variational_parameters = default_params
+        class TestVarDist(Distribution):
+            is_variational_distribution: bool = True
+            distribution_parameters: Tuple[str, ...] = var_params
+            _default_variational_parameters: Tuple[float, ...] = default_params
 
-        def sample(self, mean: Tensor, std: Tensor) -> Tensor:
-            pass
+            def sample(self, mean: Tensor, std: Tensor) -> Tensor:
+                return mean + std
 
-        def variational_log_prob(
-            self, sample: Tensor, mean: Tensor, std: Tensor
-        ) -> Tensor:
-            pass
+            def variational_log_prob(
+                self, sample: Tensor, mean: Tensor, std: Tensor
+            ) -> Tensor:
+                return 3 * sample
 
-    class TestPrior(Distribution):
-        is_prior = True
-        distribution_parameters = ("mean", "std")
-        _scaling_parameters = ("mean", "std")
-        mean: float = 1.0
-        std: float = 2.0
+        return TestVarDist
 
-        def prior_log_prob(self, x: Tensor) -> Tensor:
-            pass
-
-    module2 = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)
-
-    for var in var_dict1:
-        for param in var_params:
-            param_name = module2.variational_parameter_name(var, param)
-            assert hasattr(module2, param_name)
-            assert getattr(module2, param_name).device == device
-            if param != "mean":
-                # kaiming_init scales with sqrt(fan_in=3)
-                scale = 1 / math.sqrt(3)
-                index = var_params.index(param)
-                default = default_params[index]
-                assert (getattr(module2, param_name) == default * scale).all()
-
-    # Check that reset_mean randomizes the means
-    weight_mean = module2._weight_mean.clone()
-    bias_mean = module2._bias_mean.clone()
-
-    module2.reset_variational_parameters()
-
-    assert not (module2._weight_mean == weight_mean).all()
-    assert not (module2._bias_mean == bias_mean).all()
-
-    # Test prior based initialization
-    with pytest.warns(
-        UserWarning,
-        match=r'Module \[TestPrior\] is missing the "reset_parameters_to_prior" method*',
-    ):
-        _ = VIModule(
-            var_dict1,
-            TestDistribution(),
-            TestPrior(),
-            prior_initialization=True,
-            device=device,
-        )
-
-    with pytest.raises(
-        AssertionError,
-        match=r"Provide either exactly one variational distribution or exactly one for each random variable",
-    ):
-        _ = VIModule(var_dict1, [TestDistribution()] * 3, TestPrior(), device=device)
-
-    with pytest.raises(
-        AssertionError,
-        match=r"Provide either exactly one prior distribution or exactly one for each random variable",
-    ):
-        _ = VIModule(var_dict1, TestDistribution(), [TestPrior()] * 3, device=device)
-
-    _ = VIModule(var_dict1, [TestDistribution()] * 2, [TestPrior()] * 2, device=device)
-
-    filterwarnings("error")
-    module2 = VIModule(
-        var_dict1, TestDistribution(), TestPrior(), rescale_prior=True, device=device
+    @pytest.fixture(
+        params=[
+            {"weight": (5, 6), "bias": (6,)},
+            {"weight": (5, 6), "weight2": (3, 2), "bias": (6,)},
+            {"weight": (3, 2), "bias": None},
+            {"weight": (3, 2)},
+        ]
     )
-    for prior in module2.prior.values():
-        assert prior.mean == 1 / math.sqrt(3 * 3)  # type: ignore [attr-defined]
-        assert prior.std == 2 / math.sqrt(3 * 3)  # type: ignore [attr-defined]
+    def var_dict(
+        self, request: pytest.FixtureRequest
+    ) -> Dict[str, Optional[Tuple[int, ...]]]:
+        """Set up variable dict for test initializations."""
+        return request.param
 
-    with pytest.raises(NoVariablesError, match="All module variables are set to None."):
-        _ = VIModule(
-            dict(a=None),
-            TestDistribution(),
-            TestPrior(),
-            rescale_prior=True,
-            device=device,
-        )
+    def test_dist_no_error(
+        self,
+        var_dict: Dict[str, Optional[Tuple[int, ...]]],
+        dummy_prior: Type[Distribution],
+        dummy_vardist: Type[Distribution],
+        device: torch.device,
+    ) -> None:
+        """Test error for incompatible number of distributions."""
+        n_var = len(var_dict)
+        n_test = [n_var + 1, n_var - 1]
 
-    # Test Distribution type checking
-    invalid_vardist = TestDistribution()
-    invalid_vardist.is_variational_distribution = False
-    invalid_prior = TestPrior()
-    invalid_prior.is_prior = False
-
-    with pytest.raises(
-        UnsupportedDistributionError,
-        match="TestDistribution does not support use as variational distribution.",
-    ):
-        _ = VIModule(var_dict1, [invalid_vardist] * 2, TestPrior(), device=device)
-
-    with pytest.raises(
-        UnsupportedDistributionError,
-        match="TestDistribution does not support use as variational distribution.",
-    ):
-        _ = VIModule(var_dict1, invalid_vardist, TestPrior(), device=device)
-
-    with pytest.raises(
-        UnsupportedDistributionError, match="TestPrior does not support use as prior."
-    ):
-        _ = VIModule(var_dict1, TestDistribution(), invalid_prior, device=device)
-
-    with pytest.raises(
-        UnsupportedDistributionError, match="TestPrior does not support use as prior."
-    ):
-        _ = VIModule(var_dict1, TestDistribution(), [invalid_prior] * 2, device=device)
-
-
-def test_get_variational_parameters(device: torch.device) -> None:
-    """Test VIBaseModule.get_variational_parameters."""
-    var_dict1: Dict[str, Optional[Tuple[int, ...]]] = dict(
-        weight=(2, 3),
-        bias=(3,),
-    )
-    var_params = ("mean", "log_std")
-    default_params = (0.0, 0.3)
-
-    class TestDistribution(Distribution):
-        is_variational_distribution = True
-        distribution_parameters = var_params
-        _default_variational_parameters = default_params
-
-        def sample(self, mean: Tensor, std: Tensor) -> Tensor:
-            pass
-
-        def variational_log_prob(
-            self, sample: Tensor, mean: Tensor, std: Tensor
-        ) -> Tensor:
-            pass
-
-    class TestPrior(Distribution):
-        is_prior = True
-        distribution_parameters = ("mean", "log_std")
-        _scaling_parameters = ()
-
-        def prior_log_prob(self, x: Tensor) -> Tensor:
-            pass
-
-    module = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)
-
-    for variable in ("weight", "bias"):
-        params_list = module.get_variational_parameters(variable)
-        for param_name, param_value in zip(var_params, params_list):
-            assert param_value.shape == var_dict1[variable]
-            assert param_value.device == device
-            assert (
-                param_value
-                == getattr(
-                    module, module.variational_parameter_name(variable, param_name)
+        for n in n_test:
+            with pytest.raises(
+                AssertionError,
+                match=r"Provide either exactly one variational distribution or "
+                r"exactly one for each random variable",
+            ):
+                _ = VIModule(
+                    var_dict, [dummy_vardist()] * n, dummy_prior(), device=device
                 )
-            ).all()
 
+            with pytest.raises(
+                AssertionError,
+                match=r"Provide either exactly one prior distribution or "
+                r"exactly one for each random variable",
+            ):
+                _ = VIModule(
+                    var_dict, dummy_vardist(), [dummy_prior()] * n, device=device
+                )
 
-def test_get_log_probs(device: torch.device) -> None:
-    """Test VIBaseModule.get_log_probs."""
-    var_dict1: Dict[str, Optional[Tuple[int, ...]]] = dict(
-        weight=(3, 1),
-        bias=(1,),
-    )
-    var_params = ("mean", "log_std")
-    default_params = (0.0, 0.3)
+        # Test correct settings
+        _ = VIModule(var_dict, dummy_vardist(), [dummy_prior()] * n_var, device=device)
+        _ = VIModule(var_dict, [dummy_vardist()] * n_var, dummy_prior(), device=device)
+        _ = VIModule(
+            var_dict, [dummy_vardist()] * n_var, [dummy_prior()] * n_var, device=device
+        )
 
-    class TestDistribution(Distribution):
-        is_variational_distribution = True
-        distribution_parameters = var_params
-        _default_variational_parameters = default_params
+    def test_prior_init_error(
+        self,
+        var_dict: Dict[str, Optional[Tuple[int, ...]]],
+        dummy_prior: Type[Distribution],
+        dummy_vardist: Type[Distribution],
+        device: torch.device,
+    ) -> None:
+        """Test error for missing prior init, if requested."""
+        with pytest.warns(
+            UserWarning,
+            match=r'Module \[TestPrior\] is missing the "reset_parameters_to_prior"'
+            r" method*",
+        ):
+            _ = VIModule(
+                var_dict,
+                dummy_vardist(),
+                dummy_prior(),
+                prior_initialization=True,
+                device=device,
+            )
 
-        def sample(self, mean: Tensor, std: Tensor) -> Tensor:
+    def test_kaiming_scaling(
+        self,
+        var_dict: Dict[str, Optional[Tuple[int, ...]]],
+        dummy_prior: Type[Distribution],
+        dummy_vardist: Type[Distribution],
+        device: torch.device,
+    ) -> None:
+        """Test kaiming scaling of non-mean parameters."""
+        var_params = dummy_vardist.distribution_parameters
+        default_params = dummy_vardist._default_variational_parameters
+        module = VIModule(var_dict, dummy_vardist(), dummy_prior(), device=device)
+        fan_in = module._calculate_fan_in(var_dict)
+
+        for var in var_dict:
+            if var_dict[var] is None:
+                # Check None shape variables do not create parameters
+                for param in var_params:
+                    param_name = module.variational_parameter_name(var, param)
+                    assert not hasattr(module, param_name)
+                continue
+
+            for param in var_params:
+                param_name = module.variational_parameter_name(var, param)
+                assert hasattr(module, param_name)
+                assert getattr(module, param_name).device == device
+                if param != "mean":
+                    # kaiming_init scales with sqrt(fan_in)
+                    scale = 1 / math.sqrt(fan_in)
+                    index = var_params.index(param)
+                    default = default_params[index]
+                    if param.startswith("log"):
+                        assert (
+                            getattr(module, param_name)
+                            == default + math.log(scale + 1e-5)
+                        ).all()
+                    else:
+                        assert (getattr(module, param_name) == default * scale).all()
+
+    def test_invalid_distribution_error(
+        self,
+        var_dict: Dict[str, Optional[Tuple[int, ...]]],
+        dummy_prior: Type[Distribution],
+        dummy_vardist: Type[Distribution],
+        device: torch.device,
+    ) -> None:
+        """Test errors if distribution is used in unsupported role."""
+
+        class InvalidVarDist(dummy_prior):  # type: ignore[valid-type,misc]
             pass
 
-        def variational_log_prob(
-            self, sample: Tensor, mean: Tensor, std: Tensor
-        ) -> Tensor:
-            return torch.tensor(3.0)
+        class InvalidPrior(dummy_vardist):  # type: ignore[valid-type,misc]
+            pass
 
-    class TestPrior(Distribution):
-        is_prior = True
-        distribution_parameters = ("mean", "log_std")
-        _scaling_parameters = ()
+        invalid_vardist = InvalidVarDist()
+        invalid_prior = InvalidPrior()
+        n_var = len(var_dict)
 
-        def prior_log_prob(self, x: Tensor) -> Tensor:
-            return torch.tensor(2.0, device=x.device)
+        with pytest.raises(
+            UnsupportedDistributionError,
+            match="InvalidVarDist does not support use as variational distribution.",
+        ):
+            _ = VIModule(
+                var_dict, [invalid_vardist] * n_var, dummy_prior(), device=device
+            )
 
-    module = VIModule(var_dict1, TestDistribution(), TestPrior(), device=device)
-    assert module.random_variables is not None
+        with pytest.raises(
+            UnsupportedDistributionError,
+            match="InvalidVarDist does not support use as variational distribution.",
+        ):
+            _ = VIModule(var_dict, invalid_vardist, dummy_prior(), device=device)
 
-    for variable in module.random_variables:
-        params = torch.empty(1, device=device)
-        prior_log_prob, variational_log_prob = module.get_log_probs(params, variable)
+        with pytest.raises(
+            UnsupportedDistributionError,
+            match="InvalidPrior does not support use as prior.",
+        ):
+            _ = VIModule(var_dict, dummy_vardist(), invalid_prior, device=device)
 
-        assert prior_log_prob == 2.0
-        assert variational_log_prob == 3.0
+        with pytest.raises(
+            UnsupportedDistributionError,
+            match="InvalidPrior does not support use as prior.",
+        ):
+            _ = VIModule(
+                var_dict, dummy_vardist(), [invalid_prior] * n_var, device=device
+            )
+
+    def test_no_variables_error(
+        self,
+        dummy_prior: Type[Distribution],
+        dummy_vardist: Type[Distribution],
+        device: torch.device,
+    ) -> None:
+        """Test error if all variables are set as None."""
+        with pytest.raises(
+            NoVariablesError, match="All module variables are set to None."
+        ):
+            _ = VIModule(
+                dict(a=None),
+                dummy_vardist(),
+                dummy_prior(),
+                device=device,
+            )
+
+    def test_prior_rescaling(
+        self,
+        var_dict: Dict[str, Optional[Tuple[int, ...]]],
+        dummy_prior: Type[Distribution],
+        dummy_vardist: Type[Distribution],
+        device: torch.device,
+    ) -> None:
+        """Test rescaling prior."""
+        ref_mean = dummy_prior.mean  # type: ignore[attr-defined]
+        ref_std = dummy_prior.std  # type: ignore[attr-defined]
+
+        module = VIModule(
+            var_dict, dummy_vardist(), dummy_prior(), rescale_prior=True, device=device
+        )
+        fan_in = module._calculate_fan_in(var_dict)
+
+        for prior in module.prior.values():
+            if prior is None:
+                continue
+            assert prior.mean == ref_mean / math.sqrt(3 * fan_in)  # type: ignore [attr-defined]
+            assert prior.std == ref_std / math.sqrt(3 * fan_in)  # type: ignore [attr-defined]
+
+    def test_parameter_resetting(
+        self,
+        var_dict: Dict[str, Optional[Tuple[int, ...]]],
+        dummy_prior: Type[Distribution],
+        dummy_vardist: Type[Distribution],
+        device: torch.device,
+    ) -> None:
+        """Test reset parameters."""
+        # Means should be randomized, everything else not
+        module = VIModule(var_dict, dummy_vardist(), dummy_prior(), device=device)
+
+        memory = dict()
+        for var in var_dict:
+            if var_dict[var] is None:
+                continue
+            for param in dummy_vardist.distribution_parameters:
+                name = module.variational_parameter_name(var, param)
+                memory[name] = (getattr(module, name).clone(), param != "mean")
+
+        module.reset_variational_parameters()
+
+        for name in memory:
+            assert (memory[name][0] == getattr(module, name)).all() == memory[name][1]
+
+    def test_get_variational_parameters(
+        self,
+        var_dict: Dict[str, Optional[Tuple[int, ...]]],
+        dummy_prior: Type[Distribution],
+        dummy_vardist: Type[Distribution],
+        device: torch.device,
+    ) -> None:
+        """Test VIModule.get_variational_parameters."""
+        var_params = dummy_vardist.distribution_parameters
+        variables = list(var_dict.keys())
+
+        module = VIModule(var_dict, dummy_vardist(), dummy_prior(), device=device)
+
+        for variable in variables:
+            if var_dict[variable] is None:
+                with pytest.raises(
+                    NoVariablesError,
+                    match=f"{variable} is None and has no parameters to get",
+                ):
+                    _ = module.get_variational_parameters(variable)
+                continue
+            params_list = module.get_variational_parameters(variable)
+            for param_name, param_value in zip(var_params, params_list):
+                name = module.variational_parameter_name(variable, param_name)
+                assert param_value.shape == var_dict[variable]
+                assert param_value.device == device
+                assert (param_value == getattr(module, name)).all()
+
+    def test_get_log_probs(
+        self,
+        var_dict: Dict[str, Optional[Tuple[int, ...]]],
+        dummy_prior: Type[Distribution],
+        dummy_vardist: Type[Distribution],
+        device: torch.device,
+    ) -> None:
+        """Test VIModule.get_log_probs."""
+        module = VIModule(var_dict, dummy_vardist(), dummy_prior(), device=device)
+        assert module.random_variables is not None
+
+        for variable in module.random_variables:
+            if var_dict[variable] is None:
+                continue
+            params = torch.empty(1, device=device)
+            prior_log_prob, variational_log_prob = module.get_log_probs(
+                params, variable
+            )
+
+            assert prior_log_prob == 2 * params
+            assert variational_log_prob == 3 * params
+
+    @pytest.mark.parametrize("return_log_probs", [True, False])
+    def test_sample_variable(
+        self,
+        var_dict: Dict[str, Optional[Tuple[int, ...]]],
+        dummy_prior: Type[Distribution],
+        dummy_vardist: Type[Distribution],
+        return_log_probs: bool,
+        device: torch.device,
+    ) -> None:
+        """Test VIModule.get_sample_variable."""
+        module = VIModule(var_dict, dummy_vardist(), dummy_prior(), device=device)
+        module.return_log_probs = return_log_probs
+
+        for variable in var_dict:
+            sample = getattr(module, variable)
+            if var_dict[variable] is None:
+                assert sample is None
+                continue
+            params = module.get_variational_parameters(variable)
+            assert torch.allclose(sample, torch.add(*params))
+
+            if return_log_probs:
+                lps = module.gather_log_probs()
+                assert torch.allclose(lps[1] / lps[0], torch.tensor(3 / 2))
 
 
-def test_log_prob_setting(device: torch.device) -> None:
-    """Test setting of _return_log_probs with VIModule.return_log_probs."""
-    from torch_blue.vi import VILinear
+class DummyModule1(VIModule):
+    """Dummy module for testing."""
 
-    in_features = 3
-    out_features = 5
+    def __init__(self, ref: Tensor, device: torch.device) -> None:
+        super().__init__()
+        self.ref = torch.tensor(False, device=device) if ref is None else ref
+        self._log_probs = dict(all=[])
 
-    class Test(VIModule):
-        def __init__(self, d_in: int, d_out: int) -> None:
-            super().__init__()
-            self.module = VILinear(d_in, d_out, device=device)
-
-        def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor]]:
-            return self.module(x)
-
-    module1 = Test(in_features, out_features)
-    module1.return_log_probs = True
-    assert module1._return_log_probs is True
-    assert module1.module._return_log_probs is True
-    sample1 = torch.randn(4, in_features, device=device)
-    out = module1(sample1, samples=10)
-    lps = out.log_probs
-    assert isinstance(out, VIReturn)
-    assert out.shape == (10, 4, out_features)
-    assert out.device == device
-    assert lps.shape == (10, 2)
-    assert lps.device == device
-
-    module1.return_log_probs = False
-    assert module1._return_log_probs is False
-    assert module1.module._return_log_probs is False
-    sample1 = torch.randn(4, in_features, device=device)
-    out = module1(sample1, samples=10)
-    lps = out.log_probs
-    assert isinstance(out, VIReturn)
-    assert out.shape == (10, 4, out_features)
-    assert out.device == device
-    assert lps is None
+    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
+        """Forward pass."""
+        assert x.shape == self.ref.shape
+        self._log_probs["all"].append(get_unwrapped(torch.randn(2, device=x.device)))
+        return x.to(torch.float), -self.ref.to(torch.float)
 
 
-@pytest.mark.filterwarnings("ignore")
-def test_basic_jit(device: torch.device) -> None:
-    """
-    Test jit.
+class DummyModule2(VIModule):
+    """Additional dummy module with wrapper and unused module for testing."""
 
-    Very incomplete test, but better than nothing.
-    """
-    # Let's just test it by jitifying something
+    def __init__(self, ref: Tensor, device: torch.device) -> None:
+        super().__init__()
+        self.module = DummyModule1(ref, device)
+        self.vestigial = DummyModule1(ref, device)
 
-    class Test(VIModule):
-        _log_probs = dict(all=[])
+    def forward(self, x: Tensor) -> Tensor:
+        """Forward pass."""
+        a, b = self.module(x)
+        return a + b
 
-        def forward(self, x: Tensor) -> Tensor:
-            self._log_probs["all"].append(torch.tensor((5.0, 3.0), device=x.device))
-            return x
 
-    module1 = Test()
-    inputs = dict(forward=torch.randn(4, 3, device=device))
-    filterwarnings(
-        "ignore",
-        "Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!",
+@pytest.mark.parametrize("shape", [(3, 4), (5,), None])
+class TestVIModuleShapeDependents:
+    """Test sample shape dependent features of VIModule."""
+
+    def test_expand_to_samples(
+        self, shape: Optional[Tuple[int, ...]], device: torch.device
+    ) -> None:
+        """Test _expand_to_samples."""
+        n_samples = torch.randint(1, 10, [1]).item()
+
+        if shape is not None:
+            sample = torch.randn(shape, device=device)
+            out = VIModule._expand_to_samples(sample, samples=n_samples)
+            assert out.shape == (n_samples,) + shape
+            for s in out:
+                assert (s == sample).all()
+        else:
+            out = VIModule._expand_to_samples(None, samples=n_samples)
+            assert out.shape == (n_samples,)
+            for s in out:
+                assert s.item() is False
+
+    def test_no_forward_error(
+        self, shape: Optional[Tuple[int, ...]], device: torch.device
+    ) -> None:
+        """Test that forward throws error if not implemented."""
+        module = VIModule()
+        sample = None if shape is None else torch.randn(shape, device=device)
+        with pytest.raises(
+            NotImplementedError,
+            match=r'Module \[VIModule\] is missing the required "forward" function',
+        ):
+            module.forward(sample)
+
+    @pytest.mark.parametrize(
+        "module,log_probs", product([DummyModule1, DummyModule2], [True, False])
     )
-    _ = torch.jit.trace_module(module1, inputs)
+    def test_sampled_forward(
+        self,
+        shape: Optional[Tuple[int, ...]],
+        module: Type[DummyModule1],
+        log_probs: bool,
+        device: torch.device,
+    ) -> None:
+        """Test _sampled_forward."""
+        n_samples = torch.randint(1, 10, [1]).item()
+
+        sample = None if shape is None else torch.randn(shape, device=device)
+        test = module(ref=sample, device=device)
+        test.return_log_probs = log_probs
+        out = cast(VIReturn, test(sample, samples=n_samples))
+
+        if isinstance(out, tuple):
+            lps = cast(Tensor, out[0].log_probs)
+            for r in out:
+                assert hasattr(r, "log_probs")
+                assert isinstance(r, VIReturn)
+                assert r.log_probs is lps
+            out = out[0] + out[1]
+        else:
+            lps = cast(Tensor, out.log_probs)
+            assert hasattr(out, "log_probs")
+            assert isinstance(out, VIReturn)
+
+        if log_probs:
+            assert lps.shape == (n_samples, 2)
+            if shape is not None:
+                assert torch.allclose(
+                    out, torch.zeros((n_samples,) + shape, device=device)
+                )
+            for r in lps[1:]:
+                assert not torch.allclose(lps[0], r)
+        else:
+            assert lps is None
 
 
-def test_forward_rerouting(device: torch.device) -> None:
-    """Test method pointer reshuffling that wraps the forward method."""
+class TestVIModuleGeneral:
+    """Test general functionalities of VIModule."""
 
-    class Test(VIModule):
-        _log_probs = dict(all=[])
+    @pytest.mark.parametrize("var,param", product(["a", "vw"], ["b", "xy"]))
+    def test_name_maker(self, var: str, param: str) -> None:
+        """Test VIModule.variational_parameter_name."""
+        target = "_".join(["", var, param])
+        assert VIModule.variational_parameter_name(var, param) == target
 
-        @staticmethod
-        def forward(x: Tensor) -> Tensor:
-            return 2 * x
+    def test_trivial_init(self) -> None:
+        """Test init for parameter-free modules."""
 
-        @staticmethod
-        def wrong_forward() -> None:
-            raise NotImplementedError
+        class DummyModule(VIModule):
+            pass
 
-    test_class = Test
-    test_instance = Test()
+        module1 = DummyModule()
 
-    assert hasattr(test_instance, "_module_forward")
-    assert test_instance._module_forward is test_class.forward
-    assert test_instance.forward is not test_class.forward
-    assert test_instance._forward_rerouted
+        assert module1.random_variables is None
+        assert module1.return_log_probs
+        assert module1._has_sampling_responsibility
+        assert not hasattr(module1, "variational_distribution")
+        assert not hasattr(module1, "prior")
+        assert not hasattr(module1, "_kaiming_init")
+        assert not hasattr(module1, "_prior_init")
 
-    # check second reroute has no effect
-    test_instance._reroute_forward(test_instance.wrong_forward)
-    assert test_instance._module_forward is test_class.forward
-    assert test_instance.forward is not test_instance.wrong_forward
+        with pytest.raises(
+            NoVariablesError, match="DummyModule has no random variables to reset"
+        ):
+            module1.reset_variational_parameters()
+        with pytest.raises(
+            NoVariablesError, match="DummyModule has no variational parameters to get"
+        ):
+            module1.get_variational_parameters("weight")
+        with pytest.raises(
+            NoVariablesError, match="DummyModule has no random variables"
+        ):
+            module1.get_log_probs(torch.zeros(1), "foo")
+        with pytest.raises(
+            NoVariablesError, match="DummyModule has no random variables to sample"
+        ):
+            module1.sample_variable("foo")
+
+
+    def test_forward_rerouting(self, device: torch.device) -> None:
+        """Test method pointer reshuffling that wraps the forward method."""
+
+        class Test(VIModule):
+            _log_probs = dict(all=[])
+
+            @staticmethod
+            def forward(x: Tensor) -> Tensor:
+                return 2 * x
+
+            @staticmethod
+            def wrong_forward() -> None:
+                raise NotImplementedError
+
+        test_class = Test
+        test_instance = Test()
+
+        assert hasattr(test_instance, "_module_forward")
+        assert test_instance._module_forward is test_class.forward
+        assert test_instance.forward is not test_class.forward
+        assert test_instance._forward_rerouted
+
+        # check second reroute has no effect
+        test_instance._reroute_forward(test_instance.wrong_forward)
+        assert test_instance._module_forward is test_class.forward
+        assert test_instance.forward is not test_instance.wrong_forward
