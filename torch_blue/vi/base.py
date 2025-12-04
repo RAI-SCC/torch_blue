@@ -295,14 +295,16 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         Raises
         ------
         NoVariablesError
-            If the module does not have parameters of its own.
+            If the module does not have parameters of its own or the requested variable
+            is None.
         """
         if self.random_variables is None:
             raise NoVariablesError(
                 f"{self.__class__.__name__} has no variational parameters to get"
             )
-
         vardist = self.variational_distribution[variable]
+        if vardist is None:
+            raise NoVariablesError(f"{variable} is None and has no parameters to get")
         return [
             getattr(self, self.variational_parameter_name(variable, param))
             for param in vardist.distribution_parameters
