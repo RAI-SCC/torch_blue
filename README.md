@@ -60,10 +60,11 @@ Documentation is available online at [readthedocs](https://torch-blue.readthedoc
 
 This Quickstart guide assumes basic familiarity with [PyTorch](https://pytorch.org/docs/stable/index.html)
 and knowledge of how to implement the intended model in it. For a (potentially familiar)
-example see `scripts/pytorch_tutorial.py`, which contains a copy of the PyTorch
-[Quickstart tutorial](https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html)
-modified to train a BNN with variational inference.
-Three levels are introduced:
+example see `scripts/mnist_tutorial` (as jupyter notebook with comments, or pure python
+script), which contains a copy of the PyTorch [Quickstart tutorial](https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html) modified to
+train a BNN with variational inference.
+
+Three levels are introduced in this guide:
 - [Level 1](#level-1): Simple sequential layer stacks
 - [Level 2](#level-2): Customizing Bayesian assumptions and VI kwargs
 - [Level 3](#level-3): Non-sequential models and log probabilities
