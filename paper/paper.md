@@ -35,37 +35,37 @@ bibliography: paper.bib
 
 Bayesian Neural Networks (BNN) integrate uncertainty quantification in all steps of the
 training and prediction process, thereby enabling better-informed decisions
-[@arbel2023primer]. Among the different variants to implement BNNs, Variational
+[@arbel2023primer]. Among the different approaches to implementing BNNs, Variational
 Inference (VI) [@hoffman2013svi] specifically strikes a balance between the ability to
 consider a large variety of distributions while maintaining low enough compute
-requirements to potentially allow scaling to larger models.
+requirements to allow scaling to larger models.
 
 However, setting up and training BNNs is quite complicated, and existing libraries all
-either lack flexibility, scalability, or tackle Bayesian computation in general, adding
-even more complexity and therefore a huge entry barrier. Moreover, no existing framework
-directly supports direct BNN model prototyping by offering pre-programmed Bayesian
+either lack flexibility, lack scalability, or tackle Bayesian computation in general, adding
+even more complexity and therefore a huge barrier to entry. Moreover, no existing framework
+directly supports straightforward BNN model prototyping by offering pre-programmed Bayesian
 network layer types, similar to PyTorch's `nn` module. This forces any BNNs to be
 implemented from scratch, which can be challenging even for non-Bayesian networks.
 
 `torch_blue` addresses this by providing an interface that is almost identical to
-the widely used PyTorch [@ansel2024pytorch] for basic use, providing a low entry
-barrier, as well as an advanced interface designed for exploration and research.
+the widely used PyTorch [@ansel2024pytorch] for basic use, providing a low
+barrier to entry, as well as an advanced interface designed for exploration and research.
 Overall, this allows users to set up models and even custom layers without worrying
 about the Bayesian intricacies under the hood.
 
 # Statement of need
 
-To represent uncertainty BNNs do not consider their weights as point values, but
+To represent uncertainty, BNNs do not consider their weights as point values, but
 random variables, i.e., distributions. The optimization goal becomes adapting the weight
 distributions to minimize their distance to the true distribution. This requires two
 assumptions. For one, the distance between distributions needs to be defined, for
 which the Kullback-Leibler divergence [@kullback1951information] is typically used.
 Secondly, optimizing an object as complex as a distribution is a non-trivial task.
-To overcome this, VI utilizes a parametrized distribution and optimizing its parameters.
+To overcome this, VI specifies a parametrized distribution and optimizes its parameters.
 Thus, the Kullback-Leibler criterion can be simplified to the ELBO
 (**E**vidence **L**ower **BO**und) loss [@jordan1999introduction]:
 $$\mathrm{ELBO} = \mathbb{E}_{W\sim q}[\underbrace{\log p(Y|X, W)}_\mathrm{Data~fitting} - \underbrace{(\log q(W|\lambda) - \log p(W))}_\mathrm{Prior~matching}] \quad ,$$
-where $(X, Y)$ are the training inputs and labels, $W$ are the network weights, $q$ the
+where $(X, Y)$ are the training inputs and labels, $W$ the network weights, $q$ the
 variational distribution and $\lambda$ its current best fit parameters.
 
 While interest in uncertainty quantification and BNNs has been growing, support for
@@ -80,13 +80,13 @@ learning users.
 `torch_blue`. The highlight colors relate user-facing components to their position
 in \autoref{design_graph}. \label{code}](code_example.png)
 
-![Design graph of `torch_blue` colored highlights correspond to their practical
+![Design graph of `torch_blue`. Colored highlights correspond to their practical
 applications in the code example (\autoref{code}). \label{design_graph}](design_graph.png)
 
-`torch_blue` sacrifices this extreme flexibility to allow nearly fully automating
+`torch_blue` sacrifices this extreme flexibility to allow nearly fully automatic
 VI with reparametrization (Bayes by Backprop) [@blundell15bbb]. The ability to use
 multiple independent sampling dimensions is removed, which allows to fully automate a
-single sampling dimensions in the outermost instance of the new base class `VIModule`,
+single sampling dimension in the outermost instance of the new base class `VIModule`,
 which captures the optional keyword argument `samples` specifying the number of samples.
 The log likelihoods typically needed for loss calculation are automatically calculated
 whenever weights are sampled, aggregated, and returned once again by the outermost
@@ -103,20 +103,19 @@ While ease of use influences all design decisions, it features most prominently 
 PyTorch-like interface. While currently only the most common layer types provided by
 PyTorch are supported, corresponding Bayesian layers follow an analogous naming
 pattern and accept the same arguments as their PyTorch version. Additionally, while
-there are minor differences the process of implementing custom layers is also very
+there are minor differences, the process of implementing custom layers is also very
 similar to PyTorch. To illustrate this \autoref{code} and \ref{design_graph} show an
 application example and internal interactions of `torch_blue` with the colors
 connecting the abstract and applied components.
 
 The additional arguments required to modify the Bayesian aspects of the layers are
-collected on a common group of keyword arguments called `VIkwargs`. These all use
-settings for mean field Gaussian variational inference with Gaussian prior as defaults
+collected on a common group of keyword arguments called `VIkwargs`. The default settings use mean field Gaussian variational inference with a Gaussian prior,
 allowing beginner users to implement simple, unoptimized models without worrying about
 Bayesian settings.
 
 An overview of the currently supported user-facing components is given in
 \autoref{overview}. While modular priors and predictive distributions are quite common
-even for packages with a simpler interface, flexible variational distributions are much
+even for packages with simpler interfaces, flexible variational distributions are much
 more challenging and are often restricted to mean-field Gaussian. This is likely due to
 the fact that a generic variational distribution might require any number of different
 parameters, and the number and shape of weight matrices can only be determined with
@@ -124,8 +123,7 @@ knowledge of the specific combination of layer and variational distribution. Thi
 overcome in `torch_blue` by having the layer provide the names and shapes of the
 required random variables (e.g., mean and bias) and dynamically creating the associated
 class attributes during initialization, when the variational distribution is known. The
-modules also provide methods to either return samples of all random variables or the
-name of each attribute for direct access.
+modules also provide methods to sample from the variational distribution and access its parameters.
 
 ![Overview of the major components of `torch_blue` and corresponding non-Bayesian
 components of PyTorch. \label{overview}](content_overview.png "Content overview for
@@ -138,8 +136,8 @@ sampled weights under these two distributions. Therefore, `torch_blue` provides 
 option to return these as part of the forward pass in the form of a `Tensor` containing
 an additional `log_probs` attribute similar to gradient tracking. As a result, the only
 requirement on custom distributions is that there needs to be a method to differentiably
-sample from a variational distribution and that for both priors and variational
-distributions, the log probability of a given sample can be computed.
+sample from a variational distribution and, for both priors and variational
+distributions, a method to compute the log probability of a given sample.
 
 Finally, in the age of large Neural Networks, scalability and efficiency are always a
 concern. While BNNs are not currently scaled to very large models and this is not a
