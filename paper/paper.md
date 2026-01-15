@@ -41,11 +41,12 @@ consider a large variety of distributions while maintaining low enough compute
 requirements to allow scaling to larger models.
 
 However, setting up and training BNNs is quite complicated, and existing libraries all
-either lack flexibility, lack scalability, or tackle Bayesian computation in general, adding
-even more complexity and therefore a huge barrier to entry. Moreover, no existing framework
-directly supports straightforward BNN model prototyping by offering pre-programmed Bayesian
-network layer types, similar to PyTorch's `nn` module. This forces any BNNs to be
-implemented from scratch, which can be challenging even for non-Bayesian networks.
+either lack flexibility, lack scalability, or tackle Bayesian computation in general,
+adding even more complexity and therefore a huge barrier to entry. Moreover, no existing
+framework directly supports straightforward BNN model prototyping by offering
+pre-programmed Bayesian network layer types, similar to PyTorch's `nn` module. This
+forces any BNNs to be implemented from scratch, which can be challenging even for
+non-Bayesian networks.
 
 `torch_blue` addresses this by providing an interface that is almost identical to
 the widely used PyTorch [@ansel2024pytorch] for basic use, providing a low
@@ -86,11 +87,11 @@ applications in the code example (\autoref{code}). \label{design_graph}](design_
 `torch_blue` sacrifices this extreme flexibility to allow nearly fully automatic
 VI with reparametrization (Bayes by Backprop) [@blundell15bbb]. The ability to use
 multiple independent sampling dimensions is removed, which allows to fully automate a
-single sampling dimension in the outermost instance of the new base class `VIModule`,
-which captures the optional keyword argument `samples` specifying the number of samples.
-The log likelihoods typically needed for loss calculation are automatically calculated
-whenever weights are sampled, aggregated, and returned once again by the outermost
-`VIModule`.
+single sampling dimension in the outermost instance of the new base class `VIModule`.
+To control the number of samples this module also captures the optional keyword argument
+`samples`. The log likelihoods typically needed for loss calculation are automatically
+calculated whenever weights are sampled, aggregated, and returned once again by the
+outermost `VIModule`.
 
 # Core design and features
 
@@ -109,9 +110,9 @@ application example and internal interactions of `torch_blue` with the colors
 connecting the abstract and applied components.
 
 The additional arguments required to modify the Bayesian aspects of the layers are
-collected on a common group of keyword arguments called `VIkwargs`. The default settings use mean field Gaussian variational inference with a Gaussian prior,
-allowing beginner users to implement simple, unoptimized models without worrying about
-Bayesian settings.
+collected on a common group of keyword arguments called `VIkwargs`. The default settings
+use mean field Gaussian variational inference with a Gaussian prior, allowing beginner
+users to implement simple, unoptimized models without worrying about Bayesian settings.
 
 An overview of the currently supported user-facing components is given in
 \autoref{overview}. While modular priors and predictive distributions are quite common
@@ -123,7 +124,8 @@ knowledge of the specific combination of layer and variational distribution. Thi
 overcome in `torch_blue` by having the layer provide the names and shapes of the
 required random variables (e.g., mean and bias) and dynamically creating the associated
 class attributes during initialization, when the variational distribution is known. The
-modules also provide methods to sample from the variational distribution and access its parameters.
+modules also provide methods to sample from the variational distribution and access its
+parameters.
 
 ![Overview of the major components of `torch_blue` and corresponding non-Bayesian
 components of PyTorch. \label{overview}](content_overview.png "Content overview for
