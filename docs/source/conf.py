@@ -14,9 +14,9 @@ sys.path.insert(0, os.path.abspath("../../torch_blue"))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "torch_blue"
-copyright = "2025, RAI-SCC"
+copyright = "2026, RAI-SCC"
 author = "RAI-SCC"
-release = "0.9.0"
+release = "0.9.1"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -160,8 +160,9 @@ html_css_files = [
     "css/custom.css",
 ]
 
+
 def rebuild_readme():
-    """Rebuild the readme file for ReadTheDocs usage with MyST parser"""
+    """Rebuild the readme file for ReadTheDocs usage with MyST parser."""
     local_path = os.path.dirname(os.path.abspath(__file__))
     readme_path = os.path.join(local_path, "../../README.md")
     new_readme_path = os.path.join(local_path, "../../README_rtd.md")

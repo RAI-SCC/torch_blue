@@ -6,20 +6,28 @@ tags:
     - Variational Inference
 authors:
     - name: Arvid Weyrauch
+      orcid: 0000-0002-2684-0927
       affiliation: 1
     - name: Lars H. Heyen
+      orcid: 0000-0001-7949-1858
       affiliation: 1
     - name: Juan Pedro Gutiérrez Hermosillo Muriedas
+      orcid: 0000-0001-8439-7145
       affiliation: 1
-    - name: Peihsuan Hsia
+    - name: Pei-Hsuan Hsia
+      orcid: 0009-0003-5440-4211
       affiliation: 1
     - name: Asena K. Özdemir
+      orcid: 0009-0003-2808-4744
       affiliation: 1
     - name: Achim Streit
+      orcid: 0000-0002-5065-469X
       affiliation: 1
     - name: Markus Götz
-      affiliation: 1, 2
+      orcid: 0000-0002-2233-1041
+      affiliation: "1, 2"
     - name: Charlotte Debus
+      orcid: 0000-0002-7156-2022
       affiliation: 1
 affiliations:
     - name: Karlsruhe Institute of Technology, Germany
@@ -27,7 +35,7 @@ affiliations:
       ror: 04t3en479
     - name: Helmholtz AI
       index: 2
-date: 31 October 2025
+date: 16 January 2026
 bibliography: paper.bib
 ---
 
