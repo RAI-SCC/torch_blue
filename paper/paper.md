@@ -17,7 +17,7 @@ authors:
     - name: Pei-Hsuan Hsia
       orcid: 0009-0003-5440-4211
       affiliation: 1
-    - name: Asena K. Özdemir
+    - name: Asena Karolin Özdemir
       orcid: 0009-0003-2808-4744
       affiliation: 1
     - name: Achim Streit
