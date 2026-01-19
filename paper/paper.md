@@ -79,10 +79,10 @@ variational distribution and $\lambda$ its current best fit parameters.
 
 While interest in uncertainty quantification and BNNs has been growing, support for
 users with little to no experience in Bayesian statistics is still limited.
-Probabilistic Programming Languages, such as Pyro [@bingham2019pyro] and
+Probabilistic programming languages, such as Pyro [@bingham2019pyro] and
 Stan [@stan2025stan], are very powerful and versatile, allowing the implementation of
 many approaches beyond VI. However, their interfaces are structured around Bayesian
-concepts - like plate notation - which will be unfamiliar to many primary machine
+concepts – like plate notation – which will be unfamiliar to many primary machine
 learning users.
 
 ![Code example of a three-layer Bayesian MLP with cross-entropy loss in
@@ -94,7 +94,7 @@ applications in the code example (\autoref{code}). \label{design_graph}](design_
 
 `torch_blue` sacrifices this extreme flexibility to allow nearly fully automatic
 VI with reparametrization (Bayes by Backprop) [@blundell15bbb]. The ability to use
-multiple independent sampling dimensions is removed, which allows to fully automate a
+multiple independent sampling dimensions is removed, which allows for fully automating a
 single sampling dimension in the outermost instance of the new base class `VIModule`.
 To control the number of samples this module also captures the optional keyword argument
 `samples`. The log likelihoods typically needed for loss calculation are automatically
@@ -113,7 +113,7 @@ PyTorch-like interface. While currently only the most common layer types provide
 PyTorch are supported, corresponding Bayesian layers follow an analogous naming
 pattern and accept the same arguments as their PyTorch version. Additionally, while
 there are minor differences, the process of implementing custom layers is also very
-similar to PyTorch. To illustrate this \autoref{code} and \ref{design_graph} show an
+similar to PyTorch. To illustrate this \hyperref[code]{Figures }\ref{code} and \ref{design_graph} show an
 application example and internal interactions of `torch_blue` with the colors
 connecting the abstract and applied components.
 
@@ -149,7 +149,7 @@ requirement on custom distributions is that there needs to be a method to differ
 sample from a variational distribution and, for both priors and variational
 distributions, a method to compute the log probability of a given sample.
 
-Finally, in the age of large Neural Networks, scalability and efficiency are always a
+Finally, in the age of large neural networks, scalability and efficiency are always a
 concern. While BNNs are not currently scaled to very large models and this is not a
 primary target of `torch_blue`, it is kept in mind wherever possible. A core feature
 for this purpose is GPU compatibility, which comes with the challenge of various
@@ -170,3 +170,5 @@ time made available to them through the HAICORE@KIT partition and on the
 high-performance computer HoreKa at the NHR Center KIT. This center is jointly supported
 by the Federal Ministry of Education and Research and the state governments
 participating in the NHR ([www.nhr-verein.de/en/our-partners](www.nhr-verein.de/en/our-partners)).
+
+# References
