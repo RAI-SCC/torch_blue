@@ -1,7 +1,7 @@
 torch_blue -- A PyTorch-based library for Bayesian learning and uncertainty estimation
 ======================================================================================
 
-| |python-version| |license| |docs| |pypi-version| |joss|
+| |python-version| |license| |pypi-version| |docs| |joss|
 
 .. |pypi-version| image:: https://img.shields.io/pypi/v/torch-blue
    :target: https://pypi.org/project/torch-blue/
