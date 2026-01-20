@@ -1,10 +1,8 @@
+.. _quickstart:
+
 Quickstart
 ==========
 
-
-Installation
-------------
-
-.. include:: ../../README.md
+.. include:: ../../README_rtd.md
    :parser: myst
-   :start-after: ## Installation
+   :start-after: ## Quickstart

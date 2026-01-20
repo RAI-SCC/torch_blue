@@ -54,7 +54,7 @@ class MeanFieldNormal(Distribution):
 
     @property
     def std(self) -> float:
-        """Prior standard deviation."""
+        """Standard deviation of the distribution."""
         return exp(self.log_std)
 
     def sample(self, mean: Tensor, log_std: Tensor) -> Tensor:
@@ -111,7 +111,7 @@ class MeanFieldNormal(Distribution):
 
     @staticmethod
     def _normal_sample(mean: Tensor, std: Tensor) -> Tensor:
-        base_sample = torch.normal(torch.zeros_like(mean), torch.ones_like(mean))
+        base_sample = torch.randn_like(mean)
         sample = std * base_sample + mean
         return sample
 
@@ -152,7 +152,7 @@ class MeanFieldNormal(Distribution):
         variable: str
             The name of the random variable to reset as given by
             :attr:`variational_parameters` of the associated
-            :class:`~torch_blue.vi.variational_distributions.VariationalDistribution`.
+            :class:`~torch_blue.vi.distributions.Distribution`.
 
         Returns
         -------

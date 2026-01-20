@@ -1,4 +1,12 @@
-# torch_blue - A PyTorch-like framework for Bayesian learning and uncertainty estimation
+# torch_blue - A PyTorch-like library for Bayesian learning and uncertainty estimation
+
+[![status](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![status](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![status](https://img.shields.io/pypi/v/torch-blue)](https://pypi.org/project/torch-blue/)
+[![status](https://readthedocs.org/projects/torch-blue/badge/?version=latest)](https://torch-blue.readthedocs.io/en/latest/?badge=latest)
+[![status](https://joss.theoj.org/papers/68b05d930d43e44aac0675c5bb3aade2/status.svg)](https://joss.theoj.org/papers/68b05d930d43e44aac0675c5bb3aade2)
+
+----------------------------------------------------------------------------------------
 
 `torch_blue` provides a simple way for non-expert users to implement and train Bayesian
 Neural Networks (BNNs). Currently, it only supports Variational Inference (VI), but will
@@ -60,10 +68,11 @@ Documentation is available online at [readthedocs](https://torch-blue.readthedoc
 
 This Quickstart guide assumes basic familiarity with [PyTorch](https://pytorch.org/docs/stable/index.html)
 and knowledge of how to implement the intended model in it. For a (potentially familiar)
-example see `scripts/pytorch_tutorial.py`, which contains a copy of the PyTorch
-[Quickstart tutorial](https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html)
-modified to train a BNN with variational inference.
-Three levels are introduced:
+example see `scripts/mnist_tutorial` (as jupyter notebook with comments, or pure python
+script), which contains a copy of the PyTorch [Quickstart tutorial](https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html) modified to
+train a BNN with variational inference.
+
+Three levels are introduced in this guide:
 - [Level 1](#level-1): Simple sequential layer stacks
 - [Level 2](#level-2): Customizing Bayesian assumptions and VI kwargs
 - [Level 3](#level-3): Non-sequential models and log probabilities

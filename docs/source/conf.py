@@ -14,9 +14,9 @@ sys.path.insert(0, os.path.abspath("../../torch_blue"))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "torch_blue"
-copyright = "2025, RAI-SCC"
+copyright = "2026, RAI-SCC"
 author = "RAI-SCC"
-release = "0.9.0"
+release = "0.9.1"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -30,12 +30,7 @@ autodoc_type_aliases = {
     "torch.nn.common_types._size_1_t": "int | Tuple[int,]",
     "torch.nn.common_types._size_2_t": "int | Tuple[int, int]",
     "torch.nn.common_types._size_3_t": "int | Tuple[int, int, int]",
-    "torch_blue.vi.utils.common_types.VIReturn[torch.Tensor]": "torch.Tensor | Tuple[torch.Tensor, torch.Tensor]",
-    "torch_blue.vi.utils.common_types.VIReturn[Tuple[torch.Tensor, Optional[torch.Tensor]]]": "Tuple[torch.Tensor, Optional[torch.Tensor]] | Tuple[Tuple[torch.Tensor, torch.Tensor | None], torch.Tensor]",
-    "torch_blue.vi.utils.common_types.VIReturn[torch.nn.common_types._tensor_list_t]": "Union[torch.Tensor, List[torch.Tensor]] | Tuple[Union[torch.Tensor, List[torch.Tensor]], torch.Tensor]",
-    "torch_blue.vi.utils.common_types._vardist_any_t": "VariationalDistribution | List[VariationalDistribution]",
-    "torch_blue.vi.utils.common_types._prior_any_t": "Prior | List[Prior]",
-    "torch_blue.vi.utils.common_types._log_prob_return_format[torch.Tensor]": "Tuple[torch.Tensor, torch.Tensor]",
+    "torch_blue.vi.utils.common_types._dist_any_t": "Distribution | List[Distribution]",
     "Ellipsis": "...",
     "torch_blue.vi.base.": "torch_blue.vi.",
     #    "torch.Tensor": "Tensor",
@@ -144,6 +139,8 @@ autoapi_options = [
     "imported-members",
 ]
 
+# autoapi_keep_files = True
+
 
 # add_module_names = False
 
@@ -162,5 +159,39 @@ html_static_path = ["_static"]
 html_css_files = [
     "css/custom.css",
 ]
+
+
+def rebuild_readme():
+    """Rebuild the readme file for ReadTheDocs usage with MyST parser."""
+    local_path = os.path.dirname(os.path.abspath(__file__))
+    readme_path = os.path.join(local_path, "../../README.md")
+    new_readme_path = os.path.join(local_path, "../../README_rtd.md")
+
+    outlines = []
+    in_block = False
+    with open(readme_path, "r") as f:
+        lines = f.readlines()
+        for line in lines:
+            if line.startswith("> [!"):
+                in_block = True
+                if line.startswith("> [!NOTE]"):
+                    outlines.append("```{note}\n")
+                elif line.startswith("> [!IMPORTANT]"):
+                    outlines.append("```{important}\n")
+            elif in_block:
+                if line.startswith("> "):
+                    outlines.append(line[2:])
+                else:
+                    in_block = False
+                    outlines.append("```\n")
+                    outlines.append(line)
+            else:
+                outlines.append(line)
+
+    with open(new_readme_path, "w") as f:
+        f.writelines(outlines)
+
+
+rebuild_readme()
 
 # command line (in venv: sphinx-build -T -E -b html ./source ./build)
