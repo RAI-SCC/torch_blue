@@ -332,15 +332,73 @@ def _convert_module(
 
 def convert_to_vimodule(
     module: nn.Module,
+    keep_weights: bool = False,
     variational_distribution: _dist_any_t = MeanFieldNormal(),
     prior: _dist_any_t = MeanFieldNormal(),
     rescale_prior: bool = False,
     kaiming_initialization: bool = True,
     prior_initialization: bool = False,
     return_log_probs: bool = True,
-    keep_weights: bool = False,
 ) -> None:
-    """Convert a PyTorch module to a VIModule."""
+    """
+    Convert a PyTorch module to a VIModule.
+
+    This method automatically converts a PyTorch module to a VIModule. This also works
+    for any model that is compatible with :meth:`torch.vmap` (documentation
+    `here <https://docs.pytorch.org/docs/stable/generated/torch.vmap.html>`__). Usually,
+    this will be the case if you do not use the `+=`, `-=`, `*=`, and `/=` operators
+    (their long form, i.e. `a = a + b` instead of `a += b` does not cause issues).
+
+    To configure the model the usual :class:`~torch_blue.vi.VIkwargs` can be used,
+    except `device` and `dtype` which are copied independently for each weight matrix
+    from the original model. This allows to convert a distributed model and maintain
+    the distributed structure. This is compatible with `torch.ddp`, but DDP needs to be
+    applied after the conversion.
+
+    For Bayesian pretraining or custom initialization schemes `keep_weights` can be set
+    to `True`, which will maintain the original weights as value for the primary
+    parameter of the weight distribution. While this can vary the primary parameter is
+    typically the distribution mean.
+
+    The model is converted inplace so to continue using the original model a copy needs
+    to be made before conversion.
+
+    A good method to verify correct model conversion is to set variational distribution
+    and prior to :class:`~torch_blue.vi.distributions.NonBayesian` and `keep_weights`
+    to `True`. This should make the converted model produce the same results as the
+    original. (The output will have an additional sampling dimension and multiple copies
+    of the same result unless you pass `samples=1` to the forward call)
+
+    Standard PyTorch layers will automatically be converted to the optimized
+    implementation of this library. Therefore, you should try to use class names that
+    already exist in PyTorch (like "Transformer"). If you cannot do this, you can use
+    :meth:`~.ban_torch_convert` to add classes to a blacklist (or later remove them from
+    it) that will make them be converted normally.
+
+    Advanced note: Auto-conversion will ignore many standard modules from PyTorch since
+    they do not have weights (making conversion irrelevant) or should not be converted
+    (this mostly applies to norm layers).
+
+    While not recommended you can use :meth:`~.convert_norms` to enable or disable
+    conversion of all PyTorch norms. Furthermore, you can add (or remove) any class to
+    the conversion ban list with :meth:`~.ban_convert`.
+
+    Finally, auto-conversion will try to reuse auto-converted classes. This means if
+    you implemented a custom layer type and used it multiple times all instances will
+    still be instances of the same (converted) class. To disable this behavior you can
+    add (or remove) the original class the reuse ban list with :meth:`~.ban_reuse`.
+
+    Parameters
+    ----------
+    module: nn.Module
+        The Pytorch module to convert.
+    keep_weights: bool
+        If `True` keep the original weights as value for the primary parameter.
+    VIkwargs
+        Several standard keyword arguments. See :class:`~.VIkwargs` for details.
+        `device` and `dtype` cannot be used since they are copied from the original
+        weights.
+    """
     # device and dtype are not present because they are copied on a per-parameter basis
     # from the original modules
     vikwargs = dict(
@@ -354,7 +412,7 @@ def convert_to_vimodule(
     for m in module.modules():
         _convert_module(m, **vikwargs, keep_weights=keep_weights)
 
-    # __post_init__ needs to be called here again since the loop above goes outside in
+    # __post_init__ needs to be called here again since the loop above goes outside-in
     # and __post_init__ relies on being called the last time by the outermost module
     module = cast(VIModule, module)
     VIModule.__post_init__(module)
