@@ -1,12 +1,11 @@
 import math
-from typing import Any, Dict, Optional, Tuple, Union, cast
+from typing import Dict, Optional, Tuple, Union, cast
 from warnings import filterwarnings
 
 import pytest
 import torch
 from torch import Tensor
 from torch._C._functorch import get_unwrapped
-from torch.nn import Module
 
 from torch_blue.vi import VIModule, VIReturn
 from torch_blue.vi.distributions import Distribution
@@ -372,12 +371,11 @@ def test_log_prob_setting(device: torch.device) -> None:
 
 
 @pytest.mark.filterwarnings("ignore")
-def test_slow_forward(device: torch.device) -> None:
+def test_basic_jit(device: torch.device) -> None:
     """
-    Test VIModule._slow_forward.
+    Test jit.
 
-    I'm not familiar with the intricacies of what this method is supposed to do.
-    I basically just copied it from torch to maintain all features.
+    Very incomplete test, but better than nothing.
     """
     # Let's just test it by jitifying something
 
@@ -389,55 +387,37 @@ def test_slow_forward(device: torch.device) -> None:
             return x
 
     module1 = Test()
-    inputs = torch.randn(4, 3, device=device)
+    inputs = dict(forward=torch.randn(4, 3, device=device))
     filterwarnings(
         "ignore",
         "Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!",
     )
-    _ = torch.jit.trace(module1.forward, inputs)
+    _ = torch.jit.trace_module(module1, inputs)
 
 
-def test_hooks(device: torch.device) -> None:
-    """Test hook execution by VIModule._call_impl."""
-
-    def backward_pre_hook(module: Module, grad: Tensor) -> None:
-        pass
-
-    def backward_hook(module: Module, grad_in: Tensor, grad_out: Tensor) -> None:
-        pass
-
-    def forward_pre_hook(module: Module, args: Any) -> Any:
-        return torch.tensor(3.0, device=device)
-
-    def forward_hook(module: Module, args: Any, out: Any) -> Any:
-        return torch.tensor(3.0, device=device)
-
-    def forward_pre_hook_with_kwargs(
-        module: Module, args: Any, kwargs: Any
-    ) -> Tuple[Any, Any]:
-        return args, kwargs
-
-    def forward_hook_with_kwargs(
-        module: Module, args: Any, kwargs: Any, out: Any
-    ) -> None:
-        pass
+def test_forward_rerouting(device: torch.device) -> None:
+    """Test method pointer reshuffling that wraps the forward method."""
 
     class Test(VIModule):
         _log_probs = dict(all=[])
 
-        def forward(self, x: Tensor) -> Tensor:
-            self._log_probs["all"].append(
-                get_unwrapped(torch.randn(2, device=x.device))
-            )
-            return x
+        @staticmethod
+        def forward(x: Tensor) -> Tensor:
+            return 2 * x
 
-    test = Test()
-    test.register_forward_pre_hook(forward_pre_hook)
-    test.register_forward_pre_hook(forward_pre_hook_with_kwargs, with_kwargs=True)
-    test.register_forward_hook(forward_hook, always_call=True)
-    test.register_forward_hook(forward_hook_with_kwargs, with_kwargs=True)
-    test.register_full_backward_pre_hook(backward_pre_hook)
-    test.register_full_backward_hook(backward_hook)
+        @staticmethod
+        def wrong_forward() -> None:
+            raise NotImplementedError
 
-    inputs = torch.randn(4, 3, device=device)
-    _ = test(inputs)
+    test_class = Test
+    test_instance = Test()
+
+    assert hasattr(test_instance, "_module_forward")
+    assert test_instance._module_forward is test_class.forward
+    assert test_instance.forward is not test_class.forward
+    assert test_instance._forward_rerouted
+
+    # check second reroute has no effect
+    test_instance._reroute_forward(test_instance.wrong_forward)
+    assert test_instance._module_forward is test_class.forward
+    assert test_instance.forward is not test_instance.wrong_forward
