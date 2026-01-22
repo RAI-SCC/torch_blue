@@ -77,8 +77,9 @@ class MeanFieldNormal(Distribution):
         std = torch.exp(log_std)
         return self._normal_sample(mean, std)
 
-    @staticmethod
-    def variational_log_prob(sample: Tensor, mean: Tensor, log_std: Tensor) -> Tensor:
+    def variational_log_prob(
+        self, sample: Tensor, mean: Tensor, log_std: Tensor
+    ) -> Tensor:
         """
         Compute the log probability of `sample` based on a normal distribution.
 
@@ -102,7 +103,7 @@ class MeanFieldNormal(Distribution):
         Tensor
             The log probability of `sample` based on the provided mean and log_std.
         """
-        variance = torch.exp(log_std) ** 2
+        variance = torch.exp(log_std) ** 2 + self.eps
         data_fitting = (sample - mean) ** 2 / variance
         normalization = 2 * log_std
         if _globals._USE_NORM_CONSTANTS:
