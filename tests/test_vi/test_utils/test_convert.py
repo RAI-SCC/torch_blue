@@ -15,8 +15,8 @@ from torch_blue.vi.utils import convert
     [
         (nn.Linear(5, 6, bias=True), 1),
         (nn.Linear(5, 6, bias=False), 1),
-        # (nn.MultiheadAttention(5, 1), 3),
-        # (nn.Transformer(5, 1, 1, 1, 5), 2),
+        (nn.MultiheadAttention(5, 1), 3),
+        (nn.Transformer(5, 1, 1, 1, 5), 2),
     ],
 )
 def test_convert_to_vimodule(module: nn.Module, n_args: int) -> None:
@@ -27,7 +27,7 @@ def test_convert_to_vimodule(module: nn.Module, n_args: int) -> None:
 
     module1 = deepcopy(module)
     convert_to_vimodule(module1)
-    ref_class = getattr(torch_blue.vi, module1.__class__.__name__)
+    ref_class = getattr(torch_blue.vi, "VI" + module.__class__.__name__)
     assert ref_class == type(module1)
     module1(*sample)
 
@@ -35,7 +35,7 @@ def test_convert_to_vimodule(module: nn.Module, n_args: int) -> None:
     module1.return_log_probs = False
     module1(*sample)
 
-    convert.ban_torch_convert(module.__class__.__name__)
+    convert.ban_convert(module.__class__, ban_mode="replace")
     module2 = deepcopy(module)
     convert_to_vimodule(module2)
     assert ref_class != type(module2)
@@ -46,22 +46,19 @@ def test_convert_to_vimodule(module: nn.Module, n_args: int) -> None:
     assert type(module2) == type(module3)
     module3(*sample)
 
-    convert.ban_reuse(module.__class__.__name__)
+    convert.ban_convert(module.__class__, ban_mode="reuse")
     module4 = deepcopy(module)
     convert_to_vimodule(module4)
     assert type(module4) is not type(module3)
     module4(*sample)
-    convert.ban_reuse(module.__class__.__name__, False)
-    convert.ban_torch_convert(module.__class__.__name__, False)
+    convert.ban_convert(module.__class__, ban_mode="reuse", unban=True)
+    convert.ban_convert(module.__class__, ban_mode="replace", unban=True)
 
-    convert.ban_convert(type(module))
+    convert.ban_convert(module.__class__)
     module9 = deepcopy(module)
-    with pytest.raises(
-        AttributeError,
-        match=f"'{module.__class__.__name__}' object has no attribute '_set_sampling_responsibility'",
-    ):
-        convert_to_vimodule(module9)
-    convert.ban_convert(type(module), False)
+    convert_to_vimodule(module9)
+    assert type(module9) == type(module)
+    convert.ban_convert(module.__class__, unban=True)
 
 
 @pytest.mark.parametrize(
@@ -117,7 +114,7 @@ def test_ban_convert(ban_norms: bool) -> None:
     assert module not in convert._blacklist
     convert.ban_convert(module)
     assert module in convert._blacklist
-    convert.ban_convert(module, False)
+    convert.ban_convert(module, unban=True)
     assert module not in convert._blacklist
 
     module_list = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
@@ -126,35 +123,33 @@ def test_ban_convert(ban_norms: bool) -> None:
     convert.ban_convert(module_list)
     for module in module_list:
         assert module in convert._blacklist
-    convert.ban_convert(module_list, False)
+    convert.ban_convert(module_list, unban=True)
     for module in module_list:
         assert module not in convert._blacklist
 
 
-@pytest.mark.parametrize("mode", ["torch", "reuse"])
+@pytest.mark.parametrize("mode", ["replace", "reuse"])
 def test_reuse_bans(mode: str) -> None:
     """Test adding and removing modules from reuse lists."""
-    if mode == "torch":
-        lst = convert._torch_blacklist
-        method = convert.ban_torch_convert
+    if mode == "replace":
+        lst = convert._replace_blacklist
     elif mode == "reuse":
         lst = convert._reuse_blacklist
-        method = convert.ban_reuse
 
-    module = "Linear"
+    module = nn.Linear
     assert module not in lst
-    method(module)
+    convert.ban_convert(module, ban_mode=mode)
     assert module in lst
-    method(module, False)
+    convert.ban_convert(module, ban_mode=mode, unban=True)
     assert module not in lst
 
-    module_list = ["Conv1d", "Conv2d", "Conv3d"]
+    module_list = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
     for module in module_list:
         assert module not in lst
-    method(module_list)
+    convert.ban_convert(module_list, ban_mode=mode)
     for module in module_list:
         assert module in lst
-    method(module_list, False)
+    convert.ban_convert(module_list, ban_mode=mode, unban=True)
     for module in module_list:
         assert module not in lst
 
