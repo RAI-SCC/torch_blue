@@ -137,7 +137,8 @@ class NonBayesian(Distribution):
         """
         Calculate the loss of the mean prediction with respect to reference.
 
-        This is not affected by :data:`_globals._USE_NORM_CONSTANTS`.
+        Since the loss works on NEGATIVE log likelihood this is minus the specified
+        loss. This is not affected by :data:`_globals._USE_NORM_CONSTANTS`.
 
         Parameters
         ----------
@@ -154,7 +155,7 @@ class NonBayesian(Distribution):
         """
         if self.loss is None:
             raise ValueError("loss_type must be set during initialization")
-        return self.loss(parameters, reference)
+        return -self.loss(parameters, reference)
 
 
 class UniformPrior(NonBayesian):
