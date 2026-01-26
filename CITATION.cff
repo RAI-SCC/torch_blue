@@ -1,0 +1,70 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Weyrauch
+  given-names: Arvid
+  orcid: "https://orcid.org/0000-0002-2684-0927"
+- family-names: Heyen
+  given-names: Lars H.
+  orcid: "https://orcid.org/0000-0001-7949-1858"
+- family-names: Muriedas
+  given-names: Juan Pedro Gutiérrez Hermosillo
+  orcid: "https://orcid.org/0000-0001-8439-7145"
+- family-names: Hsia
+  given-names: Pei-Hsuan
+  orcid: "https://orcid.org/0009-0003-5440-4211"
+- family-names: Özdemir
+  given-names: Asena Karolin
+  orcid: "https://orcid.org/0009-0003-2808-4744"
+- family-names: Streit
+  given-names: Achim
+  orcid: "https://orcid.org/0000-0002-5065-469X"
+- family-names: Götz
+  given-names: Markus
+  orcid: "https://orcid.org/0000-0002-2233-1041"
+- family-names: Debus
+  given-names: Charlotte
+  orcid: "https://orcid.org/0000-0002-7156-2022"
+doi: 10.5281/zenodo.18313585
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Weyrauch
+    given-names: Arvid
+    orcid: "https://orcid.org/0000-0002-2684-0927"
+  - family-names: Heyen
+    given-names: Lars H.
+    orcid: "https://orcid.org/0000-0001-7949-1858"
+  - family-names: Muriedas
+    given-names: Juan Pedro Gutiérrez Hermosillo
+    orcid: "https://orcid.org/0000-0001-8439-7145"
+  - family-names: Hsia
+    given-names: Pei-Hsuan
+    orcid: "https://orcid.org/0009-0003-5440-4211"
+  - family-names: Özdemir
+    given-names: Asena Karolin
+    orcid: "https://orcid.org/0009-0003-2808-4744"
+  - family-names: Streit
+    given-names: Achim
+    orcid: "https://orcid.org/0000-0002-5065-469X"
+  - family-names: Götz
+    given-names: Markus
+    orcid: "https://orcid.org/0000-0002-2233-1041"
+  - family-names: Debus
+    given-names: Charlotte
+    orcid: "https://orcid.org/0000-0002-7156-2022"
+  date-published: 2026-01-23
+  doi: 10.21105/joss.09415
+  issn: 2475-9066
+  issue: 117
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 9415
+  title: "torch_blue: A Flexible Python Package for Bayesian Neural
+    Networks in PyTorch"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.09415"
+  volume: 11
+title: "torch_blue: A Flexible Python Package for Bayesian Neural
+  Networks in PyTorch"
