@@ -82,35 +82,32 @@ Three levels are introduced in this guide:
 ### Level 1
 
 Many parts of a neural network remain completely unchanged when turning it into a BNN.
-Indeed, only `Module`s containing `nn.Parameter`s, need to be changed. Therefore, if a
-PyTorch model fulfills two requirements it can be transferred almost unchanged:
+Indeed, only `Module`s containing `nn.Parameter`s, need to be changed. Therefore, if all
+PyTorch `Module`s that have weights and should be Bayesian have equivalents in this
+package (see table below) should be relatively straightforward.
 
-1. All PyTorch `Module`s containing parameters have equivalents in this package (table below).
-2. The model can be expressed purely as a sequential application of a list of layers,
-i.e. with `nn.Sequential`.
+| PyTorch                                | vi replacement                        |
+|----------------------------------------|---------------------------------------|
+| `nn.Linear`                            | `VILinear`                            |
+| `nn.Conv1d`                            | `VIConv1d`                            |
+| `nn.Conv2d`                            | `VIConv2d`                            |
+| `nn.Conv3d`                            | `VIConv3d`                            |
+| `nn.Transformer` (including sublayers) | `VITransformer` (including sublayers) |
 
-| PyTorch          | vi replacement  |
-|------------------|-----------------|
-| `nn.Linear`      | `VILinear`      |
-| `nn.Conv1d`      | `VIConv1d`      |
-| `nn.Conv2d`      | `VIConv2d`      |
-| `nn.Conv3d`      | `VIConv3d`      |
-| `nn.Transformer` | `VITransformer` |
-
-Given these two conditions, inherit the module from `vi.VIModule` instead of `nn.Module`
-and use `vi.VISequential` instead of `nn.Sequential`. Then replace all layers
-containing parameters as shown in the table above. For basic usage initialize these
-modules with the same arguments as their PyTorch equivalent. For advanced usage see
-[Quickstart: Level 2](#level-2). Many other layers can be included as-is. In particular
-activation functions, pooling, and padding (even dropout, though they
-should not be necessary since the prior acts as regularization). Currently not supported
-are recurrent and transposed convolution layers. Normalization layers may
-have parameters depending on their setting, but can likely be left non-Bayesian.
+Any custom modules should from `vi.VIModule` instead of `nn.Module`. Then replace all
+layers containing parameters as shown in the table above. For basic usage initialize
+these modules with the same arguments as their PyTorch equivalent. For advanced usage
+see [Quickstart: Level 2](#level-2). Many other layers can be included as-is. In
+particular activation functions, pooling, and padding (even dropout, though they
+should not be necessary since the prior acts as regularization). Currently, recurrent
+and transposed convolution layers are not supported. Normalization layers may have
+parameters depending on their setting, but can likely be left non-Bayesian.
 
 Additionally, the loss must be replaced. To start out use `vi.KullbackLeiblerLoss`,
 which requires a `Distribution` with `self.is_predictive_distribution=True` and the size
-of the training dataset (this is important for balancing of assumptions and data. Choose
-your `Distribution` from the table below based on the loss you would use in PyTorch.
+of the training dataset (this is important for balancing of assumptions and data).
+Choose your `Distribution` from the table below based on the loss you would use in
+PyTorch.
 
 > [!IMPORTANT]
 > `KullbackLeiblerLoss` requires the length of the dataset, not the dataloader, which is
@@ -121,12 +118,6 @@ your `Distribution` from the table below based on the loss you would use in PyTo
 | `nn.MSELoss`          | `MeanFieldNormal`                            |
 | `nn.CrossEntropyLoss` | `Categorical`                                |
 
-> [!NOTE]
-> Reasons for the requirement to use `VISequential` (and how to overcome it)
-> are described in [Quickstart: Level 3](#level-3). However, adding residual connections
-> from the start to the end of a block of layers can also be achieved using
-> `VIResidualConnection`, which acts the same as `VISequential`, but adds the input to
-> the output.
 
 ### Level 2
 
@@ -144,7 +135,11 @@ weights with mean 0 and standard deviation 1 (also known as a standard normal pr
 Mean and standard deviation can be adapted here. Particularly reducing the standard
 deviation may help convergence at the risk of an overconfident model. Other available
 priors:
-  - `BasicQuietPrior`: an experimental prior that correlates mean and standard deviation
+  - `NonBayesian`/`UniformPrior`: Under this prior all weight values are equally likely.
+  While not recommended for Bayesian models this can be used in combination with a
+  `NonBayesian` variational and predictive distribution to recover non-Bayesian training
+  (useful for debugging or obtaining a baseline).
+  - `BasicQuietPrior`: An experimental prior that correlates mean and standard deviation
   to disincentivize noisy weights
 - rescale_prior (`bool`): Experimental. Scales the prior similar to Kaiming-initialization.
 May help with convergence, but may lead to overconfidence. Current research.
@@ -181,7 +176,7 @@ performed by the outermost module. For deployment `return_log_probs` should be s
 
 > [!NOTE]
 > Always make sure your outermost module is a VIModule and keep in mind that the output
-> of that module will be a `VIReturn` object, which behaves like a `Tensor`, carries
+> of that module will be a `VIReturn` object, which behaves like a `Tensor`, but carries
 > weight log probabilities, if `return_log_probs == True`. Losses in `torch_blue`
 > expect this format.
 
