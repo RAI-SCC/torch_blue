@@ -100,7 +100,7 @@ class TestNonBayesian:
             raise
 
         target_mean = samples.mean(dim=0)
-        target_loss = target()(target_mean, reference)
+        target_loss = -target()(target_mean, reference)
 
         assert target_mean.shape == predictive_mean.shape
         assert predictive_mean.device == device

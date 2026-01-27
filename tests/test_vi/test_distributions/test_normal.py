@@ -49,25 +49,30 @@ class TestNormal:
         prior_log_prob = prior.prior_log_prob(sample)
         assert torch.allclose(ref, prior_log_prob, atol=1e-7)
 
-    @pytest.mark.parametrize("norm_constants", [True, False])
+    @pytest.mark.parametrize(
+        "norm_constants,eps", list(product([True, False], [1e-10, 1e-3]))
+    )
     def test_variational_log_prob(
-        self, norm_constants: bool, device: torch.device
+        self, norm_constants: bool, eps: float, device: torch.device
     ) -> None:
         """Test Normal.variational_log_prob."""
         shape = (3, 4)
-        var_dist = self.target()
+        var_dist = self.target(eps=eps)
         use_norm_constants(norm_constants)
 
         mean = torch.randn(shape, device=device)
         log_std = torch.randn(shape, device=device)
 
         ref_dist = dist.Normal(mean, log_std.exp())
+        sample = ref_dist.sample([1]).to(device=device).squeeze()
 
-        sample = ref_dist.sample(shape).to(device=device)
-        ref = dist.Normal(mean, log_std.exp()).log_prob(sample).to(device=device)
-        if not norm_constants:
-            norm_const = torch.full_like(mean, 2 * torch.pi, device=device).log() / 2
-            ref += norm_const
+        ref_variance = torch.exp(log_std) ** 2 + eps
+        ref_data_fitting = (sample - mean) ** 2 / ref_variance
+        ref_normalization = 2 * log_std
+        if norm_constants:
+            ref_normalization = ref_normalization + log(2 * torch.pi)
+        ref = -0.5 * (ref_data_fitting + ref_normalization).to(device=device)
+
         variational_log_prob = var_dist.variational_log_prob(sample, mean, log_std)
         assert torch.allclose(ref, variational_log_prob, atol=1e-7)
         assert variational_log_prob.device == device
