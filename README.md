@@ -1,5 +1,5 @@
-![torch blue Logo](https://raw.githubusercontent.com/RAI-SCC/torch_blue/logos/docs/images/logo-torch-blue-wide.svg#gh-light-mode-only)
-![torch blue Logo](https://raw.githubusercontent.com/RAI-SCC/torch_blue/logos/docs/images/logo-torch-blue-wide-darkmode.svg#gh-dark-mode-only)
+![torch blue Logo](https://raw.githubusercontent.com/RAI-SCC/torch_blue/dev/docs/images/logo-torch-blue-wide.svg#gh-light-mode-only)
+![torch blue Logo](https://raw.githubusercontent.com/RAI-SCC/torch_blue/dev/docs/images/logo-torch-blue-wide-darkmode.svg#gh-dark-mode-only)
 ### A PyTorch-like library for Bayesian learning and uncertainty estimation
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
