@@ -1,11 +1,13 @@
-# torch_blue - A PyTorch-like library for Bayesian learning and uncertainty estimation
+![torch blue Logo](https://raw.githubusercontent.com/RAI-SCC/torch_blue/logos/docs/images/logo-torch-blue-wide.svg#gh-light-mode-only)
+![torch blue Logo](https://raw.githubusercontent.com/RAI-SCC/torch_blue/logos/docs/images/logo-torch-blue-wide.svg#gh-dark-mode-only)
+### A PyTorch-like library for Bayesian learning and uncertainty estimation
 
-[![status](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![status](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-[![status](https://img.shields.io/pypi/v/torch-blue)](https://pypi.org/project/torch-blue/)
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: BSD-3](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![PyPI](https://img.shields.io/pypi/v/torch-blue)](https://pypi.org/project/torch-blue/)
 [![codecov](https://codecov.io/gh/RAI-SCC/torch_blue/graph/badge.svg?token=0CD3FTVKRC)](https://codecov.io/gh/RAI-SCC/torch_blue)
-[![status](https://readthedocs.org/projects/torch-blue/badge/?version=latest)](https://torch-blue.readthedocs.io/en/latest/?badge=latest)
-[![status](https://joss.theoj.org/papers/68b05d930d43e44aac0675c5bb3aade2/status.svg)](https://joss.theoj.org/papers/68b05d930d43e44aac0675c5bb3aade2)
+[![docs](https://readthedocs.org/projects/torch-blue/badge/?version=latest)](https://torch-blue.readthedocs.io/en/latest/?badge=latest)
+[![JOSS](https://joss.theoj.org/papers/68b05d930d43e44aac0675c5bb3aade2/status.svg)](https://joss.theoj.org/papers/68b05d930d43e44aac0675c5bb3aade2)
 
 ----------------------------------------------------------------------------------------
 

@@ -1,4 +1,5 @@
-torch_blue -- A PyTorch-based library for Bayesian learning and uncertainty estimation
+.. image:: https://raw.githubusercontent.com/RAI-SCC/torch_blue/logos/docs/images/logo-torch-blue-wide.svg
+A PyTorch-based library for Bayesian learning and uncertainty estimation
 ======================================================================================
 
 
