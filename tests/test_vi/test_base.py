@@ -431,22 +431,37 @@ class TestVIModuleShapeDependents:
             module.forward(sample)
 
     @pytest.mark.parametrize(
-        "module,log_probs", product([DummyModule1, DummyModule2], [True, False])
+        "module,log_probs,sampled_input",
+        product([DummyModule1, DummyModule2], [True, False], [True, False]),
     )
     def test_sampled_forward(
         self,
         shape: Optional[tuple[int, ...]],
         module: Type[DummyModule1],
         log_probs: bool,
+        sampled_input: bool,
         device: torch.device,
     ) -> None:
         """Test _sampled_forward."""
         n_samples = torch.randint(1, 10, [1]).item()
+        if sampled_input and shape is not None:
+            shape = (n_samples,) + shape
 
         sample = None if shape is None else torch.randn(shape, device=device)
-        test = module(ref=sample, device=device)
+
+        if sampled_input and shape is not None:
+            test = module(ref=sample[0], device=device)  # type: ignore[index]
+        else:
+            test = module(ref=sample, device=device)
         test.return_log_probs = log_probs
-        out = cast(VIReturn, test(sample, samples=n_samples))
+
+        if sampled_input and shape is None:
+            with pytest.raises(ValueError):
+                out = test(sample, samples=n_samples, sampled_input=sampled_input)
+            return
+        out = cast(
+            VIReturn, test(sample, samples=n_samples, sampled_input=sampled_input)
+        )
 
         if isinstance(out, tuple):
             lps = cast(Tensor, out[0].log_probs)
@@ -462,10 +477,12 @@ class TestVIModuleShapeDependents:
 
         if log_probs:
             assert lps.shape == (n_samples, 2)
-            if shape is not None:
+            if shape is not None and not sampled_input:
                 assert torch.allclose(
                     out, torch.zeros((n_samples,) + shape, device=device)
                 )
+            elif shape is not None:
+                assert torch.allclose(out[0], torch.zeros(shape, device=device))
             for r in lps[1:]:
                 assert not torch.allclose(lps[0], r)
         else:

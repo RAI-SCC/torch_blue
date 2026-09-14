@@ -1,6 +1,6 @@
 import warnings
 from copy import deepcopy
-from typing import Any, Callable, Dict, List, Mapping, Optional, Union, cast
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Union, cast
 
 import torch
 from torch import Tensor
@@ -403,7 +403,11 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         return input_.expand(samples, *input_.shape)
 
     def sampled_forward(
-        self, *input_: Optional[Tensor], samples: int = 10, **kwargs: Any
+        self,
+        *input_: Optional[Tensor],
+        samples: int = 10,
+        sampled_input: bool = False,
+        **kwargs: Any,
     ) -> Union[VIReturn, tuple[VIReturn, ...]]:
         """
         Forward pass of the module evaluating multiple weight samples.
@@ -411,7 +415,9 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         This will automatically be called by the outermost module. Instead of the
         :meth:`~forward` method. It grabs the ``samples`` argument, if provided,
         and copies the input batch the specified number of times. The :meth:`~forward`
-        is performed vectorized over that additional sample dimension.
+        is performed vectorized over that additional sample dimension. If you wish to
+        provide an input that already has a sample dimension use the keyword argument
+        ``sampled_input=True``, which will cause the ``samples`` argument to be ignored.
 
         If you need more information on how this is achieved, check the documentation of
         this class' `__post_init__` method in the source code. Note this goes in deep
@@ -422,8 +428,11 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         ----------
         input_: Tensor
             Any number of input Tensors
-        samples : int, default: 10
+        samples: int, default: 10
             Number of weight samples to evaluate
+        sampled_input: bool, default: False
+            If ``True`` the ``samples`` argument is ignored and the 0th input dimension
+            is used as sample dimension. This implicitly specifies the sample number.
         kwargs: Any
             Any additional keyword arguments
 
@@ -435,7 +444,12 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         # reset log_probs in case users (or IDEs) have touched attributes
         self.reset_log_probs()
 
-        expanded = [self._expand_to_samples(x, samples=samples) for x in input_]
+        if not sampled_input:
+            expanded: Iterable = [
+                self._expand_to_samples(x, samples=samples) for x in input_
+            ]
+        else:
+            expanded = input_
         out: _tensor_list_t = torch.vmap(self._module_forward, randomness="different")(
             *expanded, **kwargs
         )
