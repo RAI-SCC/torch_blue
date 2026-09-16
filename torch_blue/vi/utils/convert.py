@@ -333,7 +333,14 @@ def convert_to_vimodule(
     typically the distribution mean.
 
     The model is converted inplace so to continue using the original model a copy needs
-    to be made before conversion.
+    to be made before conversion. Additionally, this allows distributed models to be
+    converted after they are set up and still function as expected. Converted models
+    are also compatible with PyTorch's
+    `DDP <https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html>`__ for
+    distributed data parallel computation. However, a specific order needs to be
+    maintained: First the model is set up and converted. Then the DDP wrapper is applied
+    to the already converted model. Finally, the optimizer is initialized, after both
+    the conversion and the DDP wrapper are applied.
 
     A good method to verify correct model conversion is to set variational distribution
     and prior to :class:`~torch_blue.vi.distributions.NonBayesian` and `keep_weights`
@@ -342,7 +349,7 @@ def convert_to_vimodule(
     of the same result unless you pass `samples=1` to the forward call)
 
     Standard PyTorch layers will automatically be converted to the optimized
-    implementation of this library. Therefore, you should try to use class names that
+    implementation of this library. Therefore, you should not use class names that
     already exist in PyTorch (like "Transformer"). If you cannot do this, you can use
     :meth:`~.ban_torch_convert` to add classes to a banlist (or later remove them from
     it) that will make them be converted normally.

@@ -12,11 +12,11 @@ added here.
 1. **Non-Bayesian Debugging**
     A very common and important sanity check is setting the variational distribution,
     prior and predictive distribution to ``NonBayesian()``. This should make your model
-    equivalent to the non-Bayesian variant. If it does not something is wrong :). With
+    equivalent to the non-Bayesian variant. If it does not, something is wrong :). With
     that you can apply any approach you would use to debug your network, e.g. train on
     only one sample or batch to make it overfit (ensuring it can learn anything). It is
-    typically easier to get the non-Bayesian version to train and the Bayesian is highly
-    unlikely to work unless the non-Bayesian does.
+    typically easier to get the non-Bayesian version to train and the Bayesian one is
+    highly unlikely to work unless the non-Bayesian does.
 
 .. _loss:
 

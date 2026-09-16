@@ -51,4 +51,5 @@ unclear or confusing so we can try to improve it and make BNNs accessible to eve
    installation
    getting_started
    debug
+   ddp
    autoapi/index
