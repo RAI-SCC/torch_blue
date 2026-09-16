@@ -3,12 +3,12 @@
 ``torch_blue`` and PyTorch DDP
 ==============================
 
-To accelerate training and evaluation of larger model ``torch_blue`` is compatible
+To accelerate training and evaluation of larger models ``torch_blue`` is compatible with
 PyTorch's `DistributedDataParallel (DDP) wrapper <https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html>`_.
-However, there is some specific sequencing to consider, especially when using
-``torch_blue``'s auto-conversion capability. The DDP wrapper always needs to be applied
-after the conversion to a VIModule. Additionally, the optimizer needs to be initialized
-after both of these steps are performed:
+However, there is some specific sequencing to consider, when using ``torch_blue``'s
+auto-conversion capability. The DDP wrapper always needs to be applied after the
+conversion to a VIModule. Additionally, the optimizer needs to be initialized after both
+of these steps are performed (this is a general interaction between optimizers and DDP):
 
 .. code-block:: python3
 
