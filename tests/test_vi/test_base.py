@@ -381,6 +381,10 @@ class DummyModule1(VIModule):
         self._log_probs["all"].append(get_unwrapped(torch.randn(2, device=x.device)))
         return x.to(torch.float), -self.ref.to(torch.float)
 
+    def __init__(self, ref: Tensor, device: torch.device) -> None:
+        super().__init__()
+        self.ref = torch.tensor(False, device=device) if ref is None else ref
+        self._log_probs = dict(all=[])
 
 class DummyModule2(VIModule):
     """Additional dummy module with wrapper and unused module for testing."""
@@ -395,6 +399,10 @@ class DummyModule2(VIModule):
         a, b = self.module(x)
         return a + b
 
+    def forward(self, x: Tensor) -> Tensor:
+        """Forward pass."""
+        a, b = self.module(x)
+        return a + b
 
 @pytest.mark.parametrize("shape", [(3, 4), (5,), None])
 class TestVIModuleShapeDependents:

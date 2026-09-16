@@ -424,6 +424,11 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         and if checking the source code seems too much hassle you should probably not
         touch it and write an issue instead.
 
+        If you need more information on how this is achieved, check the documentation of
+        this class' `__post_init__` method in the source code. Note this goes in deep
+        and if checking the source code seems too much hassle you should probably not
+        touch it and write an issue instead.
+
         Parameters
         ----------
         input_: Tensor
