@@ -1,24 +1,22 @@
 from math import log, sqrt
-from typing import Dict, Tuple
+from typing import Dict
 
 import pytest
 import torch
 from torch import Tensor
 from torch.nn import Linear, Module, Parameter
 
-from torch_blue.vi.distributions import Distribution
+from torch_blue.vi.distributions import (
+    Distribution,
+    PredictiveDistribution,
+    Prior,
+    VariationalDistribution,
+)
+from torch_blue.vi.distributions.base import _init_constant, _init_uniform
 
 
 class TestDistribution:
     """Tests for Distribution class."""
-
-    target = Distribution
-
-    def _simple_log_prob(self, x: Tensor) -> Tensor:
-        pass
-
-    def _required_mean_log_prob(self, x: Tensor, mean: Tensor) -> Tensor:
-        pass
 
     @pytest.mark.parametrize(
         "params",
@@ -32,10 +30,13 @@ class TestDistribution:
     def test_primary_parameters(self, params: Dict[str, float]) -> None:
         """Test primary parameter property."""
 
-        class Test(self.target):  # type:ignore [name-defined]
-            is_prior = True
+        class Test(Prior):
             distribution_parameters = tuple(params.keys())
-            prior_log_prob = self._simple_log_prob
+
+            def log_prob(
+                self, sample: Tensor, parameters: tuple[Tensor, ...]
+            ) -> Tensor:
+                return sample
 
         for name, val in params.items():
             setattr(Test, name, val)
@@ -43,55 +44,34 @@ class TestDistribution:
         test = Test()
         assert test.primary_parameter == tuple(params.keys())[0]
 
-    def test_parameter_checking_prior(self) -> None:
-        """Test enforcement or required parameters for subclasses of Distribution, prior mode."""
+    def test_subclass_enforcement(self) -> None:
+        r"""Test enforcement of subclass use."""
 
-        class Test(self.target):  # type:ignore [name-defined]
-            pass
+        class Test(Distribution):
+            distribution_parameters = ("mean", "log_std")
+
+            def log_prob(
+                self, sample: Tensor, parameters: tuple[Tensor, Tensor]
+            ) -> Tensor:
+                return sample
 
         with pytest.raises(
-            NotImplementedError,
-            match="Test not flagged to be functional as any distribution.",
+            TypeError,
+            match="A Distribution must use at least one of Prior, "
+            "VariationalDistribution, or PredictiveDistribution as interface.",
         ):
             Test()
 
-        # distribution_parameters assertion
-        Test.is_prior = True
+    def test_prior_checking(self) -> None:
+        r"""Test enforcement or required parameters for prior mode."""
 
-        with pytest.raises(
-            NotImplementedError, match=r"Subclasses must define distribution_parameters"
-        ):
-            Test()
+        class Test(Prior):  # type:ignore [name-defined]
+            distribution_parameters = ("mean", "log_std")
 
-        # log_prob assertion
-        Test.distribution_parameters = ("mean", "log_std")
-
-        with pytest.raises(
-            NotImplementedError, match=r"Subclasses must define prior_log_prob"
-        ):
-            Test()
-
-        # log_prob signature without required parameters
-        Test.prior_log_prob = self._required_mean_log_prob
-
-        with pytest.raises(
-            AssertionError,
-            match=r"prior_log_prob must accept an argument for each required parameter plus the sample",
-        ):
-            Test()
-
-        # log_prob signature with required parameters
-        Test.prior_log_prob = self._simple_log_prob
-        Test._required_parameters = ("mean",)
-
-        with pytest.raises(
-            AssertionError,
-            match=r"log_prob must accept an argument for each required parameter plus the sample",
-        ):
-            Test()
-
-        # Test scaling parameter enforcement
-        Test._required_parameters = ()
+            def log_prob(
+                self, sample: Tensor, parameters: tuple[Tensor, Tensor]
+            ) -> Tensor:
+                return sample
 
         with pytest.raises(
             AssertionError,
@@ -99,8 +79,18 @@ class TestDistribution:
         ):
             Test()
 
-        Test.mean = 0.0
-        Test.log_std = 0.0
+    def test_reset_to_prior_warning(self) -> None:
+        """Test warning is raised when prior init is requested, but not implemented."""
+
+        class Test(Prior):  # type:ignore [name-defined]
+            distribution_parameters = ("mean", "log_std")
+            mean = 0.0
+            log_std = 0.0
+
+            def log_prob(
+                self, sample: Tensor, parameters: tuple[Tensor, Tensor]
+            ) -> Tensor:
+                return sample
 
         test = Test()
 
@@ -108,14 +98,7 @@ class TestDistribution:
             UserWarning,
             match=r'Module \[Test\] is missing the "reset_parameters_to_prior" method*',
         ):
-            test.reset_parameters_to_prior(test, "mean")  # type: ignore [arg-type]
-
-        Test._required_parameters = ("mean",)
-        Test._scaling_parameters = ("log_std",)
-        del Test.mean
-        Test.prior_log_prob = self._required_mean_log_prob
-
-        _ = Test()
+            test.reset_parameters_to_prior(test, "mean")  # type:ignore [arg-type]
 
 
 def test_kaiming_rescale() -> None:
@@ -127,8 +110,7 @@ def test_kaiming_rescale() -> None:
         ff=2,
     )
 
-    class Test(Distribution):
-        is_prior = True
+    class Test(Prior):
         distribution_parameters = ("mean", "log_std", "skew", "ff")
         _scaling_parameters = ("mean", "log_std", "skew")
         mean: float = ref["mean"]
@@ -136,8 +118,8 @@ def test_kaiming_rescale() -> None:
         skew: float = ref["skew"]
         ff: float = ref["ff"]
 
-        def prior_log_prob(self, x: Tensor) -> Tensor:
-            pass
+        def log_prob(self, sample: Tensor, parameters: tuple[Tensor, ...]) -> Tensor:
+            return sample
 
     # Test vector rescale
     test = Test()
@@ -182,137 +164,44 @@ def test_kaiming_rescale() -> None:
     assert test.ff == ref["ff"]
 
 
-def test_parameter_checking_variational() -> None:
-    """Test enforcement or required parameters for subclasses of Distribution, variational mode."""
-
-    # variational_parameters assertion
-    class Test(Distribution):
-        is_variational_distribution = True
-
-    try:
-        Test()
-        raise AssertionError
-    except NotImplementedError as e:
-        assert str(e) == "Subclasses must define distribution_parameters"
-
-    # _default_variational_parameters assertion
-    class Test1(Distribution):
-        is_variational_distribution = True
-        distribution_parameters = ("mean", "std")
-
-    try:
-        Test1()
-        raise AssertionError
-    except NotImplementedError as e:
-        assert str(e) == "Subclasses must define _default_variational_parameters"
+def test_vardist_checking() -> None:
+    """Test enforcement or required parameters for variational mode."""
 
     # length matching of variational_parameters and default parameters
-    class Test2(Distribution):
-        is_variational_distribution = True
+    class Test(VariationalDistribution):
         distribution_parameters = ("mean", "std")
-        _default_variational_parameters = (0.0,)
+        _default_variational_parameters: tuple[float, ...] = (0.0,)
 
-    try:
-        Test2()
-        raise AssertionError
-    except AssertionError as e:
-        assert str(e) == "Each variational parameter must be assigned a default value"
-
-    # sample assertion
-    class Test3(Distribution):
-        is_variational_distribution = True
-        distribution_parameters = ("mean", "std")
-        _default_variational_parameters = (0.0, 1.0)
-
-    try:
-        Test3()
-        raise AssertionError
-    except NotImplementedError as e:
-        assert str(e) == "Subclasses must define the sample method"
-
-    # sample assertion
-    class Test4(Distribution):
-        is_variational_distribution = True
-        distribution_parameters = ("mean", "std")
-        _default_variational_parameters = (0.0, 1.0)
+        def log_prob(self, sample: Tensor, parameters: tuple[Tensor, Tensor]) -> Tensor:
+            return sample
 
         def sample(self, mean: Tensor) -> Tensor:
             return mean
 
-    try:
-        Test4()
-        raise AssertionError
-    except AssertionError as e:
-        assert (
-            str(e)
-            == "Sample must accept exactly one Tensor for each distribution parameter"
-        )
+    with pytest.raises(
+        AssertionError,
+        match="Each variational parameter must be assigned a default value",
+    ):
+        Test()
 
-    class Test5(Distribution):
-        is_variational_distribution = True
-        distribution_parameters = ("mean", "std")
-        _default_variational_parameters = (0.0, 1.0)
+    # sample assertion
+    Test._default_variational_parameters = (0.0, 1.0)
 
-        def sample(self, mean: Tensor, std: Tensor) -> Tensor:
-            return mean + std
-
-    try:
-        Test5()
-        raise AssertionError
-    except NotImplementedError as e:
-        assert str(e) == "Subclasses must define variational_log_prob"
-
-    class Test6(Distribution):
-        is_variational_distribution = True
-        distribution_parameters = ("mean", "std")
-        _default_variational_parameters = (0.0, 1.0)
-
-        def sample(self, mean: Tensor, std: Tensor) -> Tensor:
-            return mean + std
-
-        def variational_log_prob(self, mean: Tensor, std: Tensor) -> Tensor:
-            return mean + std
-
-    try:
-        Test6()
-        raise AssertionError
-    except AssertionError as e:
-        assert (
-            str(e)
-            == "variational_log_prob must accept an argument for each variational parameter plus the sample"
-        )
-
-    class Test7(Distribution):
-        is_variational_distribution = True
-        distribution_parameters = ("mean", "std")
-        _default_variational_parameters = (0.0, 1.0)
-
-        def sample(self, mean: Tensor, std: Tensor) -> Tensor:
-            return mean + std
-
-        def variational_log_prob(
-            self, sample: Tensor, mean: Tensor, std: Tensor
-        ) -> Tensor:
-            return sample + mean + std
-
-    _ = Test7()
+    _ = Test()
 
 
 def test_match_parameters() -> None:
     """Test Distribution.match_parameters()."""
 
-    class Test(Distribution):
-        is_variational_distribution = True
+    class Test(VariationalDistribution):
         distribution_parameters = ("mean", "std")
         _default_variational_parameters = (0.0, 1.0)
 
-        def sample(self, mean: Tensor, std: Tensor) -> Tensor:
-            return mean + std
+        def log_prob(self, sample: Tensor, parameters: tuple[Tensor, Tensor]) -> Tensor:
+            return sample
 
-        def variational_log_prob(
-            self, sample: Tensor, mean: Tensor, std: Tensor
-        ) -> Tensor:
-            return sample + mean + std
+        def sample(self, mean: Tensor) -> Tensor:
+            return mean
 
     test = Test()
 
@@ -336,8 +225,8 @@ def test_init_uniform(device: torch.device) -> None:
     bias1 = module.bias.clone()
     iter1 = module.parameters()
     fan_in = 10
-    Distribution._init_uniform(module.weight, fan_in)
-    Distribution._init_uniform(module.bias, fan_in)
+    _init_uniform(module.weight, fan_in)
+    _init_uniform(module.bias, fan_in)
     weight2 = iter1.__next__().clone()
     bias2 = iter1.__next__().clone()
 
@@ -353,8 +242,8 @@ def test_init_uniform(device: torch.device) -> None:
 
     iter2 = module.parameters()
     fan_in = 0
-    Distribution._init_uniform(module.weight, fan_in)
-    Distribution._init_uniform(module.bias, fan_in)
+    _init_uniform(module.weight, fan_in)
+    _init_uniform(module.bias, fan_in)
     weight3 = iter2.__next__().clone()
     bias3 = iter2.__next__().clone()
 
@@ -373,8 +262,8 @@ def test_init_constant(device: torch.device) -> None:
     iter1 = module.parameters()
     default = (1.0, 2.0)
     fan_in = 7
-    Distribution._init_constant(module.weight, default[0], fan_in, False)
-    Distribution._init_constant(module.bias, default[1], fan_in, False)
+    _init_constant(module.weight, default[0], fan_in, False)
+    _init_constant(module.bias, default[1], fan_in, False)
     weight2 = iter1.__next__().clone()
     bias2 = iter1.__next__().clone()
 
@@ -386,8 +275,8 @@ def test_init_constant(device: torch.device) -> None:
     iter2 = module.parameters()
     eps1 = 1e-5
     eps2 = 1e-3
-    Distribution._init_constant(module.weight, default[0], fan_in, True, eps1)
-    Distribution._init_constant(module.bias, default[1], 0, True, eps2)
+    _init_constant(module.weight, default[0], fan_in, True, eps1)
+    _init_constant(module.bias, default[1], 0, True, eps2)
 
     weight3 = iter2.__next__().clone()
     bias3 = iter2.__next__().clone()
@@ -402,18 +291,18 @@ def test_vardist_reset_variational_parameters(device: torch.device) -> None:
     """Test VariationalDistribution.reset_variational_parameters."""
     param_shape = (5, 4)
 
-    class Test(Distribution):
-        is_variational_distribution = True
+    class Test(VariationalDistribution):
         distribution_parameters = ("mean", "std", "log_std")
         _default_variational_parameters = (0.0, 1.0, 0.0)
 
-        def sample(self, mean: Tensor, std: Tensor, log_std: Tensor) -> Tensor:
-            return mean + std
-
-        def variational_log_prob(
-            self, sample: Tensor, mean: Tensor, std: Tensor, log_std: Tensor
+        def log_prob(
+            self, sample: Tensor, parameters: tuple[Tensor, Tensor, Tensor]
         ) -> Tensor:
+            mean, std, log_std = parameters
             return sample + mean + std
+
+        def sample(self, mean: Tensor) -> Tensor:
+            return mean
 
     class ModuleDummy(Module):
         def __init__(self) -> None:
@@ -468,78 +357,37 @@ def test_vardist_reset_variational_parameters(device: torch.device) -> None:
     assert (log_std3 == 0.0 + log(1 / sqrt(fan_in) + eps)).all()
 
 
-def test_parameter_checking_predictive() -> None:
-    """Test enforcement or required parameters for subclasses of Distribution, predictive mode."""
-
-    # predictive_parameters assertion
-    class Test1(Distribution):
-        is_predictive_distribution = True
-
-    try:
-        Test1()
-        raise AssertionError
-    except NotImplementedError as e:
-        assert str(e) == "Subclasses must define distribution_parameters"
-
-    # predictive_parameters_from_samples assertion
-    class Test2(Distribution):
-        is_predictive_distribution = True
-        distribution_parameters = ("mean", "log_std")
-
-    try:
-        Test2()
-        raise AssertionError
-    except NotImplementedError as e:
-        assert str(e) == "Subclasses must define predictive_parameters_from_samples"
-
-    # log_prob_from_parameters assertion
-    class Test3(Distribution):
-        is_predictive_distribution = True
-        distribution_parameters = ("mean", "log_std")
-
-        def predictive_parameters_from_samples(
-            self, samples: Tensor
-        ) -> Tuple[Tensor, Tensor]:
-            return samples, samples
-
-    try:
-        Test3()
-        raise AssertionError
-    except NotImplementedError as e:
-        assert str(e) == "Subclasses must define log_prob_from_parameters"
+def test_predictive_checking() -> None:
+    """Test enforcement or required parameters for predictive mode."""
 
     # Test correct init
-    class Test4(Distribution):
-        is_predictive_distribution = True
-        distribution_parameters = ("mean", "log_std")
+    class Test(PredictiveDistribution):
+        distribution_parameters = ("mean", "std")
+
+        def log_prob(self, sample: Tensor, parameters: tuple[Tensor, Tensor]) -> Tensor:
+            return sample
 
         def predictive_parameters_from_samples(
-            self, samples: Tensor
-        ) -> Tuple[Tensor, Tensor]:
-            return samples, samples
+            self, sample: Tensor
+        ) -> tuple[Tensor, ...]:
+            return sample
 
-        def log_prob_from_parameters(
-            self, reference: Tensor, parameters: Tuple[Tensor, Tensor]
-        ) -> Tensor:
-            return reference
-
-    _ = Test4()
+    _ = Test()
 
 
 def test_log_prob_from_samples(device: torch.device) -> None:
-    """Test Distribution.log_prob_from_samples."""
+    """Test PredictiveDistribution.log_prob_from_samples."""
 
-    class Test(Distribution):
-        is_predictive_distribution = True
+    class Test(PredictiveDistribution):
         distribution_parameters = ("mean",)
 
-        @staticmethod
-        def predictive_parameters_from_samples(samples: Tensor) -> Tensor:
-            return samples.sum(dim=0)
+        def log_prob(self, sample: Tensor, parameters: Tensor) -> Tensor:
+            return sample + parameters
 
-        @staticmethod
-        def log_prob_from_parameters(reference: Tensor, parameters: Tensor) -> Tensor:
-            return reference + parameters
+        def predictive_parameters_from_samples(
+            self, sample: Tensor
+        ) -> tuple[Tensor, ...]:
+            return sample.sum(dim=0)
 
     test = Test()
     samples = torch.randn((5, 3, 4), device=device)

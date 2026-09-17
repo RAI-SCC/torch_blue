@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import torch
 from torch import Tensor
@@ -8,9 +8,9 @@ from torch.nn import functional as F  # noqa: N812
 from torch.nn.modules.transformer import _detect_is_causal_mask, _get_seq_len
 
 from .base import VIModule
-from .distributions import Distribution, MeanFieldNormal
+from .distributions import MeanFieldNormal, Prior, VariationalDistribution
 from .linear import VILinear
-from .utils.common_types import VIkwargs, _dist_any_t
+from .utils.common_types import VIkwargs, _prior_any_t, _vardist_any_t
 
 
 class VIMultiheadAttention(VIModule):
@@ -61,8 +61,8 @@ class VIMultiheadAttention(VIModule):
         kdim: Optional[int] = None,
         vdim: Optional[int] = None,
         batch_first: bool = True,
-        variational_distribution: _dist_any_t = MeanFieldNormal(),
-        prior: _dist_any_t = MeanFieldNormal(),
+        variational_distribution: _vardist_any_t = MeanFieldNormal(),
+        prior: _prior_any_t = MeanFieldNormal(),
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,
         rescale_prior: bool = True,
@@ -93,7 +93,7 @@ class VIMultiheadAttention(VIModule):
             self.head_dim * num_heads == self.embed_dim
         ), "embed_dim must be divisible by num_heads"
 
-        variables: Dict[str, Optional[Tuple[int, ...]]] = dict(
+        variables: Dict[str, Optional[tuple[int, ...]]] = dict(
             in_proj_weight=None,
             q_proj_weight=None,
             k_proj_weight=None,
@@ -134,7 +134,7 @@ class VIMultiheadAttention(VIModule):
         key_padding_mask: Optional[Tensor] = None,
         average_attn_weights: bool = True,
         is_causal: bool = False,
-    ) -> Tuple[Tensor, Optional[Tensor]]:
+    ) -> tuple[Tensor, Optional[Tensor]]:
         """
         Compute attention outputs using query, key, and value embeddings.
 
@@ -263,8 +263,8 @@ class VITransformerEncoderLayer(VIModule):
         batch_first: bool = True,
         norm_first: bool = False,
         bias: bool = True,
-        variational_distribution: Distribution = MeanFieldNormal(),
-        prior: Distribution = MeanFieldNormal(),
+        variational_distribution: VariationalDistribution = MeanFieldNormal(),
+        prior: Prior = MeanFieldNormal(),
         rescale_prior: bool = True,
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,
@@ -357,7 +357,7 @@ class VITransformerEncoderLayer(VIModule):
         attn_mask: Optional[Tensor] = None,
         key_padding_mask: Optional[Tensor] = None,
         is_causal: bool = False,
-    ) -> Tuple[Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor]:
         x = self.self_attn(
             x,
             x,
@@ -404,8 +404,8 @@ class VITransformerDecoderLayer(VIModule):
         norm_first: bool = False,
         batch_first: bool = True,
         bias: bool = True,
-        variational_distribution: Distribution = MeanFieldNormal(),
-        prior: Distribution = MeanFieldNormal(),
+        variational_distribution: VariationalDistribution = MeanFieldNormal(),
+        prior: Prior = MeanFieldNormal(),
         rescale_prior: bool = True,
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,
@@ -505,7 +505,7 @@ class VITransformerDecoderLayer(VIModule):
         attn_mask: Optional[Tensor] = None,
         key_padding_mask: Optional[Tensor] = None,
         is_causal: bool = False,
-    ) -> Tuple[Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor]:
         x = self.self_attn(
             x,
             x,
@@ -523,7 +523,7 @@ class VITransformerDecoderLayer(VIModule):
         attn_mask: Optional[Tensor] = None,
         key_padding_mask: Optional[Tensor] = None,
         is_causal: bool = False,
-    ) -> Tuple[Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor]:
         x = self.multihead_attn(
             x,
             mem,
@@ -711,8 +711,8 @@ class VITransformer(VIModule):
         batch_first: bool = False,
         norm_first: bool = False,
         bias: bool = True,
-        variational_distribution: Distribution = MeanFieldNormal(),
-        prior: Distribution = MeanFieldNormal(),
+        variational_distribution: VariationalDistribution = MeanFieldNormal(),
+        prior: Prior = MeanFieldNormal(),
         rescale_prior: bool = True,
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,

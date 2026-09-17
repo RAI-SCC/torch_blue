@@ -6,10 +6,10 @@ from torch import Tensor
 
 from torch_blue.vi import _globals
 
-from .base import Distribution
+from .base import VariationalDistribution
 
 
-class MeanFieldStudentT(Distribution):
+class MeanFieldStudentT(VariationalDistribution):
     """
     Distribution assuming uncorrelated Student's t-distributions.
 
@@ -20,53 +20,31 @@ class MeanFieldStudentT(Distribution):
 
     Parameters
     ----------
-    initial_scale: float, default: 1.0
+    scale: float, default: 1.0
         initial scale each independent distribution.
     degrees_of_freedom: float, default: 4.0
         degrees of freedom each independent distribution.
     """
 
-    is_prior = False
-    is_variational_distribution = True
-    is_predictive_distribution = False
+    distribution_parameters = ("mean", "log_scale")
 
     def __init__(
         self,
-        initial_scale: float = 1.0,
+        mean: float = 0.0,
+        scale: float = 1.0,
         degrees_of_freedom: float = 4.0,
         device: Optional[torch.device] = None,
     ) -> None:
         super().__init__()
+        self.mean = mean
+        self.log_scale = log(scale)
         self.degrees_of_freedom = torch.tensor(degrees_of_freedom, device=device)
-        self.distribution_parameters = ("mean", "log_scale")
-        self._default_variational_parameters = (0.0, log(initial_scale))
 
-    def sample(self, mean: Tensor, log_scale: Tensor) -> Tensor:
-        """
-        Draw sample from Student's t-distribution.
+    @property
+    def _default_variational_parameters(self) -> tuple[float, float]:
+        return (self.mean, self.log_scale)
 
-        Draw samples from a Student's t-distribution with the given mean and log_scale.
-        mean and log_scale must be broadcastable to the same shape.
-
-        Parameters
-        ----------
-        mean: Tensor
-            Sample mean.
-        log_scale: Tensor
-            Sample distribution log scale.
-
-        Returns
-        -------
-        sample: Tensor
-            Sample tensor of the same shape as ``mean`` drawn from
-            Student's t-distribution.
-        """
-        scale = torch.exp(log_scale)
-        return self._student_t_sample(mean, scale)
-
-    def variational_log_prob(
-        self, sample: Tensor, mean: Tensor, log_scale: Tensor
-    ) -> Tensor:
+    def log_prob(self, sample: Tensor, parameters: tuple[Tensor, Tensor]) -> Tensor:
         """
         Compute the log probability of a sample.
 
@@ -77,10 +55,8 @@ class MeanFieldStudentT(Distribution):
         ----------
         sample: Tensor
             Sample tensor.
-        mean: Tensor
-            Distribution mean.
-        log_scale: Tensor
-            Distribution log scale.
+        parameters: tuple[Tensor, Tensor]
+            Distribution mean and log scale.
 
         Returns
         -------
@@ -88,6 +64,7 @@ class MeanFieldStudentT(Distribution):
             Tensor with the same shape as ``sample`` containing the log probability of
             the sample given ``mean`` and ``log_scale``.
         """
+        mean, log_scale = parameters
         self.degrees_of_freedom = self.degrees_of_freedom.to(device=sample.device)
         scale = torch.exp(log_scale)
         data_fitting = (
@@ -104,6 +81,28 @@ class MeanFieldStudentT(Distribution):
                 - torch.lgamma((self.degrees_of_freedom + 1.0) / 2.0)
             )
         return -(data_fitting + normalization)
+
+    def sample(self, parameters: tuple[Tensor, Tensor]) -> Tensor:
+        """
+        Draw sample from Student's t-distribution.
+
+        Draw samples from a Student's t-distribution with the given mean and log_scale.
+        mean and log_scale must be broadcastable to the same shape.
+
+        Parameters
+        ----------
+        parameters: tuple[Tensor, Tensor]
+            Distribution mean and log scale.
+
+        Returns
+        -------
+        sample: Tensor
+            Sample tensor of the same shape as the input Tensors drawn from
+            Student's t-distribution.
+        """
+        mean, log_scale = parameters
+        scale = torch.exp(log_scale)
+        return self._student_t_sample(mean, scale)
 
     def _student_t_sample(self, mean: Tensor, scale: Tensor) -> Tensor:
         """

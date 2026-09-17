@@ -1,6 +1,6 @@
 from itertools import product
 from math import log
-from typing import Optional, Tuple
+from typing import Optional
 
 import pytest
 import torch
@@ -22,7 +22,7 @@ class TestNormal:
     def test_prior_log_prob(
         self,
         norm_constants: bool,
-        params: Optional[Tuple[float, float, float]],
+        params: Optional[tuple[float, float, float]],
         device: torch.device,
     ) -> None:
         """Test Normal.prior_log_prob."""
@@ -42,7 +42,7 @@ class TestNormal:
 
         shape = (3, 4)
         sample = ref_dist.sample(shape).to(device=device)
-        ref = -0.5 * (2 * log(std) + (sample - mean) ** 2 / (std**2 + eps))
+        ref = -0.5 * (log(std**2 + eps) + (sample - mean) ** 2 / (std**2 + eps))
         if norm_constants:
             norm_const = torch.full(shape, 2 * torch.pi, device=device).log() / 2
             ref -= norm_const
@@ -68,12 +68,12 @@ class TestNormal:
 
         ref_variance = torch.exp(log_std) ** 2 + eps
         ref_data_fitting = (sample - mean) ** 2 / ref_variance
-        ref_normalization = 2 * log_std
+        ref_normalization = ref_variance.log()
         if norm_constants:
             ref_normalization = ref_normalization + log(2 * torch.pi)
         ref = -0.5 * (ref_data_fitting + ref_normalization).to(device=device)
 
-        variational_log_prob = var_dist.variational_log_prob(sample, mean, log_std)
+        variational_log_prob = var_dist.variational_log_prob(sample, (mean, log_std))
         assert torch.allclose(ref, variational_log_prob, atol=1e-7)
         assert variational_log_prob.device == device
 
@@ -126,14 +126,14 @@ class TestNormal:
         vardist = self.target()
         mean = torch.randn((3, 4), device=device)
         log_std = torch.full_like(mean, -float("inf"), device=device)
-        sample = vardist.sample(mean, log_std)
+        sample = vardist.sample((mean, log_std))
         assert sample.shape == mean.shape
         assert torch.allclose(sample, mean)
         assert sample.device == device
 
         mean = torch.randn((6,), device=device)
         log_std = torch.zeros_like(mean, device=device)
-        sample = vardist.sample(mean, log_std)
+        sample = vardist.sample((mean, log_std))
         assert not torch.allclose(sample, mean)
         assert sample.device == device
 
@@ -167,7 +167,7 @@ class TestNormal:
         assert test_std.device == device
 
         test_log_prob = predictive_dist.log_prob_from_parameters(
-            reference, (target_mean, target_std)
+            reference, (target_mean, target_std.log())
         )
         assert torch.allclose(test_log_prob, target_log_prob, atol=1e-7)
         assert test_log_prob.device == device

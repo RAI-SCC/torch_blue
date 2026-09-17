@@ -1,6 +1,6 @@
 import warnings
 from copy import deepcopy
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union, cast
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Union, cast
 
 import torch
 from torch import Tensor
@@ -8,9 +8,9 @@ from torch._C._functorch import get_unwrapped
 from torch.nn import Module, Parameter, init
 from torch.nn.common_types import _tensor_list_t
 
-from .distributions import MeanFieldNormal
+from .distributions import MeanFieldNormal, Prior, VariationalDistribution
 from .utils import NoVariablesError, PostInitCallMeta, UnsupportedDistributionError
-from .utils.common_types import _dist_any_t
+from .utils.common_types import _prior_any_t, _vardist_any_t
 from .utils.vi_return import VIReturn
 
 
@@ -58,8 +58,8 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     log prob information.
 
     .. IMPORTANT:: When defining custom modules with weights make sure to retrieve them
-        using :meth:`~self.sample_variables` as this will maintain the automatic log
-        prob tracking.
+        only once per use as each access will trigger caculation and storage of log
+        probabilities.
 
     Secondly, a model of nested :class:`~.VIModule` automatically identifies the
     outermost module and sets the :attr:`~self._has_sampling_responsibility` flag. This
@@ -67,15 +67,16 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     defaults to 10. Since BNNs require multiple samples for each forward pass, the input
     batch is duplicated accordingly and the forward pass is performed vectorized on all
     samples. While this is significantly faster than serial evaluation, it naturally
-    requires more memory. Additionally, a certain few operations do not function
-    correctly with the vectorization and should not be used in :class:`~.VIModule`.
-    Most importantly, this affects the operators ``+=``, ``-=``, ``*=``, and ``/=``.
-    However, their longform versions work fine, e.g. ``a = a + b`` instead of ``a += b``.
+    requires more memory. Additionally, a few operations do not function correctly with
+    the vectorization and should not be used in :class:`~.VIModule`. Most importantly,
+    this affects the operators ``+=``, ``-=``, ``*=``, and ``/=``. However, their
+    longform versions work fine, e.g. ``a = a + b`` instead of ``a += b``.
 
     If the constructed module does not have its own weights, :meth:`super().__init__()`
-    is called without arguments. In this setting the methods :meth:`get_log_probs`,
-    :meth:`get_variational_parameters`, :meth:`reset_variational_parameters`, and
-    :meth:`sample_variable` cannot be used and raise
+    is called without arguments. In this setting the methods
+    :meth:`~.VIModule.get_log_probs`, :meth:`~.VIModule.get_variational_parameters`,
+    :meth:`~.VIModule.reset_variational_parameters`, and
+    :meth:`~.VIModule.sample_variable` cannot be used and raise
     :exc:`~torch_blue.vi.utils.NoVariablesError`.
 
     Any weight matrix in a BNN may require multiple parameters (e.g. mean and std).
@@ -89,11 +90,11 @@ class VIModule(Module, metaclass=PostInitCallMeta):
     specified name. Each access will yield a new sample. The shape of a random variable
     can be set to ``None``. In that case accessing it will always return ``None``.
 
-    .. NOTE:: The insertion order of the dictionary becomes the order
-        :attr:`self.random_variables`.
+    .. NOTE:: The insertion order of the dictionary becomes the order of
+        :attr:`~.VIModule.random_variables`.
 
     The names of the created attributes can be discovered using the
-    :meth:`~self.variational_parameter_name()` method.
+    :meth:`~.VIModule.variational_parameter_name` method.
 
     Additionally, a module with random variables accepts arguments from
     :class:`~.VIkwargs` as keyword arguments. If a list of priors or variational
@@ -102,9 +103,9 @@ class VIModule(Module, metaclass=PostInitCallMeta):
 
     Parameters
     ----------
-    variable_shapes: Optional[Mapping[str, Optional[Tuple[int, ...]]]], default = None
+    variable_shapes: Optional[Mapping[str, Optional[tuple[int, ...]]]], default = None
         Shape specifications for all random variables. Keys are turned into
-        :attr:`self.random_variables` in insertion order.
+        :attr:`~.VIModule.random_variables` in insertion order.
     VIkwargs
         Several standard keyword arguments. See :class:`~.VIkwargs` for details.
 
@@ -126,9 +127,9 @@ class VIModule(Module, metaclass=PostInitCallMeta):
 
     def __init__(
         self,
-        variable_shapes: Optional[Mapping[str, Optional[Tuple[int, ...]]]] = None,
-        variational_distribution: _dist_any_t = MeanFieldNormal(),
-        prior: _dist_any_t = MeanFieldNormal(),
+        variable_shapes: Optional[Mapping[str, Optional[tuple[int, ...]]]] = None,
+        variational_distribution: _vardist_any_t = MeanFieldNormal(),
+        prior: _prior_any_t = MeanFieldNormal(),
         rescale_prior: bool = False,
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,
@@ -150,12 +151,12 @@ class VIModule(Module, metaclass=PostInitCallMeta):
                 len(variational_distribution) == len(random_variables)
             ), "Provide either exactly one variational distribution or exactly one for each random variable"
             for dist in variational_distribution:
-                if not dist.is_variational_distribution:
+                if not isinstance(dist, VariationalDistribution):
                     raise UnsupportedDistributionError(
                         f"{dist.__class__.__name__} does not support use as variational distribution."
                     )
         else:
-            if not variational_distribution.is_variational_distribution:
+            if not isinstance(variational_distribution, VariationalDistribution):
                 raise UnsupportedDistributionError(
                     f"{variational_distribution.__class__.__name__} does not support use as variational distribution."
                 )
@@ -171,12 +172,12 @@ class VIModule(Module, metaclass=PostInitCallMeta):
                 len(prior) == len(random_variables)
             ), "Provide either exactly one prior distribution or exactly one for each random variable"
             for dist in prior:
-                if not dist.is_prior:
+                if not isinstance(dist, Prior):
                     raise UnsupportedDistributionError(
                         f"{dist.__class__.__name__} does not support use as prior."
                     )
         else:
-            if not prior.is_prior:
+            if not isinstance(prior, Prior):
                 raise UnsupportedDistributionError(
                     f"{prior.__class__.__name__} does not support use as prior."
                 )
@@ -209,14 +210,14 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         self.reset_variational_parameters()
 
     @property
-    def random_variables(self) -> Optional[Tuple[str, ...]]:
+    def random_variables(self) -> Optional[tuple[str, ...]]:
         """Names of the modules random variables."""
         if "variational_distribution" not in self.__dict__:
             return None
         return tuple(self.variational_distribution.keys())
 
     def _rescale_prior(
-        self, variable_shapes: Mapping[str, Optional[Tuple[int, ...]]]
+        self, variable_shapes: Mapping[str, Optional[tuple[int, ...]]]
     ) -> None:
         """
         Rescale the prior parameters based on the layer width.
@@ -225,7 +226,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
 
         Parameters
         ----------
-        variable_shapes: Mapping[str, Optional[Tuple[int, ...]]]
+        variable_shapes: Mapping[str, Optional[tuple[int, ...]]]
             The dictionary of random variable names and shapes as passed to __init__.
 
         Returns
@@ -345,7 +346,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
 
         variational_parameters = self.get_variational_parameters(variable)
         variational_log_prob = vardist.variational_log_prob(
-            sample, *variational_parameters
+            sample, variational_parameters
         ).sum()
 
         prior_params = [
@@ -384,7 +385,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
             return None
 
         variational_parameters = self.get_variational_parameters(variable)
-        sample = self.variational_distribution[variable].sample(*variational_parameters)
+        sample = self.variational_distribution[variable].sample(variational_parameters)
 
         if self.return_log_probs:
             log_probs = self.get_log_probs(sample, variable)
@@ -402,15 +403,26 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         return input_.expand(samples, *input_.shape)
 
     def sampled_forward(
-        self, *input_: Optional[Tensor], samples: int = 10, **kwargs: Any
-    ) -> Union[VIReturn, Tuple[VIReturn, ...]]:
+        self,
+        *input_: Optional[Tensor],
+        samples: int = 10,
+        sampled_input: bool = False,
+        **kwargs: Any,
+    ) -> Union[VIReturn, tuple[VIReturn, ...]]:
         """
         Forward pass of the module evaluating multiple weight samples.
 
         This will automatically be called by the outermost module. Instead of the
         :meth:`~forward` method. It grabs the ``samples`` argument, if provided,
         and copies the input batch the specified number of times. The :meth:`~forward`
-        is performed vectorized over that additional sample dimension.
+        is performed vectorized over that additional sample dimension. If you wish to
+        provide an input that already has a sample dimension use the keyword argument
+        ``sampled_input=True``, which will cause the ``samples`` argument to be ignored.
+
+        If you need more information on how this is achieved, check the documentation of
+        this class' `__post_init__` method in the source code. Note this goes in deep
+        and if checking the source code seems too much hassle you should probably not
+        touch it and write an issue instead.
 
         If you need more information on how this is achieved, check the documentation of
         this class' `__post_init__` method in the source code. Note this goes in deep
@@ -421,20 +433,28 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         ----------
         input_: Tensor
             Any number of input Tensors
-        samples : int, default: 10
+        samples: int, default: 10
             Number of weight samples to evaluate
+        sampled_input: bool, default: False
+            If ``True`` the ``samples`` argument is ignored and the 0th input dimension
+            is used as sample dimension. This implicitly specifies the sample number.
         kwargs: Any
             Any additional keyword arguments
 
         Returns
         -------
-        Union[VIReturn, Tuple[VIReturn, ...]]
+        Union[VIReturn, tuple[VIReturn, ...]]
             One or multiple Tensors with log prob annotation
         """
         # reset log_probs in case users (or IDEs) have touched attributes
         self.reset_log_probs()
 
-        expanded = [self._expand_to_samples(x, samples=samples) for x in input_]
+        if not sampled_input:
+            expanded: Iterable = [
+                self._expand_to_samples(x, samples=samples) for x in input_
+            ]
+        else:
+            expanded = input_
         out: _tensor_list_t = torch.vmap(self._module_forward, randomness="different")(
             *expanded, **kwargs
         )
@@ -561,7 +581,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
         return super().__getattr__(name)
 
     def _calculate_fan_in(
-        self, variable_shapes: Optional[Mapping[str, Optional[Tuple[int, ...]]]] = None
+        self, variable_shapes: Optional[Mapping[str, Optional[tuple[int, ...]]]] = None
     ) -> int:
         if variable_shapes is None:
             loop = self.random_variables
@@ -570,7 +590,7 @@ class VIModule(Module, metaclass=PostInitCallMeta):
             loop = checked_dict = variable_shapes  # type:ignore[assignment]
 
         all_none = True
-        for var in cast(Tuple[str, ...], loop):
+        for var in cast(tuple[str, ...], loop):
             if checked_dict[var] is None:
                 continue
 

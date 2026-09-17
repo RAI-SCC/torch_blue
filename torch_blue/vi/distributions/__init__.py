@@ -1,6 +1,6 @@
 """Provides a collection of distributions."""
 
-from .base import Distribution
+from .base import Distribution, PredictiveDistribution, Prior, VariationalDistribution
 from .categorical import Categorical
 from .non_bayesian import NonBayesian, UniformPrior
 from .normal import MeanFieldNormal
@@ -18,6 +18,9 @@ __all__ = [
     "MeanFieldStudentT",
     "NonBayesian",
     "Normal",
+    "PredictiveDistribution",
+    "Prior",
     "StudentT",
     "UniformPrior",
+    "VariationalDistribution",
 ]

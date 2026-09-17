@@ -20,10 +20,12 @@ from torch_blue.vi.analytical_kl_loss import (
     UniformNormalDivergence,
 )
 from torch_blue.vi.distributions import (
-    Distribution,
     MeanFieldNormal,
     NonBayesian,
+    PredictiveDistribution,
+    Prior,
     UniformPrior,
+    VariationalDistribution,
 )
 from torch_blue.vi.utils import UnsupportedDistributionError, use_norm_constants
 
@@ -112,35 +114,34 @@ def test_normalnormal_klmodule(norm_constants: bool, device: torch.device) -> No
     assert torch.allclose(out, reference.sum())
 
 
-class DummyPrior(Distribution):
+class DummyPrior(Prior):
     """Dummy prior for testing."""
 
-    is_prior = True
+    distribution_parameters = ()
 
     def __init__(self) -> None:
         super().__init__()
-        self.distribution_parameters = ()
 
-    def prior_log_prob(self, *args: Tensor) -> Tensor:
+    def log_prob(self, *args: Tensor) -> Tensor:
         """Return dummy log probability."""
         return torch.zeros(1, device=args[0].device)
 
 
-class DummyVarDist(Distribution):
+class DummyVarDist(VariationalDistribution):
     """Dummy variational distribution for testing."""
 
-    is_variational_distribution = True
+    distribution_parameters = ("mean",)
+    _default_variational_parameters = (0.0,)
 
     def __init__(self) -> None:
         super().__init__()
-        self.distribution_parameters = ("mean",)
-        self._default_variational_parameters = (0.0,)
+        self.mean = None
 
     def sample(self, mean: Tensor) -> Tensor:
         """Return dummy sample."""
         return torch.zeros(1, device=mean.device)
 
-    def variational_log_prob(self, sample: Tensor, mean: Tensor) -> Tensor:
+    def log_prob(self, sample: Tensor, mean: Tensor) -> Tensor:
         """Return dummy log probability."""
         return torch.zeros(1, device=mean.device)
 
@@ -157,8 +158,8 @@ class DummyVarDist(Distribution):
     ],
 )
 def test_detect_divergence(
-    prior: Type[Distribution],
-    var_dist: Type[Distribution],
+    prior: Type[Prior],
+    var_dist: Type[VariationalDistribution],
     target: Union[str, Type[KullbackLeiblerModule]],
 ) -> None:
     """Test AnalyticalKullbackLeiblerLoss._detect_divergence()."""
@@ -185,10 +186,10 @@ class DummyMLP(VIModule):
         in_features: int,
         hidden_features: int,
         out_features: int,
-        prior: Distribution = MeanFieldNormal(),
-        var_dist: Distribution = MeanFieldNormal(),
-        alt_prior: Optional[Distribution] = None,
-        alt_vardist: Optional[Distribution] = None,
+        prior: Prior = MeanFieldNormal(),
+        var_dist: VariationalDistribution = MeanFieldNormal(),
+        alt_prior: Optional[Prior] = None,
+        alt_vardist: Optional[VariationalDistribution] = None,
         return_log_probs: bool = True,
         device: Optional[torch.device] = None,
     ) -> None:
@@ -227,8 +228,8 @@ class NoneParamMLP(VIModule):
         self,
         in_features: int,
         out_features: int,
-        prior: Distribution = MeanFieldNormal(),
-        var_dist: Distribution = MeanFieldNormal(),
+        prior: Prior = MeanFieldNormal(),
+        var_dist: VariationalDistribution = MeanFieldNormal(),
         return_log_probs: bool = True,
         device: Optional[torch.device] = None,
     ) -> None:
@@ -266,8 +267,8 @@ class NoneParamMLP(VIModule):
     ],
 )
 def test_prior_matching(
-    prior: Distribution,
-    var_dist: Distribution,
+    prior: Prior,
+    var_dist: VariationalDistribution,
     norm_constants: bool,
     device: torch.device,
 ) -> None:
@@ -593,11 +594,11 @@ def test_prior_matching(
     ],
 )
 def test_init(
-    prior: Distribution,
-    var_dist: Distribution,
-    predictive_distribution: Distribution,
-    alt_prior: Optional[Distribution],
-    alt_var_dist: Optional[Distribution],
+    prior: Prior,
+    var_dist: VariationalDistribution,
+    predictive_distribution: PredictiveDistribution,
+    alt_prior: Optional[Prior],
+    alt_var_dist: Optional[VariationalDistribution],
     target_kl_module: Type[KullbackLeiblerModule],
     heat: Optional[float],
     dataset_size: Optional[int],
@@ -713,8 +714,8 @@ def test_init(
     ],
 )
 def test_forward(
-    prior: Distribution,
-    var_dist: Distribution,
+    prior: Prior,
+    var_dist: VariationalDistribution,
     heat: float,
     init_dataset_size: Optional[int],
     fwrd_dataset_size: Optional[int],
@@ -737,7 +738,7 @@ def test_forward(
         f_in, f_hidden, f_out, prior=prior, var_dist=var_dist, device=device
     )
     if isinstance(var_dist, NonBayesian):
-        predictive_distribution: Distribution = NonBayesian("MSE")
+        predictive_distribution: PredictiveDistribution = NonBayesian("MSE")
     else:
         predictive_distribution = MeanFieldNormal()
 

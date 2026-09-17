@@ -42,7 +42,7 @@ def test_overfitting() -> None:
             optimizer.step()
 
         if epoch % 100 == 99:
-            print(f"Epoch {epoch+1}/{epochs}, Training loss: {all_losses[-1]}")
+            print(f"Epoch {epoch + 1}/{epochs}, Training loss: {all_losses[-1]}")
 
     plt.plot(torch.arange(len(all_losses)) / batch_size, all_losses)
     # plt.yscale('log')

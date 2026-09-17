@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import torch
 from torch import Tensor
@@ -8,7 +8,7 @@ from torch.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _tripl
 
 from .base import VIModule
 from .distributions import MeanFieldNormal
-from .utils.common_types import VIkwargs, _dist_any_t
+from .utils.common_types import VIkwargs, _prior_any_t, _vardist_any_t
 
 
 class _VIConvNd(VIModule):
@@ -33,12 +33,12 @@ class _VIConvNd(VIModule):
     in_channels: int
     _reversed_padding_repeated_twice: List[int]
     out_channels: int
-    kernel_size: Tuple[int, ...]
-    stride: Tuple[int, ...]
-    padding: Union[str, Tuple[int, ...]]
-    dilation: Tuple[int, ...]
+    kernel_size: tuple[int, ...]
+    stride: tuple[int, ...]
+    padding: Union[str, tuple[int, ...]]
+    dilation: tuple[int, ...]
     transposed: bool
-    output_padding: Tuple[int, ...]
+    output_padding: tuple[int, ...]
     groups: int
     padding_mode: str
     weight: Tensor
@@ -48,17 +48,17 @@ class _VIConvNd(VIModule):
         self,
         in_channels: int,
         out_channels: int,
-        kernel_size: Tuple[int, ...],
-        stride: Tuple[int, ...],
-        padding: Tuple[int, ...],
-        dilation: Tuple[int, ...],
+        kernel_size: tuple[int, ...],
+        stride: tuple[int, ...],
+        padding: tuple[int, ...],
+        dilation: tuple[int, ...],
         transposed: bool,
-        output_padding: Tuple[int, ...],
+        output_padding: tuple[int, ...],
         groups: int,
         bias: bool,
         padding_mode: str,
-        variational_distribution: _dist_any_t,
-        prior: _dist_any_t,
+        variational_distribution: _vardist_any_t,
+        prior: _prior_any_t,
         rescale_prior: bool = False,
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,
@@ -135,7 +135,7 @@ class _VIConvNd(VIModule):
         else:
             weight_shape = (out_channels, in_channels // groups, *kernel_size)
 
-        variable_shapes: Dict[str, Optional[Tuple[int, ...]]] = dict(
+        variable_shapes: Dict[str, Optional[tuple[int, ...]]] = dict(
             weight=weight_shape,
             bias=None,
         )
@@ -187,8 +187,8 @@ class VIConv1d(_VIConvNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: str = "zeros",
-        variational_distribution: _dist_any_t = MeanFieldNormal(),
-        prior: _dist_any_t = MeanFieldNormal(),
+        variational_distribution: _vardist_any_t = MeanFieldNormal(),
+        prior: _prior_any_t = MeanFieldNormal(),
         rescale_prior: bool = False,
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,
@@ -207,7 +207,7 @@ class VIConv1d(_VIConvNd):
             dtype=dtype,
         )
         # we create new variables below to make mypy happy since kernel_size has
-        # type Union[int, Tuple[int]] and kernel_size_ has type Tuple[int]
+        # type Union[int, tuple[int]] and kernel_size_ has type tuple[int]
         kernel_size_ = _single(kernel_size)
         stride_ = _single(stride)
         padding_ = padding if isinstance(padding, str) else _single(padding)
@@ -305,8 +305,8 @@ class VIConv2d(_VIConvNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: str = "zeros",
-        variational_distribution: _dist_any_t = MeanFieldNormal(),
-        prior: _dist_any_t = MeanFieldNormal(),
+        variational_distribution: _vardist_any_t = MeanFieldNormal(),
+        prior: _prior_any_t = MeanFieldNormal(),
         rescale_prior: bool = False,
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,
@@ -421,8 +421,8 @@ class VIConv3d(_VIConvNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: str = "zeros",
-        variational_distribution: _dist_any_t = MeanFieldNormal(),
-        prior: _dist_any_t = MeanFieldNormal(),
+        variational_distribution: _vardist_any_t = MeanFieldNormal(),
+        prior: _prior_any_t = MeanFieldNormal(),
         rescale_prior: bool = False,
         kaiming_initialization: bool = True,
         prior_initialization: bool = False,

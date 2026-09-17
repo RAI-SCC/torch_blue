@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, Dict, Optional, cast
 
 import pytest
 import torch
@@ -16,7 +16,7 @@ from torch_blue.vi import (
     VITransformerEncoder,
     VITransformerEncoderLayer,
 )
-from torch_blue.vi.distributions import Distribution, MeanFieldNormal
+from torch_blue.vi.distributions import MeanFieldNormal, Prior, VariationalDistribution
 
 
 class Filter(VIModule):
@@ -298,7 +298,7 @@ class Filter(VIModule):
 def test_multihead_attention(
     embed_dim: int,
     num_heads: int,
-    variational_distribution: Distribution,
+    variational_distribution: VariationalDistribution,
     batch_size: Optional[int],
     src_len: int,
     tgt_len: int,
@@ -345,7 +345,7 @@ def test_multihead_attention(
         )
     )
 
-    random_variable_shapes: Dict[str, Optional[Tuple[int, ...]]] = dict(
+    random_variable_shapes: Dict[str, Optional[tuple[int, ...]]] = dict(
         in_proj_weight=None,
         q_proj_weight=None,
         k_proj_weight=None,
@@ -380,7 +380,7 @@ def test_multihead_attention(
     assert module.module.num_heads == num_heads
     assert module.module.bias == bias
     assert module.module.batch_first == batch_first
-    module_random_vars = cast(Tuple[str, ...], module.module.random_variables)
+    module_random_vars = cast(tuple[str, ...], module.module.random_variables)
     assert len(module_random_vars) == len(random_variable_shapes.keys())
     for v1, v2 in zip(module_random_vars, random_variable_shapes.keys()):
         assert v1 == v2
@@ -396,9 +396,9 @@ def test_multihead_attention(
             assert param_dict[name].device == device
 
     if batch_size is not None:
-        src_shape: Tuple[int, ...] = (batch_size, src_len, embed_dim)
-        tgt_shape: Tuple[int, ...] = (batch_size, tgt_len, kdim or embed_dim)
-        ext_shape: Tuple[int, ...] = (batch_size, tgt_len, vdim or embed_dim)
+        src_shape: tuple[int, ...] = (batch_size, src_len, embed_dim)
+        tgt_shape: tuple[int, ...] = (batch_size, tgt_len, kdim or embed_dim)
+        ext_shape: tuple[int, ...] = (batch_size, tgt_len, vdim or embed_dim)
     else:
         src_shape = (src_len, embed_dim)
         tgt_shape = (tgt_len, kdim or embed_dim)
@@ -1212,8 +1212,8 @@ def test_transformer(
     batch_first: bool,
     norm_first: bool,
     bias: bool,
-    variational_distribution: Distribution,
-    prior: Distribution,
+    variational_distribution: VariationalDistribution,
+    prior: Prior,
     prior_initialization: bool,
     rescale_prior: bool,
     return_log_probs: bool,

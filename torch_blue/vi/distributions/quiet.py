@@ -8,13 +8,13 @@ from torch.nn import init
 from torch_blue.vi import _globals
 
 from ..utils import init as vi_init
-from .base import Distribution
+from .base import Prior
 
 if TYPE_CHECKING:
     from ..base import VIModule  # pragma: no cover
 
 
-class BasicQuietPrior(Distribution):
+class BasicQuietPrior(Prior):
     """
     Prior assuming normal distributed mean and std proportional to it.
 
@@ -40,9 +40,9 @@ class BasicQuietPrior(Distribution):
         Epsilon for numerical stability.
     """
 
-    is_prior = True
-    is_variational_distribution = False
-    is_predictive_distribution = False
+    distribution_parameters = ("mean", "log_std")
+    _required_parameters = ("mean",)
+    _scaling_parameters = ("mean_mean", "mean_std")
 
     def __init__(
         self,
@@ -52,17 +52,20 @@ class BasicQuietPrior(Distribution):
         eps: float = 1e-10,
     ) -> None:
         super().__init__()
-        self.distribution_parameters = ("mean", "log_std")
-        self._required_parameters = ("mean",)
-        self._scaling_parameters = ("mean_mean", "mean_std", "eps")
         self._std_ratio = std_ratio
-        self.mean_mean = mean_mean
-        self.mean_std = mean_std
+        self.mean_mean = torch.tensor(mean_mean)
+        self.mean_std = torch.tensor(mean_std)
         self.eps = eps
 
-    def prior_log_prob(self, sample: Tensor, mean: Tensor) -> Tensor:
+    def get_parameters(self) -> tuple[Tensor, Tensor]:
+        r"""Return the prior parameters."""
+        return self.mean_mean, self.mean_std
+
+    def log_prob(
+        self, sample: Tensor, parameters: tuple[Tensor, Tensor, Tensor]
+    ) -> Tensor:
         """
-        Compute the log probability of the sample based on the prior.
+        Compute the log probability of the sample.
 
         This calculates the Gaussian log probability of a sample using the current best
         estimate for its mean and adds a factor to account for the distribution of
@@ -77,19 +80,22 @@ class BasicQuietPrior(Distribution):
         ----------
         sample: Tensor
             A Tensor of values to calculate the log probability for.
-        mean: Tensor
-            The current best estimate for the mean of ech value.
+        parameters: tuple[Tensor, Tensor, Tensor]
+            The mean of distribution means, the standard deviation of distribution
+            means, and the current best estimate for the mean of each value.
 
         Returns
         -------
         Tensor
-            The log probability of the sample under the prior.
+            The log probability of the sample.
 
         """
+        mean_mean, mean_std, mean = parameters
         variance = (self._std_ratio * mean) ** 2 + self.eps
+        mean_variance = mean_std**2 + self.eps
         data_fitting = (sample - mean) ** 2 / variance
-        mean_decay = (mean - self.mean_mean) ** 2 / (self.mean_std**2)
-        normalization = variance.log() + 2 * log(self.mean_std)
+        mean_decay = (mean - mean_mean) ** 2 / mean_variance
+        normalization = variance.log() + log(mean_variance)
         if _globals._USE_NORM_CONSTANTS:
             normalization = normalization + 2 * log(2 * torch.pi)
         return -0.5 * (data_fitting + mean_decay + normalization)
@@ -108,8 +114,8 @@ class BasicQuietPrior(Distribution):
             The module containing the parameters to reset.
         variable: str
             The name of the random variable to reset as given by
-            :attr:`variational_parameters` of the associated
-            :class:`~torch_blue.vi.distributions.Distribution`.
+            :attr:`distribution_parameters` of the associated
+            :class:`~torch_blue.vi.distributions.Prior`.
 
         Returns
         -------

@@ -20,7 +20,7 @@ def test_prior_log_prob(norm_constants: bool, device: torch.device) -> None:
     prior1 = BasicQuietPrior(std_ratio1, mean_mean1, mean_std1, eps1)
     assert prior1.distribution_parameters == ("mean", "log_std")
     assert prior1._required_parameters == ("mean",)
-    assert prior1._scaling_parameters == ("mean_mean", "mean_std", "eps")
+    assert prior1._scaling_parameters == ("mean_mean", "mean_std")
     assert prior1._std_ratio == std_ratio1
     assert prior1.mean_mean == mean_mean1
     assert prior1.mean_std == mean_std1
@@ -50,7 +50,7 @@ def test_prior_log_prob(norm_constants: bool, device: torch.device) -> None:
     if not norm_constants:
         norm_const = torch.full_like(mean, 2 * torch.pi, device=device).log()
         ref1 += norm_const
-    log_prob1 = prior2.prior_log_prob(sample1, mean)
+    log_prob1 = prior2.prior_log_prob(sample1, (mean,))
     assert torch.allclose(log_prob1, ref1)
     assert log_prob1.device == device
 
@@ -58,7 +58,7 @@ def test_prior_log_prob(norm_constants: bool, device: torch.device) -> None:
     if not norm_constants:
         norm_const = torch.full_like(mean, 2 * torch.pi, device=device).log()
         ref2 += norm_const
-    log_prob2 = prior2.prior_log_prob(sample2, mean)
+    log_prob2 = prior2.prior_log_prob(sample2, (mean,))
     assert torch.allclose(log_prob2, ref2)
     assert log_prob2.device == device
 

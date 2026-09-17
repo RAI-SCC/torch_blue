@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Tuple, Union
+from typing import Union
 
 import pytest
 import torch
@@ -77,7 +77,7 @@ def test_residual_connection(device: torch.device) -> None:
     """Test VIResidualConnection."""
 
     class Test(VIModule):
-        def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor, Tensor]]:
+        def forward(self, x: Tensor) -> Union[Tensor, tuple[Tensor, Tensor]]:
             if self._return_log_probs:
                 self._log_probs = dict(
                     all=[torch.tensor([[0.0, 1.0]], device=x.device)]
@@ -85,7 +85,7 @@ def test_residual_connection(device: torch.device) -> None:
             return x
 
     class Test2(VIModule):
-        def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor, Tensor]]:
+        def forward(self, x: Tensor) -> Union[Tensor, tuple[Tensor, Tensor]]:
             if self._return_log_probs:
                 self._log_probs = dict(
                     all=[torch.tensor([[0.0, 1.0]], device=x.device)]

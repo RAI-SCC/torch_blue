@@ -2,10 +2,10 @@ import torch
 from torch import Tensor
 from torch.nn import functional as F  # noqa: N812
 
-from .base import Distribution
+from .base import PredictiveDistribution
 
 
-class Categorical(Distribution):
+class Categorical(PredictiveDistribution):
     """
     Categorical distribution used as predictive distribution for classification tasks.
 
@@ -24,6 +24,8 @@ class Categorical(Distribution):
     input_type: str, default: "logits"
         Whether to interpret the model output as logits ("logits"; i.e., log
         probabilities) or probabilities ("probs").
+    eps: float, default: 1e-5
+        Epsilon for numerical stability.
 
     Raises
     ------
@@ -31,18 +33,14 @@ class Categorical(Distribution):
         If ``input_type`` is neither "logits" nor "probs".
     """
 
-    is_prior = False
-    is_variational_distribution = False
-    is_predictive_distribution = True
+    distribution_parameters = ("probs",)
 
-    def __init__(self, input_type: str = "logits"):
-        self.distribution_parameters = ("probs",)
+    def __init__(self, input_type: str = "logits", eps: float = 1e-5):
         assert input_type in ["logits", "probs"], "input_type must be logits or probs"
+        self.eps = eps
         self._in_logits = input_type == "logits"
 
-    def predictive_parameters_from_samples(
-        self, samples: Tensor, eps: float = 1e-5
-    ) -> Tensor:
+    def predictive_parameters_from_samples(self, samples: Tensor) -> tuple[Tensor]:
         """
         Calculate predictive probabilities from samples.
 
@@ -55,24 +53,19 @@ class Categorical(Distribution):
             The model output as Tensor of shape (S, B, C), where S is the number of
             samples, B is the batch size, and C is the number of classes. The batch size
             dimension is optional.
-        eps: float, default: 1e-5
-            Epsilon for numerical stability.
 
         Returns
         -------
-        Tensor
+        tuple[Tensor]
             The predictive class probabilities as Tensor of shape (B, C).
         """
         if self._in_logits:
-            return F.softmax(samples + eps, -1).mean(dim=0)
+            return (F.softmax(samples + self.eps, -1).mean(dim=0),)
         else:
             normalized = samples / samples.sum(dim=-1, keepdim=True)
-            return normalized.mean(dim=0)
+            return (normalized.mean(dim=0),)
 
-    @staticmethod
-    def log_prob_from_parameters(
-        reference: Tensor, parameters: Tensor, eps: float = 1e-5
-    ) -> Tensor:
+    def log_prob(self, sample: Tensor, parameters: tuple[Tensor]) -> Tensor:
         """
         Calculate the log probability of the label based on the class probabilities.
 
@@ -80,23 +73,20 @@ class Categorical(Distribution):
 
         Parameters
         ----------
-        reference: Tensor
+        sample: Tensor
             The ground truth label as Tensor of shape (B,), where B is the batch size
             and may be one.
-        parameters: Tensor
+        parameters: tuple[Tensor]
             The predictive class probabilities as Tensor of shape (B, C) as returned by
             :meth:`~predictive_parameters_from_samples`.
-        eps: float, default: 1e-5
-            Epsilon for numerical stability.
 
         Returns
         -------
         Tensor
             The log probability of the label under the predicted class probabilities.
-            Shape: (1,).
         """
-        parameters = torch.log(parameters + eps)
-        value = reference.long().unsqueeze(-1)
-        value, log_pmf = torch.broadcast_tensors(value, parameters)
+        log_param = torch.log(parameters[0] + self.eps)
+        value = sample.long().unsqueeze(-1)
+        value, log_pmf = torch.broadcast_tensors(value, log_param)
         value = value[..., :1]
         return log_pmf.gather(-1, value).squeeze(-1)

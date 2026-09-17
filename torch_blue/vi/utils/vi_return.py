@@ -1,4 +1,4 @@
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 from torch import Tensor
 
@@ -7,13 +7,13 @@ class VIReturn(Tensor):
     r"""
     A subclass of :class:`torch.Tensor` that also stores log probabilities.
 
-    A :class:`VIReturn` object behaves like a :class:`torch.Tensor` for all practical
+    A :class:`~.VIReturn` object behaves like a :class:`~torch.Tensor` for all practical
     purposes, but provides the optional attribute :attr:`~log\_probs`. However, it should
-    not be used as replacement since certain pytorch operation will lose the log prob
-    information. It is almost exclusively used as the return formate for
+    not be used as replacement since certain PyTorch operations will lose the log prob
+    information. It is almost exclusively used as the return format for
     :class:`~torch\_blue.vi.VIModule`s. This allows the output to be treated like a
-    :class:`torch.Tensor`, but still provide the log prob information when needed.
-    `torch\_blue` losses may require this format as input.
+    :class:`~torch.Tensor`, but still provide the log prob information when needed.
+    :class:`~torch\_blue.vi.KullbackLeiblerLoss` expects this format as input.
     """
 
     log_probs: Optional[Tensor] = None
@@ -29,7 +29,7 @@ class VIReturn(Tensor):
         super().__init__()
         self.log_probs = log_probs
 
-    def new_empty(self, size: Tuple[int, ...], **kwargs: Any) -> "VIReturn":
+    def new_empty(self, size: tuple[int, ...], **kwargs: Any) -> "VIReturn":
         """Return a VIReturn of size `size` filled with uninitialized data."""
         return self.__class__(super().new_empty(size, **kwargs), None)
 
@@ -55,7 +55,7 @@ class VIReturn(Tensor):
     @staticmethod
     def from_tensor(input_: Tensor, log_probs: Optional[Tensor]) -> "VIReturn":
         r"""
-        Turn a torch.Tensor into a VIReturn.
+        Turn a :class:`~torch.Tensor` into a :class:`~.VIReturn`.
 
         This is an inplace operation and does not copy data.
 
@@ -69,7 +69,8 @@ class VIReturn(Tensor):
         Returns
         -------
         VIReturn
-            The input converted to a VIReturn with the specified log probabilities.
+            The input converted to a :class:`~.VIReturn` object with the specified log
+            probabilities.
         """
         input_.__class__ = VIReturn
         input_.log_probs = log_probs

@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple, cast
+from typing import Dict, Optional, cast
 
 import torch
 from torch import Tensor
@@ -6,7 +6,7 @@ from torch.nn import functional as F  # noqa: N812
 
 from .base import VIModule
 from .distributions import MeanFieldNormal
-from .utils.common_types import VIkwargs, _dist_any_t
+from .utils.common_types import VIkwargs, _prior_any_t, _vardist_any_t
 
 
 class VILinear(VIModule):
@@ -43,8 +43,8 @@ class VILinear(VIModule):
         self,
         in_features: int,
         out_features: int,
-        variational_distribution: _dist_any_t = MeanFieldNormal(),
-        prior: _dist_any_t = MeanFieldNormal(),
+        variational_distribution: _vardist_any_t = MeanFieldNormal(),
+        prior: _prior_any_t = MeanFieldNormal(),
         bias: bool = True,
         rescale_prior: bool = False,
         kaiming_initialization: bool = True,
@@ -66,7 +66,7 @@ class VILinear(VIModule):
         self.in_features = in_features
         self.out_features = out_features
 
-        variable_shapes: Dict[str, Optional[Tuple[int, ...]]] = dict(
+        variable_shapes: Dict[str, Optional[tuple[int, ...]]] = dict(
             weight=(out_features, in_features)
         )
         if bias:

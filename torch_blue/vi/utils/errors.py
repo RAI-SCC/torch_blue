@@ -13,7 +13,7 @@ class UnsupportedDistributionError(ValueError):
     r"""
     Raised if a distribution is used in an unsupported way.
 
-    A :class:`~torch\_bayesian.vi.distributions.Distribution` may not support being
+    A :class:`~.torch\_blue.vi.distributions.Distribution` may not support being
     used as prior, variational distribution or predictive distribution. When attempting
     to still use it in such a way this error is raised.
     """

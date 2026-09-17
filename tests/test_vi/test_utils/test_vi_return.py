@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Tuple, cast
+from typing import cast
 
 import pytest
 import torch
@@ -13,8 +13,8 @@ class TestVIReturn:
 
     @staticmethod
     def _init_instance(
-        shape: Tuple[int], lp_is_none: bool = False
-    ) -> Tuple[VIReturn, Tensor, Tensor]:
+        shape: tuple[int], lp_is_none: bool = False
+    ) -> tuple[VIReturn, Tensor, Tensor]:
         ref_tensor = torch.randn(shape)
         ref_log_probs = None if lp_is_none else torch.randn([10, 2])
         vi_return = VIReturn(ref_tensor, ref_log_probs)

@@ -29,13 +29,17 @@ autodoc_typehints = "signature"
 autodoc_typehints_format = "short"
 python_use_unqualified_type_names = True
 autodoc_type_aliases = {
-    "torch.nn.common_types._size_1_t": "int | Tuple[int,]",
-    "torch.nn.common_types._size_2_t": "int | Tuple[int, int]",
-    "torch.nn.common_types._size_3_t": "int | Tuple[int, int, int]",
+    "torch.nn.common_types._tensor_list_t": "Tensor | tuple[Tensor, ...]",
+    "torch.nn.common_types._size_1_t": "int | tuple[int]",
+    "torch.nn.common_types._size_2_t": "int | tuple[int, int]",
+    "torch.nn.common_types._size_3_t": "int | tuple[int, int, int]",
     "torch_blue.vi.utils.common_types._dist_any_t": "Distribution | List[Distribution]",
+    "torch_blue.vi.utils.common_types._prior_any_t": "Prior | List[Prior]",
+    "torch_blue.vi.utils.common_types._vardist_any_t": "VariationalDistribution | List[VariationalDistribution]",
+    "torch_blue.vi.utils.common_types._preddist_any_t": "PredictiveDistribution | List[PredictiveDistribution]",
     "Ellipsis": "...",
     "torch_blue.vi.base.": "torch_blue.vi.",
-    #    "torch.Tensor": "Tensor",
+    "torch.Tensor": "Tensor",
 }
 
 napoleon_numpy_docstring = True
@@ -144,7 +148,7 @@ autoapi_options = [
 # autoapi_keep_files = True
 
 
-# add_module_names = False
+add_module_names = False
 
 
 # -- Options for HTML output -------------------------------------------------

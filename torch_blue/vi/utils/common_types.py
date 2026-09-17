@@ -5,9 +5,17 @@ from torch.nn.common_types import _scalar_or_tuple_any_t
 from typing_extensions import TypeAlias
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ..distributions import Distribution
+    from ..distributions import (
+        Distribution,
+        PredictiveDistribution,
+        Prior,
+        VariationalDistribution,
+    )
 
 _dist_any_t: TypeAlias = _scalar_or_tuple_any_t["Distribution"]
+_prior_any_t: TypeAlias = _scalar_or_tuple_any_t["Prior"]
+_vardist_any_t: TypeAlias = _scalar_or_tuple_any_t["VariationalDistribution"]
+_preddist_any_t: TypeAlias = _scalar_or_tuple_any_t["PredictiveDistribution"]
 
 
 class VIkwargs(TypedDict):
@@ -21,13 +29,13 @@ class VIkwargs(TypedDict):
 
     Parameters
     ----------
-    variational_distribution: Union[Distribution, List[Distribution]], default: :class:`MeanFieldNormal()<torch_blue.vi.distributions.MeanFieldNormal>`
-        Either one :class:`torch_blue.vi.distributions.Distribution` ,
+    variational_distribution: Union[VariationalDistribution, List[VariationalDistribution]], default: :class:`~torch_blue.vi.distributions.MeanFieldNormal`
+        Either one :class:`~torch_blue.vi.distributions.VariationalDistribution` ,
         which is used for all random variables, or a list of them, one for each random
         variable. This specifies the assumed parametrization of the weight distribution.
-    prior: Union[Distribution, List[Distribution]], default: :class:`MeanFieldNormal()<torch_blue.vi.distributions.MeanFieldNormal>`
-        Either one :class:`~torch_blue.vi.distributions.Distribution` , which is
-        used for all random variables, or a list of them, one for each random variable.
+    prior: Union[Prior, List[Prior]], default: :class:`~torch_blue.vi.distributions.MeanFieldNormal`
+        Either one :class:`~torch_blue.vi.distributions.Prior` , which is used for all
+        random variables, or a list of them, one for each random variable.
         This specifies the previous knowledge about the weight distribution.
     rescale_prior: bool, default: False
         If ``True`` , the priors :attr:`_scaling_parameters` are scaled with the sqrt of
@@ -38,16 +46,15 @@ class VIkwargs(TypedDict):
         parameters are initialized similar to non-Bayesian networks.
     return_log_probs: bool, default: True
         If ``True`` the model forward pass returns the log probability of the sampled
-        weights. This is required for use of
-        :class:`~torch_blue.vi.KullbackLeiblerLoss`.
+        weights. This is required for use of :class:`~torch_blue.vi.KullbackLeiblerLoss`.
     device: Optional[torch.device], default: None
         The torch.device on which the module should be stored.
     dtype: Optional[torch.dtype], default: None
         The torch.dtype of the module parameters.
     """
 
-    variational_distribution: _dist_any_t
-    prior: _dist_any_t
+    variational_distribution: _vardist_any_t
+    prior: _prior_any_t
     rescale_prior: bool
     kaiming_initialization: bool
     prior_initialization: bool

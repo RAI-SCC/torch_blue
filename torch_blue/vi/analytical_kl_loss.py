@@ -9,7 +9,14 @@ from torch.nn import Module
 
 from . import _globals
 from .base import VIModule
-from .distributions import Distribution, MeanFieldNormal, NonBayesian
+from .distributions import (
+    MeanFieldNormal,
+    NonBayesian,
+    PredictiveDistribution,
+    Prior,
+    UniformPrior,
+    VariationalDistribution,
+)
 from .utils import UnsupportedDistributionError
 
 
@@ -36,17 +43,15 @@ class KullbackLeiblerModule(ABC):
     Base class for modules calculating the Kullback-Leibler divergence from distribution parameters.
 
     A KullbackLeiblerModule calculates the analytical Kullback-Leibler divergence
-    between a :class:`~.priors.Prior` and a
-    :class:`~.variational_distributions.VariationalDistribution` based on their
-    parameters. They are mainly intended for use with the
-    :class:`~.AnalyticalKullbackLeiblerLoss`.
+    between a :class:`~.distributions.Prior` and a
+    :class:`~.distributions.VariationalDistribution` based on their parameters. They are
+    mainly intended for use with the :class:`~.AnalyticalKullbackLeiblerLoss`.
 
     Each subclass must define a forward function that is passed, as positional arguments,
-    the parameters of the :class:`~.priors.Prior` in the order specified in its
-    :attr:`~.prior.Prior.distribution_parameters` attribute followed by the parameters
-    of the :class:`~.variational_distributions.VariationalDistribution` in the order
-    specified in its
-    :attr:`~.variational_distributions.VariationalDistribution.variational_parameters`
+    the parameters of the :class:`~.distributions.Prior` in the order specified in its
+    :attr:`~.distributions.Distribution.distribution_parameters` attribute followed by
+    the parameters of the :class:`~.distributions.VariationalDistribution` in the order
+    specified in its :attr:`~.distributions.Distribution.distribution_parameters`
     attribute.
     """
 
@@ -54,7 +59,7 @@ class KullbackLeiblerModule(ABC):
 
     def __call__(
         self,
-        prior_parameters: Iterable[Union[Tensor, float]],
+        prior_parameters: Iterable[Tensor],
         variational_parameters: Iterable[Tensor],
     ) -> Tensor:
         """Distribute parameters to forward function."""
@@ -65,8 +70,8 @@ class NormalNormalDivergence(KullbackLeiblerModule):
     """
     Kullback-Leibler divergence between two normal distributions.
 
-    Calculates the KL-Divergence between a :class:`~.priors.MeanFieldNormalPrior` and a
-    :class:`~.variational_distributions.MeanFieldNormalVarDist`.
+    Calculates the KL-Divergence between a :class:`~.distributions.MeanFieldNormal` and
+    a :class:`~.distributions.MeanFieldNormal`.
     """
 
     @staticmethod
@@ -120,7 +125,7 @@ class NonBayesianDivergence(KullbackLeiblerModule):
 
     This module can be used to disable the prior matching term of the
     :class:`~.AnalyticalKullbackLeiblerLoss`. Together with a
-    :class:`~.predictive_distributions.NonBayesianPredictiveDistribution` it yields a
+    :class:`~.distributions.NonBayesian` predictive distribution it yields a
     non-Bayesian loss.
     """
 
@@ -141,8 +146,8 @@ class UniformNormalDivergence(KullbackLeiblerModule):
     """
     Kullback-Leibler divergence between a uniform and normal distribution.
 
-    Calculates the KL-Divergence between a :class:`~.priors.UniformPrior` and a
-    :class:`~.variational_distributions.MeanFieldNormalVarDist`.
+    Calculates the KL-Divergence between a :class:`~.distributions.UniformPrior` and a
+    :class:`~.distributions.MeanFieldNormal` distribution.
     """
 
     @staticmethod
@@ -190,12 +195,11 @@ class AnalyticalKullbackLeiblerLoss(Module):
     A version of the Kullback-Leibler loss function that calculates the prior matching
     term analytically from the prior and variational parameters. To that end it stores a
     reference to the model for access to the parameters. Furthermore, only specific
-    combinations of :class:`~.priors.Prior` and
-    :class:`~.variational_distributions.VariationalDistribution` are supported (see
-    table below). Additionally, it can emulate a non-Bayesian loss, when provided a
-    model with :class:`~.variational_distributions.NonBayesian`
-    variational distribution and a
-    :class:`~.predictive_distributions.NonBayesianPredictiveDistribution`.
+    combinations of :class:`~.distributions.Prior` and
+    :class:`~.distributions.VariationalDistribution` are supported (see table below).
+    Additionally, it can emulate a non-Bayesian loss, when provided a model with a
+    :class:`~.distributions.NonBayesian` variational distribution and a
+    :class:`~.distributions.NonBayesian` prior.
 
     .. list-table:: Supported class combinations
         :widths: 33 33 33
@@ -204,18 +208,21 @@ class AnalyticalKullbackLeiblerLoss(Module):
         * - Prior
           - Variational distribution
           - Kullback-Leibler module
-        * - :class:`~.priors.MeanFieldNormalPrior`
-          - :class:`~.variational_distributions.MeanFieldNormalVarDist`
+        * - :class:`~.distributions.MeanFieldNormal`
+          - :class:`~.distributions.MeanFieldNormal`
           - :class:`~.NormalNormalDivergence`
-        * - :class:`~.priors.UniformPrior`
-          - :class:`~.variational_distributions.MeanFieldNormalVarDist`
+        * - :class:`~.distributions.UniformPrior`
+          - :class:`~.distributions.MeanFieldNormal`
           - :class:`~.UniformNormalDivergence`
+        * - :class:`~.distributions.UniformPrior`
+          - :class:`~.distributions.NonBayesian`
+          - :class:`~.NonBayesianDivergence`
 
     Parameters
     ----------
     model: :class:`~.VIModule`
         The model to be trained.
-    predictive_distribution: :class:`~.distributions.Distribution`
+    predictive_distribution: :class:`~.distributions.PredictiveDistribution`
         The kind of distribution to assume for the forecasts. This is closely related to
         the non-Bayesian losses, e.g. :class:`~.distributions.MeanFieldNormal`
         corresponds to MSE loss, while :class:`~.distributions.Categorical`
@@ -234,9 +241,9 @@ class AnalyticalKullbackLeiblerLoss(Module):
         a non-Bayesian loss.
     track: bool, default: False
         If ``True`` the loss components are tracked for every forward pass in
-        :attr:`~self.log`. This can be enabled, disabled and re-enable with the
-        :meth:`~self.track` method. Any stored data will remain even if disabled and
-        re-enabled.
+        :attr:`~.AnalyticalKullbackLeiblerLoss.log`. This can be enabled, disabled and
+        re-enable with the :meth:`~.AnalyticalKullbackLeiblerLoss.track` method. Any
+        stored data will remain even if disabled and re-enabled.
 
     Attributes
     ----------
@@ -256,7 +263,7 @@ class AnalyticalKullbackLeiblerLoss(Module):
         distribution is not supported.
     :exc:`ValueError`:
         If ``divergence_type`` is ``None`` and the model does not contain any
-        :class:`~.VIBaseModule`, i.e. is non-Bayesian.
+        :class:`~.VIModule`, i.e. is non-Bayesian.
     :exc:`UnsupportedDistributionError`:
         If ``predictive_distribution`` does not support being use as predictive
         distribution.
@@ -265,7 +272,7 @@ class AnalyticalKullbackLeiblerLoss(Module):
     def __init__(
         self,
         model: VIModule,
-        predictive_distribution: Distribution,
+        predictive_distribution: PredictiveDistribution,
         dataset_size: Optional[int] = None,
         divergence_type: Optional["KullbackLeiblerModule"] = None,
         heat: float = 1.0,
@@ -277,7 +284,7 @@ class AnalyticalKullbackLeiblerLoss(Module):
         self.heat = heat
         self._track = track
 
-        if not predictive_distribution.is_predictive_distribution:
+        if not isinstance(predictive_distribution, PredictiveDistribution):
             raise UnsupportedDistributionError(
                 f"{predictive_distribution.__class__.__name__} does not support use as"
                 f" predictive distribution"
@@ -340,11 +347,11 @@ class AnalyticalKullbackLeiblerLoss(Module):
 
     @staticmethod
     def _detect_divergence(
-        prior: Distribution, var_dist: Distribution
+        prior: Prior, var_dist: VariationalDistribution
     ) -> KullbackLeiblerModule:
         if isinstance(prior, MeanFieldNormal):
             prior_name = "Normal"
-        elif isinstance(prior, NonBayesian):
+        elif isinstance(prior, UniformPrior):
             prior_name = "Uniform"
         else:
             prior_name = None
@@ -363,16 +370,11 @@ class AnalyticalKullbackLeiblerLoss(Module):
 
         return _kl_div_dict[prior_name + vardist_name + "Divergence"]()
 
-    def prior_matching(self) -> Tensor:
-        """
-        Calculate the prior matching KL-Divergence of :attr:`~self.model`.
+    def _get_flat_params(self) -> tuple[Tensor, ...]:
+        """Extract all parameters as tensors for vectorized operations."""
+        prior_param_lol: List[List[Tensor]] = []
+        variational_param_lol: List[List[Tensor]] = []
 
-        Returns
-        -------
-        Tensor
-            The prior matching KL-Divergence of :attr:`~self.model`.
-        """
-        total_kl = None
         for module in self.model.modules():
             if (
                 not hasattr(module, "random_variables")
@@ -383,18 +385,56 @@ class AnalyticalKullbackLeiblerLoss(Module):
                 if prior is None:
                     continue
 
-                prior_params = []
-                for param in prior.distribution_parameters:
-                    prior_params.append(getattr(prior, param))
-                variational_params = module.get_variational_parameters(var)
+                # Extract prior parameters efficiently
+                prior_params = [
+                    getattr(prior, param) for param in prior.distribution_parameters
+                ]
 
-                variable_kl = self.kl_module(prior_params, variational_params)
-                if total_kl is None:
-                    total_kl = variable_kl
-                else:
-                    total_kl = total_kl + variable_kl
+                var_params = module.get_variational_parameters(var)
+                for i, var_param in enumerate(var_params):
+                    if len(variational_param_lol) < i + 1:
+                        variational_param_lol.append([])
+                    variational_param_lol[i].append(var_param.flatten())
 
-        return total_kl
+                # Get number of elements in the last variational parameter
+                n_elements = variational_param_lol[0][-1].shape[0]
+                # Get device from the last variational parameter
+                device = variational_param_lol[0][-1].device
+                # Get dtype from the last variational parameter
+                dtype = variational_param_lol[0][-1].dtype
+
+                # Broadcast scalar parameters to match dimensions using tensor ops
+                for i, prior_param in enumerate(prior_params):
+                    if len(prior_param_lol) < i + 1:
+                        prior_param_lol.append([])
+                    prior_param_lol[i].append(
+                        torch.full(
+                            (n_elements,),
+                            prior_param if prior_param else 0.0,
+                            dtype=dtype,
+                            device=device,
+                        )
+                    )
+
+        # Concatenate all tensors at once (more efficient than extending)
+        return (
+            *(torch.cat(prior_param_list) for prior_param_list in prior_param_lol),
+            *(
+                torch.cat(variational_param_list)
+                for variational_param_list in variational_param_lol
+            ),
+        )
+
+    def prior_matching(self) -> Tensor:
+        """
+        Calculate the prior matching KL-Divergence of :attr:`~self.model`.
+
+        Returns
+        -------
+        Tensor
+            The prior matching KL-Divergence of :attr:`~self.model`.
+        """
+        return self.kl_module.forward(*self._get_flat_params())
 
     def forward(
         self, model_output: Tensor, target: Tensor, dataset_size: Optional[int] = None

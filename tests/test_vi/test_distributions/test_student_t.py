@@ -38,14 +38,14 @@ class TestMeanFieldStudentT:
         vardist = self.target(degrees_of_freedom=degrees_of_freedom)
         mean = torch.randn((3, 4), device=device)
         log_scale = torch.full_like(mean, -float("inf"), device=device)
-        sample = vardist.sample(mean, log_scale)
+        sample = vardist.sample((mean, log_scale))
         assert sample.shape == mean.shape
         assert torch.allclose(sample, mean)
         assert sample.device == device
 
         mean = torch.randn((6,), device=device)
         log_scale = torch.zeros_like(mean, device=device)
-        sample = vardist.sample(mean, log_scale)
+        sample = vardist.sample((mean, log_scale))
         assert not torch.allclose(sample, mean)
         assert sample.device == device
 
@@ -63,7 +63,7 @@ class TestMeanFieldStudentT:
         sample_shape = (3, 4)
         mean = torch.randn(sample_shape, device=device)
         log_scale = torch.randn(sample_shape, device=device)
-        sample = vardist.sample(mean, log_scale)
+        sample = vardist.sample((mean, log_scale))
         ref1 = torch.distributions.StudentT(
             degrees_of_freedom * torch.ones_like(mean),
             loc=mean,
@@ -77,14 +77,14 @@ class TestMeanFieldStudentT:
             ).to(device=device)
             norm_const = torch.full_like(mean, norm_value.item(), device=device)
             ref1 += norm_const
-        log_prob1 = vardist.variational_log_prob(sample, mean, log_scale)
+        log_prob1 = vardist.variational_log_prob(sample, (mean, log_scale))
         assert torch.allclose(ref1, log_prob1, atol=3e-7)
         assert log_prob1.device == device
 
         sample_shape2 = (6,)
         mean = torch.randn(sample_shape2, device=device)
         log_scale = torch.zeros_like(mean, device=device)
-        sample = vardist.sample(mean, log_scale)
+        sample = vardist.sample((mean, log_scale))
         ref2 = torch.distributions.StudentT(
             degrees_of_freedom * torch.ones_like(mean),
             loc=mean,
@@ -98,7 +98,7 @@ class TestMeanFieldStudentT:
             ).to(device=device)
             norm_const = torch.full_like(mean, norm_value.item(), device=device)
             ref2 += norm_const
-        log_prob2 = vardist.variational_log_prob(sample, mean, log_scale)
+        log_prob2 = vardist.variational_log_prob(sample, (mean, log_scale))
         assert torch.allclose(ref2, log_prob2, atol=3e-7)
         assert log_prob2.device == device
 
