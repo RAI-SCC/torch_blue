@@ -94,7 +94,7 @@ class MeanFieldNormal(Prior, VariationalDistribution, PredictiveDistribution):
 
         Parameters
         ----------
-        parameters: Tupel[Tensor, Tensor]
+        parameters: tuple[Tensor, Tensor]
             The mean and the standard deviation of the distribution.
 
         Returns

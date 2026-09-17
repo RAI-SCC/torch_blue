@@ -1,4 +1,4 @@
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 from torch import Tensor
 
@@ -13,7 +13,7 @@ class VIReturn(Tensor):
     information. It is almost exclusively used as the return format for
     :class:`~torch\_blue.vi.VIModule`s. This allows the output to be treated like a
     :class:`~torch.Tensor`, but still provide the log prob information when needed.
-    `torch\_blue` losses expect this format as input.
+    :class:`~torch\_blue.vi.KullbackLeiblerLoss` expects this format as input.
     """
 
     log_probs: Optional[Tensor] = None
