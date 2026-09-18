@@ -1,5 +1,4 @@
 from typing import Dict, List, Optional, cast
-from warnings import warn
 
 from torch import Tensor
 from torch.nn import Module
@@ -119,12 +118,12 @@ class KullbackLeiblerLoss(Module):
         mean_log_probs = log_probs.mean(dim=0) if log_probs.dim() != 1 else log_probs
 
         if (dataset_size is None) and (self.dataset_size is None):
-            warn(
-                f"No dataset_size is provided. Batch size ({samples.shape[1]}) is used instead."
+            raise ValueError(
+                "dataset_size must be provided either in the constructor or in the "
+                "forward method. It is required to correctly balance the data fitting "
+                "and prior matching terms of the ELBO loss."
             )
-            n_data = samples.shape[1]
-        else:
-            n_data = dataset_size or self.dataset_size
+        n_data = dataset_size or self.dataset_size
 
         prior_matching = self.heat * (mean_log_probs[1] - mean_log_probs[0])
         # Sample average for predictive log prob is already done

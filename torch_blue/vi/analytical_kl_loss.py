@@ -1,7 +1,6 @@
 from abc import ABC
 from math import log
 from typing import Callable, Dict, Iterable, List, Optional, Type, Union
-from warnings import warn
 
 import torch
 from torch import Tensor
@@ -464,13 +463,12 @@ class AnalyticalKullbackLeiblerLoss(Module):
         samples = model_output
 
         if (dataset_size is None) and (self.dataset_size is None):
-            warn(
-                f"No dataset_size is provided. Batch size ({samples.shape[1]}) is used"
-                f" instead."
+            raise ValueError(
+                "dataset_size must be provided either in the constructor or in the "
+                "forward method. It is required to correctly balance the data fitting "
+                "and prior matching terms of the ELBO loss."
             )
-            n_data = samples.shape[1]
-        else:
-            n_data = dataset_size or self.dataset_size
+        n_data = dataset_size or self.dataset_size
 
         prior_matching = self.heat * self.prior_matching()
         # Sample average for predictive log prob is already done

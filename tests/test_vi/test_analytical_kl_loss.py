@@ -766,10 +766,17 @@ def test_forward(
         output = model(sample, samples=samples)
 
         if init_dataset_size is None and fwrd_dataset_size is None:
-            message = f"No dataset_size is provided. Batch size \\({batch_size}\\) is used instead."
-            with pytest.warns(UserWarning, match=message):
-                analytical_loss = criterion(output, target, fwrd_dataset_size)
+            with pytest.raises(
+                ValueError,
+                match="dataset_size must be provided",
+            ):
+                criterion(output, target, fwrd_dataset_size)
             ref_loss = ref_criterion(output, target, batch_size)
+            # Skip the rest of this iteration since forward raised
+            model.zero_grad()
+            ref_loss.backward()
+            optimizer.step()
+            continue
         else:
             analytical_loss = criterion(output, target, fwrd_dataset_size)
             ref_loss = ref_criterion(output, target, fwrd_dataset_size)

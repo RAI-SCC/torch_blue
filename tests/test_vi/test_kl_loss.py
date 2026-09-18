@@ -1,7 +1,5 @@
-from warnings import filterwarnings
-
 import torch
-from pytest import raises, warns
+from pytest import raises
 
 from torch_blue.vi import KullbackLeiblerLoss, VIReturn
 from torch_blue.vi.distributions import MeanFieldNormal, UniformPrior
@@ -28,9 +26,9 @@ def test_kl_loss(device: torch.device) -> None:
         _ = KullbackLeiblerLoss(UniformPrior())
 
     loss1 = KullbackLeiblerLoss(MeanFieldNormal())
-    with warns(
-        UserWarning,
-        match=f"No dataset_size is provided. Batch size \({batch_size}\) is used instead.",
+    with raises(
+        ValueError,
+        match="dataset_size must be provided",
     ):
         _ = loss1(model_return, target)
 
@@ -66,11 +64,6 @@ def test_kl_loss(device: torch.device) -> None:
     out5 = loss4(model_return, target)
     assert out1 != out5
     assert out5.device == device
-
-    filterwarnings("ignore", category=UserWarning)
-    out6 = loss1(model_return, target)
-    assert out1 == out6
-    assert out6.device == device
 
     loss5 = KullbackLeiblerLoss(MeanFieldNormal(), dataset_size=batch_size, track=True)
 
