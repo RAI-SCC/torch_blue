@@ -112,7 +112,10 @@ class LearnableDelta(nn.Module):
             as the model output.
 
         """
-        rademacher_tensor = torch.randint(0, 2, x_std.shape).float() * 2 - 1
+        rademacher_tensor = (
+            torch.randint(0, 2, x_std.shape, device=x_std.device).to(x_std.dtype) * 2
+            - 1
+        )
         d = x_std * rademacher_tensor
         _, diff = torch.func.jvp(model, (x,), (d,))
 
