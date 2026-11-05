@@ -8,6 +8,7 @@ packages = [
     "torch_blue.vi",
     "torch_blue.vi.distributions",
     "torch_blue.vi.utils",
+    "torch_blue.delta",
 ]
 
 [project]
